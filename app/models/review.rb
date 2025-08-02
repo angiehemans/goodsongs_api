@@ -6,7 +6,7 @@ class Review < ApplicationRecord
   validates :band_name, presence: true
   validates :song_name, presence: true
   validates :review_text, presence: true
-  validates :overall_rating, presence: true, inclusion: { in: 1..3 }
+  validates :overall_rating, presence: true, inclusion: { in: 1..5 }
   
   LIKED_ASPECTS = %w[Guitar Vocals Lyrics Drums Bass Production Melody Rhythm Energy Creativity].freeze
   
