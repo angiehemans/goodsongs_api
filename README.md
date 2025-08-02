@@ -43,9 +43,11 @@ bundle install
 ### 3. Database Setup
 
 #### Configure PostgreSQL
+
 Make sure PostgreSQL is running. If using Postgres.app, note the port (usually 5445).
 
 #### Update Database Configuration
+
 Edit `config/database.yml` if needed to match your PostgreSQL setup:
 
 ```yaml
@@ -55,7 +57,7 @@ development:
   pool: 5
   database: goodsongs_api_development
   host: localhost
-  port: 5445  # Update if your PostgreSQL runs on a different port
+  port: 5445 # Update if your PostgreSQL runs on a different port
 ```
 
 #### Create and Setup Database
@@ -76,11 +78,13 @@ The API will be available at `http://localhost:3000`
 ## API Endpoints
 
 ### Authentication
+
 - `POST /signup` - Create a new user account
 - `POST /auth/login` - Login and get JWT token
 - `GET /profile` - Get current user's profile (requires auth)
 
 ### Reviews
+
 - `GET /reviews` - Get all reviews (requires auth)
 - `POST /reviews` - Create a new review (requires auth)
 - `GET /reviews/:id` - Get specific review (requires auth)
@@ -88,15 +92,18 @@ The API will be available at `http://localhost:3000`
 - `DELETE /reviews/:id` - Delete review (requires auth, owner only)
 
 ### Public Endpoints
+
 - `GET /users/:username` - Get public user profile with reviews
 - `GET /feed` - Get latest reviews feed (requires auth)
 
 ### Health Check
+
 - `GET /health` - API health check
 
 ## API Usage Examples
 
 ### Create a User
+
 ```bash
 curl -X POST http://localhost:3000/signup \
   -H "Content-Type: application/json" \
@@ -109,6 +116,7 @@ curl -X POST http://localhost:3000/signup \
 ```
 
 ### Login
+
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
@@ -119,6 +127,7 @@ curl -X POST http://localhost:3000/auth/login \
 ```
 
 ### Create a Review
+
 ```bash
 curl -X POST http://localhost:3000/reviews \
   -H "Content-Type: application/json" \
@@ -137,6 +146,7 @@ curl -X POST http://localhost:3000/reviews \
 ```
 
 ### Get User Profile
+
 ```bash
 curl http://localhost:3000/users/musiclover
 ```
@@ -144,11 +154,13 @@ curl http://localhost:3000/users/musiclover
 ## Data Models
 
 ### User
+
 - `username` (string, unique)
 - `email` (string, unique)
 - `password_digest` (encrypted)
 
 ### Review
+
 - `song_link` (string) - Link to the song
 - `band_name` (string) - Name of the band/artist
 - `song_name` (string) - Title of the song
@@ -160,13 +172,15 @@ curl http://localhost:3000/users/musiclover
 - `band_id` (foreign key)
 
 ### Band
+
 - `name` (string, unique) - Band/artist name
 
 ## Available Liked Aspects
 
 When creating reviews, you can select from these aspects:
+
 - Guitar
-- Vocals  
+- Vocals
 - Lyrics
 - Drums
 - Bass
@@ -179,11 +193,13 @@ When creating reviews, you can select from these aspects:
 ## Development
 
 ### Running Tests
+
 ```bash
 bundle exec rspec
 ```
 
 ### Database Commands
+
 ```bash
 # Reset database
 rails db:drop db:create db:migrate
@@ -196,6 +212,7 @@ rails db:rollback
 ```
 
 ### Rails Console
+
 ```bash
 rails console
 ```
@@ -203,6 +220,7 @@ rails console
 ## CORS Configuration
 
 The API is configured to accept requests from:
+
 - `http://localhost:3000` (Rails default)
 - `http://localhost:3001` (Common frontend port)
 
@@ -231,18 +249,17 @@ DATABASE_URL=postgresql://user:password@localhost/goodsongs_api_development
 ## Common Issues
 
 ### PostgreSQL Connection Issues
+
 - Ensure PostgreSQL is running
 - Check the port in `database.yml` matches your PostgreSQL instance
 - For Postgres.app users, the default port is usually 5445
 
 ### CORS Issues
+
 - Make sure your frontend origin is listed in `config/initializers/cors.rb`
 - Check browser console for specific CORS error messages
 
 ### Authentication Issues
+
 - Ensure JWT token is included in Authorization header: `Bearer YOUR_TOKEN`
 - Check token expiration and refresh as needed
-
-## License
-
-This project is available as open source under the terms of the [MIT License](LICENSE).

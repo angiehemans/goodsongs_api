@@ -14,6 +14,7 @@ class UsersController < ApplicationController
   def show
     user_data = current_user.as_json(except: [:password_digest, :created_at, :updated_at])
     user_data[:reviews_count] = current_user.reviews.count
+    user_data[:bands_count] = current_user.bands.count
     json_response(user_data)
   end
 
@@ -21,13 +22,16 @@ class UsersController < ApplicationController
   def profile_by_username
     user = User.find_by!(username: params[:username].downcase)
     reviews = user.reviews.includes(:band).order(created_at: :desc)
+    bands = user.bands.order(:name)
     
     user_data = {
       id: user.id,
       username: user.username,
       email: user.email,
       reviews_count: reviews.count,
-      reviews: reviews.map { |review| review_json(review) }
+      bands_count: bands.count,
+      reviews: reviews.map { |review| review_json(review) },
+      bands: bands.map { |band| band_summary_json(band) }
     }
     
     json_response(user_data)
@@ -51,10 +55,30 @@ class UsersController < ApplicationController
       liked_aspects: review.liked_aspects_array,
       band: {
         id: review.band.id,
-        name: review.band.name
+        slug: review.band.slug,
+        name: review.band.name,
+        location: review.band.location,
+        spotify_link: review.band.spotify_link,
+        bandcamp_link: review.band.bandcamp_link,
+        apple_music_link: review.band.apple_music_link,
+        youtube_music_link: review.band.youtube_music_link,
+        about: review.band.about,
+        profile_picture_url: review.band.profile_picture.attached? ? url_for(review.band.profile_picture) : nil
       },
       created_at: review.created_at,
       updated_at: review.updated_at
+    }
+  end
+
+  def band_summary_json(band)
+    {
+      id: band.id,
+      slug: band.slug,
+      name: band.name,
+      location: band.location,
+      profile_picture_url: band.profile_picture.attached? ? url_for(band.profile_picture) : nil,
+      reviews_count: band.reviews.count,
+      user_owned: band.user_owned?
     }
   end
 end

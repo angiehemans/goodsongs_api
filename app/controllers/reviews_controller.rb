@@ -58,6 +58,11 @@ class ReviewsController < ApplicationController
     render json: @reviews.map { |review| review_json(review) }
   end
 
+  def current_user_reviews
+    @reviews = current_user.reviews.includes(:band).order(created_at: :desc).limit(5)
+    render json: @reviews.map { |review| review_json(review) }
+  end
+
   private
 
   def set_review
@@ -90,7 +95,15 @@ class ReviewsController < ApplicationController
       },
       band: {
         id: review.band.id,
-        name: review.band.name
+        slug: review.band.slug,
+        name: review.band.name,
+        location: review.band.location,
+        spotify_link: review.band.spotify_link,
+        bandcamp_link: review.band.bandcamp_link,
+        apple_music_link: review.band.apple_music_link,
+        youtube_music_link: review.band.youtube_music_link,
+        about: review.band.about,
+        profile_picture_url: review.band.profile_picture.attached? ? url_for(review.band.profile_picture) : nil
       },
       created_at: review.created_at,
       updated_at: review.updated_at
