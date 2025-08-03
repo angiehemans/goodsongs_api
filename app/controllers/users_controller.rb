@@ -12,10 +12,22 @@ class UsersController < ApplicationController
   end
 
   def show
-    user_data = current_user.as_json(except: [:password_digest, :created_at, :updated_at])
+    user_data = current_user.as_json(except: [:password_digest, :created_at, :updated_at, :spotify_access_token, :spotify_refresh_token])
     user_data[:reviews_count] = current_user.reviews.count
     user_data[:bands_count] = current_user.bands.count
+    user_data[:spotify_connected] = current_user.spotify_access_token.present?
     json_response(user_data)
+  end
+
+  def recently_played
+    spotify_service = SpotifyService.new(current_user)
+    result = spotify_service.recently_played(limit: params[:limit] || 20)
+    
+    if result[:error]
+      render json: { error: result[:error] }, status: :bad_request
+    else
+      render json: result
+    end
   end
 
 

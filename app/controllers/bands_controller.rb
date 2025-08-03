@@ -9,7 +9,7 @@ class BandsController < ApplicationController
   end
 
   def show
-    render json: band_json(@band)
+    render json: band_json_with_reviews(@band)
   end
 
   def create
@@ -48,7 +48,7 @@ class BandsController < ApplicationController
   private
 
   def set_band
-    @band = Band.find_by!(slug: params[:slug])
+    @band = Band.includes(reviews: :user).find_by!(slug: params[:slug])
   end
 
   def check_band_ownership
@@ -77,6 +77,43 @@ class BandsController < ApplicationController
       reviews_count: band.reviews.count,
       user_owned: band.user_owned?,
       owner: band.user ? { id: band.user.id, username: band.user.username } : nil,
+      created_at: band.created_at,
+      updated_at: band.updated_at
+    }
+  end
+
+  def band_json_with_reviews(band)
+    {
+      id: band.id,
+      slug: band.slug,
+      name: band.name,
+      location: band.location,
+      spotify_link: band.spotify_link,
+      bandcamp_link: band.bandcamp_link,
+      apple_music_link: band.apple_music_link,
+      youtube_music_link: band.youtube_music_link,
+      about: band.about,
+      profile_picture_url: band.profile_picture.attached? ? url_for(band.profile_picture) : nil,
+      reviews_count: band.reviews.count,
+      user_owned: band.user_owned?,
+      owner: band.user ? { id: band.user.id, username: band.user.username } : nil,
+      reviews: band.reviews.order(created_at: :desc).map do |review|
+        {
+          id: review.id,
+          song_link: review.song_link,
+          song_name: review.song_name,
+          artwork_url: review.artwork_url,
+          review_text: review.review_text,
+          overall_rating: review.overall_rating,
+          liked_aspects: review.liked_aspects_array,
+          author: {
+            id: review.user.id,
+            username: review.user.username
+          },
+          created_at: review.created_at,
+          updated_at: review.updated_at
+        }
+      end,
       created_at: band.created_at,
       updated_at: band.updated_at
     }
