@@ -114,7 +114,7 @@ class SpotifyController < ApplicationController
     )
 
     # Redirect to frontend success page
-    redirect_to "#{ENV['FRONTEND_URL'] || 'http://localhost:3000'}/dashboard?spotify=connected"
+    redirect_to "#{ENV['FRONTEND_URL'] || 'http://localhost:3000'}/dashboard?spotify=connected", allow_other_host: true
   end
 
   def disconnect
