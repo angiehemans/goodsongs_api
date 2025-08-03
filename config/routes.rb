@@ -25,6 +25,7 @@ Rails.application.routes.draw do
   resources :bands, except: [:new, :edit], param: :slug
   get '/my-bands', to: 'bands#my_bands'
   
-  # Health check endpoint
+  # Health check endpoints
   get '/health', to: proc { [200, {}, ['OK']] }
+  get '/up', to: proc { [200, {}, ['OK']] }
 end
