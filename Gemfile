@@ -14,6 +14,11 @@ gem "puma", ">= 5.0"
 gem 'bcrypt', '~> 3.1.7'  # For password encryption
 gem 'jwt'                  # For JWT tokens
 gem 'rack-cors'           # For CORS (needed for frontend integration)
+gem 'httparty'            # For making HTTP requests to Spotify API
+gem 'omniauth'            # OAuth framework
+gem 'omniauth-spotify'    # Spotify OAuth strategy
+gem 'omniauth-rails_csrf_protection'  # CSRF protection for OAuth
+gem 'dotenv-rails'        # Load environment variables from .env file
 
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem

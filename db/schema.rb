@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_02_175355) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_03_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -80,6 +80,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_02_175355) do
     t.string "username", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "spotify_access_token"
+    t.text "spotify_refresh_token"
+    t.datetime "spotify_expires_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["username"], name: "index_users_on_username", unique: true
   end
