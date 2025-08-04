@@ -1,6 +1,5 @@
 # app/controllers/authentication_controller.rb
 class AuthenticationController < ApplicationController
-  include ExceptionHandler
   
   skip_before_action :authenticate_request, only: [:authenticate]
 

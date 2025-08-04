@@ -13,6 +13,14 @@ class User < ApplicationRecord
   validates :about_me, length: { maximum: 500 }
   
   before_save :downcase_email, :downcase_username
+
+  def profile_data
+    UserSerializer.profile_data(self)
+  end
+
+  def public_profile_data
+    UserSerializer.public_profile(self)
+  end
   
   private
   

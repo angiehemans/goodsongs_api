@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_04_031911) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_04_220530) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -54,6 +54,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_031911) do
     t.text "about"
     t.bigint "user_id"
     t.string "slug"
+    t.index ["created_at"], name: "index_bands_on_created_at"
+    t.index ["name"], name: "index_bands_on_name"
     t.index ["slug"], name: "index_bands_on_slug", unique: true
     t.index ["user_id"], name: "index_bands_on_user_id"
   end
@@ -70,7 +72,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_031911) do
     t.text "liked_aspects"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["band_id", "created_at"], name: "index_reviews_on_band_id_and_created_at"
     t.index ["band_id"], name: "index_reviews_on_band_id"
+    t.index ["created_at"], name: "index_reviews_on_created_at"
+    t.index ["user_id", "created_at"], name: "index_reviews_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_reviews_on_user_id"
   end
 
@@ -85,6 +90,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_031911) do
     t.datetime "spotify_expires_at"
     t.text "about_me"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["spotify_expires_at"], name: "index_users_on_spotify_expires_at"
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
