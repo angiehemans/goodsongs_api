@@ -28,5 +28,11 @@ module GoodsongsApi
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+    
+    # Use environment variables instead of encrypted credentials for production
+    config.force_ssl = false # We handle SSL at the proxy level
+    
+    # Skip credentials in production - use environment variables only
+    config.credentials.content_path = nil if Rails.env.production?
   end
 end

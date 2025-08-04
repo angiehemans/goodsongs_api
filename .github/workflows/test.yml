@@ -1,0 +1,59 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: goodsongs_api_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/goodsongs_api_test
+      RAILS_ENV: test
+      JWT_SECRET_KEY: test_secret_key
+      SPOTIFY_CLIENT_ID: test_client_id
+      SPOTIFY_CLIENT_SECRET: test_client_secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.4.4
+          bundler-cache: true
+
+      - name: Set up database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Run tests
+        run: bundle exec rspec
+
+      - name: Run security checks
+        run: |
+          bundle exec brakeman --no-pager
+          bundle exec bundle audit --update
+
+      - name: Check code style
+        run: bundle exec rubocop

@@ -3,6 +3,8 @@ Rails.application.routes.draw do
   post '/login', to: 'authentication#authenticate'
   post '/signup', to: 'users#create'
   get '/profile', to: 'users#show'
+  patch '/profile', to: 'users#update'
+  put '/profile', to: 'users#update'
   get '/users/:username', to: 'users#profile_by_username'
   get '/recently-played', to: 'users#recently_played'
   

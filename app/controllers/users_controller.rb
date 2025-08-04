@@ -16,7 +16,21 @@ class UsersController < ApplicationController
     user_data[:reviews_count] = current_user.reviews.count
     user_data[:bands_count] = current_user.bands.count
     user_data[:spotify_connected] = current_user.spotify_access_token.present?
+    user_data[:profile_image_url] = current_user.profile_image.attached? ? url_for(current_user.profile_image) : nil
     json_response(user_data)
+  end
+
+  def update
+    if current_user.update(profile_params)
+      user_data = current_user.as_json(except: [:password_digest, :created_at, :updated_at, :spotify_access_token, :spotify_refresh_token])
+      user_data[:reviews_count] = current_user.reviews.count
+      user_data[:bands_count] = current_user.bands.count
+      user_data[:spotify_connected] = current_user.spotify_access_token.present?
+      user_data[:profile_image_url] = current_user.profile_image.attached? ? url_for(current_user.profile_image) : nil
+      json_response(user_data)
+    else
+      json_response({ errors: current_user.errors.full_messages }, :unprocessable_entity)
+    end
   end
 
   def recently_played
@@ -40,6 +54,8 @@ class UsersController < ApplicationController
       id: user.id,
       username: user.username,
       email: user.email,
+      about_me: user.about_me,
+      profile_image_url: user.profile_image.attached? ? url_for(user.profile_image) : nil,
       reviews_count: reviews.count,
       bands_count: bands.count,
       reviews: reviews.map { |review| review_json(review) },
@@ -53,6 +69,10 @@ class UsersController < ApplicationController
 
   def user_params
     params.permit(:username, :email, :password, :password_confirmation)
+  end
+
+  def profile_params
+    params.permit(:about_me, :profile_image)
   end
 
   def review_json(review)
