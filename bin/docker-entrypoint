@@ -6,9 +6,9 @@ if [ -z "${LD_PRELOAD+x}" ]; then
     export LD_PRELOAD
 fi
 
-# Run database setup only if tables don't exist
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  ./bin/rails db:migrate 2>/dev/null || echo "Database migration failed or already up to date"
-fi
+# Database is managed by Kamal accessories and migrations run manually
+# if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+#   ./bin/rails db:migrate 2>/dev/null || echo "Database migration failed or already up to date"
+# fi
 
 exec "${@}"
