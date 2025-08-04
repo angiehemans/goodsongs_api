@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   get '/profile', to: 'users#show'
   patch '/profile', to: 'users#update'
   put '/profile', to: 'users#update'
+  post '/update-profile', to: 'users#update'
   get '/users/:username', to: 'users#profile_by_username'
   get '/recently-played', to: 'users#recently_played'
   
