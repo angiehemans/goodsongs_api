@@ -39,7 +39,6 @@ env:
     - JWT_SECRET_KEY
     - SPOTIFY_CLIENT_ID
     - SPOTIFY_CLIENT_SECRET
-    - RAILS_MASTER_KEY
   clear:
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
@@ -60,7 +59,7 @@ env:
     # Log everything from Rails
     RAILS_LOG_LEVEL: info
 
-    # Rails environment - temporarily using development for debugging
+    # Rails environment - using development for simplified deployment
     RAILS_ENV: development
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:

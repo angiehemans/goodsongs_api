@@ -23,7 +23,7 @@ class SpotifyController < ApplicationController
     unless current_user
       error_message = 'Authentication required. Please use the secure flow from your app.'
       if request.format.json?
-        render_error(error_message, :unauthorized)
+        render_unauthorized(error_message)
       else
         render plain: error_message, status: :unauthorized
       end
@@ -67,19 +67,19 @@ class SpotifyController < ApplicationController
     error = params[:error]
 
     if error
-      render_error("Spotify authorization failed: #{error}", :bad_request)
+      render json: { error: "Spotify authorization failed: #{error}" }, status: :bad_request
       return
     end
 
     unless auth_code && state
-      render_error('Missing authorization code or state', :bad_request)
+      render json: { error: 'Missing authorization code or state' }, status: :bad_request
       return
     end
 
     # Find user by state parameter
     user = User.find_by(id: state)
     unless user
-      render_error('Invalid state parameter', :bad_request)
+      render json: { error: 'Invalid state parameter' }, status: :bad_request
       return
     end
 
@@ -87,7 +87,7 @@ class SpotifyController < ApplicationController
     token_response = exchange_code_for_token(auth_code)
     
     if token_response[:error]
-      render_error(token_response[:error], :bad_request)
+      render json: { error: token_response[:error] }, status: :bad_request
       return
     end
 
