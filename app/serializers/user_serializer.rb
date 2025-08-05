@@ -1,5 +1,6 @@
 class UserSerializer
-  include Rails.application.routes.url_helpers
+  include ImageSerializable
+  extend ImageUrlHelper
 
   def self.profile_data(user)
     base_data = user.as_json(except: [
@@ -14,8 +15,7 @@ class UserSerializer
       reviews_count: user.reviews.count,
       bands_count: user.bands.count,
       spotify_connected: user.spotify_access_token.present?,
-      profile_image_url: user.profile_image.attached? ? 
-        Rails.application.routes.url_helpers.url_for(user.profile_image) : nil
+      profile_image_url: profile_image_url(user)
     )
   end
 
@@ -25,8 +25,7 @@ class UserSerializer
       username: user.username,
       email: user.email,
       about_me: user.about_me,
-      profile_image_url: user.profile_image.attached? ? 
-        Rails.application.routes.url_helpers.url_for(user.profile_image) : nil,
+      profile_image_url: profile_image_url(user),
       reviews_count: user.reviews.count,
       bands_count: user.bands.count
     }

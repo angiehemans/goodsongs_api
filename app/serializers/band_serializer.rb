@@ -1,5 +1,6 @@
 class BandSerializer
-  include Rails.application.routes.url_helpers
+  include ImageSerializable
+  extend ImageUrlHelper
 
   def self.summary(band)
     {
@@ -7,8 +8,7 @@ class BandSerializer
       slug: band.slug,
       name: band.name,
       location: band.location,
-      profile_picture_url: band.profile_picture.attached? ? 
-        Rails.application.routes.url_helpers.url_for(band.profile_picture) : nil,
+      profile_picture_url: profile_picture_url(band),
       reviews_count: band.reviews.count,
       user_owned: band.user_owned?
     }
@@ -25,8 +25,7 @@ class BandSerializer
       apple_music_link: band.apple_music_link,
       youtube_music_link: band.youtube_music_link,
       about: band.about,
-      profile_picture_url: band.profile_picture.attached? ? 
-        Rails.application.routes.url_helpers.url_for(band.profile_picture) : nil,
+      profile_picture_url: profile_picture_url(band),
       reviews_count: band.reviews.count,
       user_owned: band.user_owned?,
       owner: band.user ? { id: band.user.id, username: band.user.username } : nil,

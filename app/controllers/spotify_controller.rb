@@ -1,4 +1,6 @@
 class SpotifyController < ApplicationController
+  include ResourceController
+
   before_action :authenticate_request, except: [:callback, :connect]
   before_action :authenticate_request_optional, only: [:connect]
 
@@ -19,29 +21,21 @@ class SpotifyController < ApplicationController
     end
 
     unless current_user
+      error_message = 'Authentication required. Please use the secure flow from your app.'
       if request.format.json?
-        render json: { error: 'Authentication required' }, status: :unauthorized
+        render_error(error_message, :unauthorized)
       else
-        render plain: 'Authentication required. Please use the secure flow from your app.', status: :unauthorized
+        render plain: error_message, status: :unauthorized
       end
       return
     end
 
-    # Use base_url but ensure it matches your Spotify app settings
     redirect_uri = "#{request.base_url}/auth/spotify/callback"
-    puts "DEBUG: Redirect URI being used: #{redirect_uri}"
-    scope = 'user-read-recently-played user-read-email'
-    
-    spotify_auth_url = "https://accounts.spotify.com/authorize?" +
-      "client_id=#{ENV['SPOTIFY_CLIENT_ID']}&" +
-      "response_type=code&" +
-      "redirect_uri=#{CGI.escape(redirect_uri)}&" +
-      "scope=#{CGI.escape(scope)}&" +
-      "state=#{current_user.id}"
+    spotify_auth_url = SpotifyUrlService.authorization_url(current_user.id, redirect_uri)
     
     # Return JSON for AJAX calls, redirect for direct browser visits
     if request.format.json?
-      render json: { auth_url: spotify_auth_url }
+      json_response({ auth_url: spotify_auth_url })
     else
       redirect_to spotify_auth_url, allow_other_host: true
     end
@@ -57,23 +51,14 @@ class SpotifyController < ApplicationController
     # Return the secure URL with the temporary code
     connect_url = "#{request.base_url}/spotify/connect?auth_code=#{auth_code}"
     
-    render json: { connect_url: connect_url }
+    json_response({ connect_url: connect_url })
   end
 
   def connect_url
-    # Use base_url but ensure it matches your Spotify app settings
     redirect_uri = "#{request.base_url}/auth/spotify/callback"
-    puts "DEBUG: Redirect URI being used: #{redirect_uri}"
-    scope = 'user-read-recently-played user-read-email'
+    spotify_auth_url = SpotifyUrlService.authorization_url(current_user.id, redirect_uri)
     
-    spotify_auth_url = "https://accounts.spotify.com/authorize?" +
-      "client_id=#{ENV['SPOTIFY_CLIENT_ID']}&" +
-      "response_type=code&" +
-      "redirect_uri=#{CGI.escape(redirect_uri)}&" +
-      "scope=#{CGI.escape(scope)}&" +
-      "state=#{current_user.id}"
-    
-    render json: { auth_url: spotify_auth_url }
+    json_response({ auth_url: spotify_auth_url })
   end
 
   def callback
@@ -82,19 +67,19 @@ class SpotifyController < ApplicationController
     error = params[:error]
 
     if error
-      render json: { error: "Spotify authorization failed: #{error}" }, status: :bad_request
+      render_error("Spotify authorization failed: #{error}", :bad_request)
       return
     end
 
     unless auth_code && state
-      render json: { error: 'Missing authorization code or state' }, status: :bad_request
+      render_error('Missing authorization code or state', :bad_request)
       return
     end
 
     # Find user by state parameter
     user = User.find_by(id: state)
     unless user
-      render json: { error: 'Invalid state parameter' }, status: :bad_request
+      render_error('Invalid state parameter', :bad_request)
       return
     end
 
@@ -102,7 +87,7 @@ class SpotifyController < ApplicationController
     token_response = exchange_code_for_token(auth_code)
     
     if token_response[:error]
-      render json: { error: token_response[:error] }, status: :bad_request
+      render_error(token_response[:error], :bad_request)
       return
     end
 
@@ -124,23 +109,21 @@ class SpotifyController < ApplicationController
       spotify_expires_at: nil
     )
 
-    render json: { message: 'Spotify account disconnected successfully' }
+    json_response({ message: 'Spotify account disconnected successfully' })
   end
 
   def status
     connected = current_user.spotify_access_token.present?
-    render json: { 
+    json_response({ 
       connected: connected,
       expires_at: current_user.spotify_expires_at
-    }
+    })
   end
 
   private
 
   def exchange_code_for_token(auth_code)
-    # Use base_url but ensure it matches your Spotify app settings
     redirect_uri = "#{request.base_url}/auth/spotify/callback"
-    puts "DEBUG: Redirect URI being used: #{redirect_uri}"
     
     response = HTTParty.post(
       'https://accounts.spotify.com/api/token',
