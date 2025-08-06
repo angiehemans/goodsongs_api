@@ -67,7 +67,7 @@ class ReviewsController < ApplicationController
 
   def review_params
     params.require(:review).permit(:song_link, :band_name, :song_name, :artwork_url, 
-                                  :review_text, :overall_rating, 
+                                  :review_text, 
                                   liked_aspects: [])
   end
 
