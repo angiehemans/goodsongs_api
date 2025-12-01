@@ -1,0 +1,18 @@
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.4.0/gems/racc-1.8.1/ext/racc/cparse
+/snap/ruby/438/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.4.0/gems/racc-1.8.1/ext/racc/cparse
+make DESTDIR\= sitearchdir\=./.gem.20251201-89105-hlgfcm sitelibdir\=./.gem.20251201-89105-hlgfcm clean
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.4.0/gems/racc-1.8.1/ext/racc/cparse
+make DESTDIR\= sitearchdir\=./.gem.20251201-89105-hlgfcm sitelibdir\=./.gem.20251201-89105-hlgfcm
+compiling cparse.c
+linking shared-object racc/cparse.so
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.4.0/gems/racc-1.8.1/ext/racc/cparse
+make DESTDIR\= sitearchdir\=./.gem.20251201-89105-hlgfcm sitelibdir\=./.gem.20251201-89105-hlgfcm install
+/usr/bin/install -c -m 0755 cparse.so ./.gem.20251201-89105-hlgfcm/racc
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.4.0/gems/racc-1.8.1/ext/racc/cparse
+make DESTDIR\= sitearchdir\=./.gem.20251201-89105-hlgfcm sitelibdir\=./.gem.20251201-89105-hlgfcm clean

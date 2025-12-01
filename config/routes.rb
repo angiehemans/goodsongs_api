@@ -2,7 +2,13 @@
 Rails.application.routes.draw do
   post '/login', to: 'authentication#authenticate'
   post '/signup', to: 'users#create'
-  
+
+  # Onboarding routes
+  get '/onboarding/status', to: 'onboarding#status'
+  post '/onboarding/account-type', to: 'onboarding#set_account_type'
+  post '/onboarding/complete-fan-profile', to: 'onboarding#complete_fan_profile'
+  post '/onboarding/complete-band-profile', to: 'onboarding#complete_band_profile'
+
   # Profile routes - cleaned up and RESTful
   get '/profile', to: 'users#show'
   patch '/profile', to: 'users#update'

@@ -1,6 +1,7 @@
 class SpotifyController < ApplicationController
   include ResourceController
 
+  skip_before_action :require_onboarding_completed
   before_action :authenticate_request, except: [:callback, :connect]
   before_action :authenticate_request_optional, only: [:connect]
 

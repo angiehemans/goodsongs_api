@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_06_211608) do
+ActiveRecord::Schema[8.0].define(version: 2025_12_01_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -81,14 +81,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_211608) do
   create_table "users", force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
-    t.string "username", null: false
+    t.string "username"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.text "spotify_access_token"
     t.text "spotify_refresh_token"
     t.datetime "spotify_expires_at"
     t.text "about_me"
+    t.integer "account_type"
+    t.boolean "onboarding_completed", default: false, null: false
+    t.bigint "primary_band_id"
+    t.index ["account_type"], name: "index_users_on_account_type"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["primary_band_id"], name: "index_users_on_primary_band_id"
     t.index ["spotify_expires_at"], name: "index_users_on_spotify_expires_at"
     t.index ["username"], name: "index_users_on_username", unique: true
   end
@@ -98,4 +103,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_06_211608) do
   add_foreign_key "bands", "users"
   add_foreign_key "reviews", "bands"
   add_foreign_key "reviews", "users"
+  add_foreign_key "users", "bands", column: "primary_band_id"
 end

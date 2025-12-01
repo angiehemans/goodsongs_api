@@ -1,7 +1,7 @@
 # app/controllers/users_controller.rb
 class UsersController < ApplicationController
-  
   skip_before_action :authenticate_request, only: [:create, :profile_by_username]
+  skip_before_action :require_onboarding_completed, only: [:create, :profile_by_username, :show]
 
   def create
     user = User.create!(user_params)
@@ -50,7 +50,8 @@ class UsersController < ApplicationController
   private
 
   def user_params
-    params.permit(:username, :email, :password, :password_confirmation)
+    # Signup only requires email and password - username set during onboarding for FAN accounts
+    params.permit(:email, :password, :password_confirmation)
   end
 
   def profile_params
