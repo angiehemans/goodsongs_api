@@ -35,8 +35,10 @@ class BandSerializer
   end
 
   def self.with_reviews(band)
+    # Only include reviews from active (non-disabled) users
+    active_reviews = QueryService.band_reviews_from_active_users(band)
     full(band).merge(
-      reviews: band.reviews.order(created_at: :desc).map do |review|
+      reviews: active_reviews.map do |review|
         ReviewSerializer.with_author(review)
       end
     )

@@ -31,7 +31,12 @@ Rails.application.routes.draw do
   # Band routes - consolidated user bands endpoint
   get '/bands/user', to: 'bands#user_bands'
   resources :bands, except: [:new, :edit], param: :slug
-  
+
+  # Admin routes
+  get '/admin/users', to: 'admin#users'
+  get '/admin/users/:id', to: 'admin#user_detail'
+  patch '/admin/users/:id/toggle-disabled', to: 'admin#toggle_disabled'
+
   # Health check endpoints
   get '/health', to: proc { [200, {}, ['OK']] }
   get '/up', to: proc { [200, {}, ['OK']] }

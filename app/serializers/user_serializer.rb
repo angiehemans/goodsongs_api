@@ -19,7 +19,8 @@ class UserSerializer
       profile_image_url: profile_image_url(user),
       account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
-      display_name: user.display_name
+      display_name: user.display_name,
+      admin: user.admin?
     )
 
     # Include primary band for BAND accounts
@@ -40,6 +41,7 @@ class UserSerializer
       reviews_count: user.reviews.count,
       bands_count: user.bands.count,
       account_type: user.account_type,
+      onboarding_completed: user.onboarding_completed,
       display_name: user.display_name
     }
 

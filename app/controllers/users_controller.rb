@@ -36,14 +36,20 @@ class UsersController < ApplicationController
 
   def profile_by_username
     user = User.find_by!(username: params[:username].downcase)
+
+    # Don't show disabled user profiles publicly
+    if user.disabled?
+      return render json: { error: 'User not found' }, status: :not_found
+    end
+
     reviews = user.reviews.includes(:band).order(created_at: :desc)
     bands = user.bands.order(:name)
-    
+
     user_data = UserSerializer.public_profile(user).merge(
       reviews: reviews.map { |review| ReviewSerializer.full(review) },
       bands: bands.map { |band| BandSerializer.summary(band) }
     )
-    
+
     json_response(user_data)
   end
 

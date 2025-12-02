@@ -43,6 +43,14 @@ class User < ApplicationRecord
     end
   end
 
+  # Check if user can modify a resource (owner or admin)
+  def can_modify?(resource)
+    return true if admin?
+    return resource.user_id == id if resource.respond_to?(:user_id)
+    return resource.id == id if resource.is_a?(User)
+    false
+  end
+
   private
 
   def username_required?

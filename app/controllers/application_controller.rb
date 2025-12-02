@@ -3,6 +3,7 @@ class ApplicationController < ActionController::API
   include Authenticable
   include ExceptionHandler
   include Onboardable
+  include Adminable
 
   private
 

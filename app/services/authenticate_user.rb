@@ -15,6 +15,8 @@ class AuthenticateUser
 
   def user
     user = User.find_by(email: email)
+
+    raise(ExceptionHandler::AuthenticationError, Message.account_disabled) if user&.disabled?
     return user if user && user.authenticate(password)
 
     raise(ExceptionHandler::AuthenticationError, Message.invalid_credentials)

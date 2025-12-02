@@ -1,5 +1,6 @@
 class ReviewSerializer
   include Rails.application.routes.url_helpers
+  extend ImageUrlHelper
 
   def self.full(review)
     {
@@ -26,7 +27,8 @@ class ReviewSerializer
       liked_aspects: review.liked_aspects_array,
       author: {
         id: review.user.id,
-        username: review.user.username
+        username: review.user.username,
+        profile_image_url: profile_image_url(review.user)
       },
       created_at: review.created_at,
       updated_at: review.updated_at

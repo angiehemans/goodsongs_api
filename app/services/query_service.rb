@@ -1,6 +1,6 @@
 class QueryService
   def self.reviews_with_associations(scope = Review)
-    scope.includes(:user, :band).order(created_at: :desc)
+    scope.from_active_users.includes(:user, :band).order(created_at: :desc)
   end
 
   def self.bands_with_associations(scope = Band)
@@ -21,5 +21,10 @@ class QueryService
 
   def self.bands_ordered_by_name(scope = Band)
     scope.includes(:reviews, :user).order(:name)
+  end
+
+  # For band pages - only show reviews from active users
+  def self.band_reviews_from_active_users(band)
+    band.reviews.from_active_users.includes(:user).order(created_at: :desc)
   end
 end
