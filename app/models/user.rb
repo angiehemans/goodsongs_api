@@ -6,12 +6,18 @@ class User < ApplicationRecord
   has_one_attached :profile_image
   belongs_to :primary_band, class_name: 'Band', optional: true
 
+  # Geocoding for user location
+  geocoded_by :full_location
+  after_validation :geocode, if: :should_geocode?
+
   enum :account_type, { fan: 0, band: 1 }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, length: { minimum: 6 }, if: -> { new_record? || !password.nil? }
   validates :about_me, length: { maximum: 500 }
+  validates :city, length: { maximum: 100 }, allow_blank: true
+  validates :region, length: { maximum: 100 }, allow_blank: true
 
   # Username is only required for FAN accounts after onboarding
   validates :username, presence: true, if: :username_required?
@@ -51,7 +57,27 @@ class User < ApplicationRecord
     false
   end
 
+  # Full location string for geocoding
+  def full_location
+    [city, region].compact.reject(&:blank?).join(', ')
+  end
+
+  # Check if user has a location set
+  def has_location?
+    city.present? || region.present?
+  end
+
+  # Location display string
+  def location
+    full_location.presence
+  end
+
   private
+
+  # Only geocode if location fields changed and we have location data
+  def should_geocode?
+    (city_changed? || region_changed?) && full_location.present?
+  end
 
   def username_required?
     fan? && onboarding_completed?

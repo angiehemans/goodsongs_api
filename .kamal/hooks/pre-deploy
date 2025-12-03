@@ -1,5 +1,17 @@
 #!/bin/sh
 
-# Run database migrations before deploying new container
-echo "Running database migrations..."
-kamal app exec --reuse "bin/rails db:migrate"
+# This hook runs AFTER the image is built/pushed but BEFORE the new container boots
+# We run migrations using the NEW image that was just built
+
+echo "Running database migrations with new image..."
+
+# Get the version being deployed (passed by Kamal)
+VERSION=${KAMAL_VERSION}
+
+if [ -z "$VERSION" ]; then
+  echo "No version specified, skipping migrations"
+  exit 0
+fi
+
+# Run migrations using the new image directly on the server
+ssh root@143.198.62.246 "docker run --rm --network kamal --env-file /root/.kamal/apps/goodsongs-api/env/roles/web.env angiehemans/goodsongs-api:${VERSION} bin/rails db:migrate"

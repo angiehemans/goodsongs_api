@@ -20,7 +20,12 @@ class UserSerializer
       account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
       display_name: user.display_name,
-      admin: user.admin?
+      admin: user.admin?,
+      city: user.city,
+      region: user.region,
+      location: user.location,
+      latitude: user.latitude,
+      longitude: user.longitude
     )
 
     # Include primary band for BAND accounts
@@ -42,7 +47,8 @@ class UserSerializer
       bands_count: user.bands.count,
       account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
-      display_name: user.display_name
+      display_name: user.display_name,
+      location: user.location
     }
 
     # Include primary band for BAND accounts

@@ -94,11 +94,11 @@ class OnboardingController < ApplicationController
   private
 
   def fan_profile_params
-    params.permit(:username, :about_me, :profile_image)
+    params.permit(:username, :about_me, :profile_image, :city, :region)
   end
 
   def band_profile_params
-    params.permit(:name, :about, :location, :spotify_link, :bandcamp_link,
+    params.permit(:name, :about, :city, :region, :spotify_link, :bandcamp_link,
                   :apple_music_link, :youtube_music_link, :profile_picture)
   end
 end

@@ -139,6 +139,8 @@ Complete FAN profile setup (Step 2 for FAN accounts).
 username: "johndoe"
 about_me: "Music lover from NYC" (optional)
 profile_image: <file> (optional)
+city: "Los Angeles" (optional)
+region: "California" (optional)
 ```
 
 **Response (200 OK):**
@@ -157,7 +159,12 @@ profile_image: <file> (optional)
     "account_type": "fan",
     "onboarding_completed": true,
     "display_name": "johndoe",
-    "admin": false
+    "admin": false,
+    "city": "Los Angeles",
+    "region": "California",
+    "location": "Los Angeles, California",
+    "latitude": 34.0522,
+    "longitude": -118.2437
   }
 }
 ```
@@ -174,7 +181,8 @@ Complete BAND profile setup (Step 2 for BAND accounts). Creates the primary band
 ```
 name: "The Band Name" (required)
 about: "We make great music" (optional)
-location: "New York" (optional)
+city: "New York" (optional)
+region: "New York" (optional)
 spotify_link: "https://open.spotify.com/artist/..." (optional)
 bandcamp_link: "https://theband.bandcamp.com" (optional)
 apple_music_link: "https://music.apple.com/..." (optional)
@@ -203,7 +211,7 @@ profile_picture: <file> (optional)
       "id": 1,
       "slug": "the-band-name",
       "name": "The Band Name",
-      "location": "New York",
+      "location": "New York, New York",
       "profile_picture_url": "https://...",
       "reviews_count": 0,
       "user_owned": true
@@ -213,7 +221,11 @@ profile_picture: <file> (optional)
     "id": 1,
     "slug": "the-band-name",
     "name": "The Band Name",
-    "location": "New York",
+    "city": "New York",
+    "region": "New York",
+    "location": "New York, New York",
+    "latitude": 40.7128,
+    "longitude": -74.006,
     "spotify_link": "https://open.spotify.com/artist/...",
     "bandcamp_link": "https://theband.bandcamp.com",
     "apple_music_link": null,
@@ -253,7 +265,12 @@ Get current authenticated user's profile.
   "account_type": "fan",
   "onboarding_completed": true,
   "display_name": "johndoe",
-  "admin": false
+  "admin": false,
+  "city": "Los Angeles",
+  "region": "California",
+  "location": "Los Angeles, California",
+  "latitude": 34.0522,
+  "longitude": -118.2437
 }
 ```
 
@@ -272,6 +289,11 @@ For BAND accounts:
   "onboarding_completed": true,
   "display_name": "The Band Name",
   "admin": false,
+  "city": null,
+  "region": null,
+  "location": null,
+  "latitude": null,
+  "longitude": null,
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -296,7 +318,11 @@ Update current user's profile.
 ```
 about_me: "Updated bio"
 profile_image: <file>
+city: "Los Angeles"
+region: "California"
 ```
+
+Note: When city/region are provided, latitude and longitude are automatically calculated via geocoding. The `region` field can be used for US states (e.g., "California"), countries (e.g., "United Kingdom"), or provinces (e.g., "Ontario, Canada").
 
 **Response (200 OK):**
 Returns updated user profile (same format as GET /profile)
@@ -327,6 +353,7 @@ Get public profile for a user by username.
   "bands_count": 2,
   "account_type": "fan",
   "display_name": "johndoe",
+  "location": "Los Angeles, California",
   "reviews": [
     {
       "id": 1,
@@ -554,7 +581,11 @@ Get all bands (ordered by name).
     "id": 1,
     "slug": "band-name",
     "name": "Band Name",
-    "location": "New York",
+    "city": "New York",
+    "region": "New York",
+    "location": "New York, New York",
+    "latitude": 40.7128,
+    "longitude": -74.006,
     "spotify_link": "https://open.spotify.com/artist/...",
     "bandcamp_link": "https://bandname.bandcamp.com",
     "apple_music_link": null,
@@ -584,7 +615,11 @@ Get a single band by slug (includes reviews).
   "id": 1,
   "slug": "band-name",
   "name": "Band Name",
-  "location": "New York",
+  "city": "New York",
+  "region": "New York",
+  "location": "New York, New York",
+  "latitude": 40.7128,
+  "longitude": -74.006,
   "spotify_link": "https://open.spotify.com/artist/...",
   "bandcamp_link": "https://bandname.bandcamp.com",
   "apple_music_link": null,
@@ -627,7 +662,8 @@ Create a new band.
 **Request Body (multipart/form-data):**
 ```
 band[name]: "Band Name" (required)
-band[location]: "New York"
+band[city]: "New York"
+band[region]: "New York"
 band[spotify_link]: "https://open.spotify.com/artist/..."
 band[bandcamp_link]: "https://bandname.bandcamp.com"
 band[apple_music_link]: "https://music.apple.com/..."
@@ -635,6 +671,8 @@ band[youtube_music_link]: "https://music.youtube.com/..."
 band[about]: "We make great music"
 band[profile_picture]: <file>
 ```
+
+Note: When city/region are provided, latitude and longitude are automatically calculated via geocoding.
 
 **Response (201 Created):**
 Returns created band object

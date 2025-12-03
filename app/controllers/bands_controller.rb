@@ -55,7 +55,7 @@ class BandsController < ApplicationController
   end
 
   def band_params
-    params.require(:band).permit(:name, :slug, :location, :spotify_link, :bandcamp_link, 
+    params.require(:band).permit(:name, :slug, :city, :region, :spotify_link, :bandcamp_link,
                                  :apple_music_link, :youtube_music_link, :about, :profile_picture)
   end
 
