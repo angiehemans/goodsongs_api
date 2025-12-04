@@ -12,6 +12,11 @@ class ReviewSerializer
       review_text: review.review_text,
       liked_aspects: review.liked_aspects_array,
       band: BandSerializer.full(review.band),
+      author: {
+        id: review.user.id,
+        username: review.user.username,
+        profile_image_url: profile_image_url(review.user)
+      },
       created_at: review.created_at,
       updated_at: review.updated_at
     }

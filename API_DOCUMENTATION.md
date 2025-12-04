@@ -364,6 +364,11 @@ Get public profile for a user by username.
       "review_text": "Great song!",
       "liked_aspects": ["melody", "lyrics"],
       "band": { ... },
+      "author": {
+        "id": 1,
+        "username": "johndoe",
+        "profile_image_url": "https://..."
+      },
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -445,7 +450,11 @@ Get all reviews (paginated, most recent first).
       "id": 1,
       "slug": "artist-name",
       "name": "Artist Name",
+      "city": null,
+      "region": null,
       "location": null,
+      "latitude": null,
+      "longitude": null,
       "spotify_link": null,
       "bandcamp_link": null,
       "apple_music_link": null,
@@ -457,6 +466,11 @@ Get all reviews (paginated, most recent first).
       "owner": null,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
+    },
+    "author": {
+      "id": 1,
+      "username": "johndoe",
+      "profile_image_url": "https://..."
     },
     "created_at": "2024-12-01T00:00:00.000Z",
     "updated_at": "2024-12-01T00:00:00.000Z"
@@ -810,7 +824,11 @@ Get a single user's profile and all their reviews (admin only).
         "id": 1,
         "slug": "artist-name",
         "name": "Artist Name",
+        "city": null,
+        "region": null,
         "location": null,
+        "latitude": null,
+        "longitude": null,
         "spotify_link": null,
         "bandcamp_link": null,
         "apple_music_link": null,
@@ -822,6 +840,11 @@ Get a single user's profile and all their reviews (admin only).
         "owner": null,
         "created_at": "2024-12-01T00:00:00.000Z",
         "updated_at": "2024-12-01T00:00:00.000Z"
+      },
+      "author": {
+        "id": 1,
+        "username": "johndoe",
+        "profile_image_url": "https://..."
       },
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
