@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_12_03_000003) do
+ActiveRecord::Schema[8.0].define(version: 2025_12_04_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -57,11 +57,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_03_000003) do
     t.string "region"
     t.float "latitude"
     t.float "longitude"
+    t.boolean "disabled", default: false, null: false
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
     t.index ["name"], name: "index_bands_on_name"
     t.index ["slug"], name: "index_bands_on_slug", unique: true
     t.index ["user_id"], name: "index_bands_on_user_id"
+  end
+
+  create_table "follows", force: :cascade do |t|
+    t.bigint "follower_id", null: false
+    t.bigint "followed_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["followed_id"], name: "index_follows_on_followed_id"
+    t.index ["follower_id", "followed_id"], name: "index_follows_on_follower_id_and_followed_id", unique: true
+    t.index ["follower_id"], name: "index_follows_on_follower_id"
   end
 
   create_table "reviews", force: :cascade do |t|
@@ -112,6 +123,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_03_000003) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "bands", "users"
+  add_foreign_key "follows", "users", column: "followed_id"
+  add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "reviews", "bands"
   add_foreign_key "reviews", "users"
   add_foreign_key "users", "bands", column: "primary_band_id"

@@ -12,6 +12,10 @@ class BandsController < ApplicationController
   end
 
   def show
+    # Don't show disabled bands publicly
+    if @band.disabled?
+      return render json: { error: 'Band not found' }, status: :not_found
+    end
     json_response(BandSerializer.with_reviews(@band))
   end
 

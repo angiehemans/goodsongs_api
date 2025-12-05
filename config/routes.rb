@@ -26,7 +26,16 @@ Rails.application.routes.draw do
   get '/reviews/user', to: 'reviews#current_user_reviews'
   resources :reviews, except: [:new, :edit]
   get '/feed', to: 'reviews#feed'
+  get '/feed/following', to: 'reviews#following_feed'
   get '/users/:user_id/reviews', to: 'reviews#user_reviews'
+
+  # Follow routes
+  post '/users/:user_id/follow', to: 'follows#create'
+  delete '/users/:user_id/follow', to: 'follows#destroy'
+  get '/following', to: 'follows#following'
+  get '/followers', to: 'follows#followers'
+  get '/users/:user_id/following', to: 'follows#user_following'
+  get '/users/:user_id/followers', to: 'follows#user_followers'
   
   # Band routes - consolidated user bands endpoint
   get '/bands/user', to: 'bands#user_bands'
@@ -36,6 +45,17 @@ Rails.application.routes.draw do
   get '/admin/users', to: 'admin#users'
   get '/admin/users/:id', to: 'admin#user_detail'
   patch '/admin/users/:id/toggle-disabled', to: 'admin#toggle_disabled'
+  delete '/admin/users/:id', to: 'admin#destroy_user'
+  get '/admin/bands', to: 'admin#bands'
+  patch '/admin/bands/:id/toggle-disabled', to: 'admin#toggle_band_disabled'
+  delete '/admin/bands/:id', to: 'admin#destroy_band'
+  get '/admin/reviews', to: 'admin#reviews'
+  delete '/admin/reviews/:id', to: 'admin#destroy_review'
+
+  # Discover routes (public, no auth required)
+  get '/discover/bands', to: 'discover#bands'
+  get '/discover/users', to: 'discover#users'
+  get '/discover/reviews', to: 'discover#reviews'
 
   # Health check endpoints
   get '/health', to: proc { [200, {}, ['OK']] }

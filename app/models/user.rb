@@ -6,6 +6,12 @@ class User < ApplicationRecord
   has_one_attached :profile_image
   belongs_to :primary_band, class_name: 'Band', optional: true
 
+  # Follow associations
+  has_many :active_follows, class_name: 'Follow', foreign_key: 'follower_id', dependent: :destroy
+  has_many :passive_follows, class_name: 'Follow', foreign_key: 'followed_id', dependent: :destroy
+  has_many :following, through: :active_follows, source: :followed
+  has_many :followers, through: :passive_follows, source: :follower
+
   # Geocoding for user location
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?
@@ -70,6 +76,21 @@ class User < ApplicationRecord
   # Location display string
   def location
     full_location.presence
+  end
+
+  # Follow a user
+  def follow(other_user)
+    following << other_user unless following?(other_user)
+  end
+
+  # Unfollow a user
+  def unfollow(other_user)
+    following.delete(other_user)
+  end
+
+  # Check if following a user
+  def following?(other_user)
+    following.include?(other_user)
   end
 
   private

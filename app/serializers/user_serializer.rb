@@ -25,7 +25,9 @@ class UserSerializer
       region: user.region,
       location: user.location,
       latitude: user.latitude,
-      longitude: user.longitude
+      longitude: user.longitude,
+      followers_count: user.followers.count,
+      following_count: user.following.count
     )
 
     # Include primary band for BAND accounts
@@ -48,7 +50,9 @@ class UserSerializer
       account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
       display_name: user.display_name,
-      location: user.location
+      location: user.location,
+      followers_count: user.followers.count,
+      following_count: user.following.count
     }
 
     # Include primary band for BAND accounts

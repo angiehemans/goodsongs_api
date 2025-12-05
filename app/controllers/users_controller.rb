@@ -50,6 +50,11 @@ class UsersController < ApplicationController
       bands: bands.map { |band| BandSerializer.summary(band) }
     )
 
+    # Include follow status if authenticated
+    if authenticated_user
+      user_data[:following] = authenticated_user.following?(user)
+    end
+
     json_response(user_data)
   end
 

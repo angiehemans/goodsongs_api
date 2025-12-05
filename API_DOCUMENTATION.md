@@ -270,7 +270,9 @@ Get current authenticated user's profile.
   "region": "California",
   "location": "Los Angeles, California",
   "latitude": 34.0522,
-  "longitude": -118.2437
+  "longitude": -118.2437,
+  "followers_count": 25,
+  "following_count": 12
 }
 ```
 
@@ -294,6 +296,8 @@ For BAND accounts:
   "location": null,
   "latitude": null,
   "longitude": null,
+  "followers_count": 100,
+  "following_count": 5,
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -339,7 +343,7 @@ Alias for PATCH /profile (for frontend compatibility).
 
 Get public profile for a user by username.
 
-**Authentication:** None
+**Authentication:** None (optional - if authenticated, includes `following` field)
 
 **Response (200 OK):**
 ```json
@@ -354,6 +358,9 @@ Get public profile for a user by username.
   "account_type": "fan",
   "display_name": "johndoe",
   "location": "Los Angeles, California",
+  "followers_count": 25,
+  "following_count": 12,
+  "following": true,
   "reviews": [
     {
       "id": 1,
@@ -386,6 +393,8 @@ Get public profile for a user by username.
   ]
 }
 ```
+
+Note: The `following` field is only included if the request includes a valid authentication token.
 
 ---
 
@@ -558,6 +567,51 @@ Returns array of reviews (same format as GET /reviews)
 
 ---
 
+### GET /feed/following
+
+Get paginated feed of reviews from users you follow and reviews about bands owned by users you follow.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "reviews": [
+    {
+      "id": 1,
+      "song_link": "https://open.spotify.com/track/...",
+      "band_name": "Artist Name",
+      "song_name": "Song Title",
+      "artwork_url": "https://...",
+      "review_text": "Great song!",
+      "liked_aspects": ["melody", "lyrics"],
+      "band": { ... },
+      "author": {
+        "id": 2,
+        "username": "followeduser",
+        "profile_image_url": "https://..."
+      },
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 45,
+    "total_pages": 3,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
 ### GET /reviews/user
 
 Get current user's most recent reviews (limit 5).
@@ -725,6 +779,262 @@ Get all bands owned by the current user.
 
 **Response (200 OK):**
 Returns array of bands (same format as GET /bands)
+
+---
+
+## Follow Endpoints
+
+### POST /users/:user_id/follow
+
+Follow a user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "Successfully followed johndoe",
+  "following": true,
+  "followers_count": 10,
+  "following_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": "You are already following this user"
+}
+```
+
+---
+
+### DELETE /users/:user_id/follow
+
+Unfollow a user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "Successfully unfollowed johndoe",
+  "following": false,
+  "followers_count": 9,
+  "following_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": "You are not following this user"
+}
+```
+
+---
+
+### GET /following
+
+Get list of users the current user is following.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 2,
+    "username": "janedoe",
+    "display_name": "janedoe",
+    "account_type": "fan",
+    "profile_image_url": "https://...",
+    "location": "Los Angeles, California",
+    "following": true
+  },
+  {
+    "id": 3,
+    "username": null,
+    "display_name": "The Band Name",
+    "account_type": "band",
+    "profile_image_url": "https://...",
+    "location": "New York, New York",
+    "following": true
+  }
+]
+```
+
+---
+
+### GET /followers
+
+Get list of users following the current user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+Returns array of users (same format as GET /following)
+
+---
+
+### GET /users/:user_id/following
+
+Get list of users a specific user is following.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+Returns array of users (same format as GET /following)
+
+---
+
+### GET /users/:user_id/followers
+
+Get list of users following a specific user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+Returns array of users (same format as GET /following)
+
+---
+
+## Discover Endpoints
+
+Public endpoints for discovering content on the platform. No authentication required.
+
+### GET /discover/bands
+
+Get paginated list of all bands.
+
+**Authentication:** None
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "bands": [
+    {
+      "id": 1,
+      "slug": "band-name",
+      "name": "Band Name",
+      "city": "New York",
+      "region": "New York",
+      "location": "New York, New York",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "spotify_link": "https://open.spotify.com/artist/...",
+      "bandcamp_link": "https://bandname.bandcamp.com",
+      "apple_music_link": null,
+      "youtube_music_link": null,
+      "about": "We make great music",
+      "profile_picture_url": "https://...",
+      "reviews_count": 5,
+      "user_owned": true,
+      "owner": { "id": 1, "username": "johndoe" },
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 150,
+    "total_pages": 8,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+### GET /discover/users
+
+Get paginated list of all active fan users who have completed onboarding (excludes band accounts).
+
+**Authentication:** None
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "johndoe",
+      "display_name": "johndoe",
+      "account_type": "fan",
+      "about_me": "Music lover",
+      "profile_image_url": "https://...",
+      "location": "Los Angeles, California",
+      "reviews_count": 10,
+      "bands_count": 2,
+      "followers_count": 25,
+      "following_count": 12
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 500,
+    "total_pages": 25,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+### GET /discover/reviews
+
+Get paginated list of all reviews (from active users only).
+
+**Authentication:** None
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "reviews": [
+    {
+      "id": 1,
+      "song_link": "https://open.spotify.com/track/...",
+      "band_name": "Artist Name",
+      "song_name": "Song Title",
+      "artwork_url": "https://...",
+      "review_text": "Great song!",
+      "liked_aspects": ["melody", "lyrics"],
+      "band": { ... },
+      "author": {
+        "id": 1,
+        "username": "johndoe",
+        "profile_image_url": "https://..."
+      },
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 1000,
+    "total_pages": 50,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
 
 ---
 
@@ -925,6 +1235,141 @@ Toggle a user's disabled status (admin only). Disabled users cannot login and th
 
 ---
 
+### DELETE /admin/users/:id
+
+Delete a user and all their associated data (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+```json
+{
+  "message": "User has been deleted"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": "You cannot delete your own account"
+}
+```
+
+---
+
+### GET /admin/bands
+
+Get all bands including disabled ones (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "slug": "band-name",
+    "name": "Band Name",
+    "city": "New York",
+    "region": "New York",
+    "location": "New York, New York",
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "spotify_link": "https://open.spotify.com/artist/...",
+    "bandcamp_link": "https://bandname.bandcamp.com",
+    "apple_music_link": null,
+    "youtube_music_link": null,
+    "about": "We make great music",
+    "profile_picture_url": "https://...",
+    "reviews_count": 5,
+    "user_owned": true,
+    "owner": { "id": 1, "username": "johndoe" },
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z",
+    "disabled": false
+  }
+]
+```
+
+---
+
+### PATCH /admin/bands/:id/toggle-disabled
+
+Toggle a band's disabled status (admin only). Disabled bands are hidden from public pages.
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK) - When disabling:**
+```json
+{
+  "message": "Band has been disabled",
+  "band": {
+    "id": 1,
+    "slug": "band-name",
+    "name": "Band Name",
+    "disabled": true,
+    ...
+  }
+}
+```
+
+**Response (200 OK) - When enabling:**
+```json
+{
+  "message": "Band has been enabled",
+  "band": {
+    "id": 1,
+    "slug": "band-name",
+    "name": "Band Name",
+    "disabled": false,
+    ...
+  }
+}
+```
+
+---
+
+### DELETE /admin/bands/:id
+
+Delete a band and all its reviews (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+```json
+{
+  "message": "Band has been deleted"
+}
+```
+
+---
+
+### GET /admin/reviews
+
+Get all reviews (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+Returns array of reviews (same format as GET /reviews)
+
+---
+
+### DELETE /admin/reviews/:id
+
+Delete a review (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+```json
+{
+  "message": "Review has been deleted"
+}
+```
+
+---
+
 ## Spotify Integration Endpoints
 
 ### GET /spotify/connect
@@ -1085,11 +1530,28 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
 
 4. **Disabled Users:**
    - Admins can disable users via `PATCH /admin/users/:id/toggle-disabled`
+   - Admins can delete users via `DELETE /admin/users/:id`
    - Disabled users cannot login (returns "This account has been disabled")
    - Disabled user profiles return 404 on public profile pages (`/users/:username`)
    - Reviews from disabled users are hidden from all public feeds and band pages
    - Admins can still view disabled users and their reviews in the admin dashboard
 
-5. **File Uploads:**
+5. **Disabled Bands:**
+   - Admins can disable bands via `PATCH /admin/bands/:id/toggle-disabled`
+   - Admins can delete bands via `DELETE /admin/bands/:id`
+   - Disabled bands return 404 on public band pages (`/bands/:slug`)
+   - Disabled bands are hidden from all public band listings
+   - Admins can still view disabled bands in the admin dashboard
+
+6. **File Uploads:**
    - Use `multipart/form-data` content type
    - Supported fields: `profile_image` (users), `profile_picture` (bands)
+
+7. **Follow System:**
+   - Users (both fans and bands) can follow other users (including themselves)
+   - Following feed (`GET /feed/following`) shows:
+     - Reviews written by users you follow
+     - Reviews written about bands owned by users you follow
+   - Following feed is paginated for performance
+   - Public profiles include `followers_count` and `following_count`
+   - When viewing a profile while authenticated, `following` boolean indicates if you follow that user
