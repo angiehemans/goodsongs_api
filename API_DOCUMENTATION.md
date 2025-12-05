@@ -899,6 +899,121 @@ Returns array of users (same format as GET /following)
 
 ---
 
+## Notification Endpoints
+
+### GET /notifications
+
+Get paginated list of notifications for the current user.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "notifications": [
+    {
+      "id": 1,
+      "type": "new_follower",
+      "read": false,
+      "created_at": "2024-12-04T00:00:00.000Z",
+      "actor": {
+        "id": 2,
+        "username": "janedoe",
+        "display_name": "janedoe",
+        "profile_image_url": "https://..."
+      },
+      "message": "janedoe started following you"
+    },
+    {
+      "id": 2,
+      "type": "new_review",
+      "read": true,
+      "created_at": "2024-12-03T00:00:00.000Z",
+      "actor": {
+        "id": 3,
+        "username": "musicfan",
+        "display_name": "musicfan",
+        "profile_image_url": "https://..."
+      },
+      "message": "musicfan reviewed Your Song Title",
+      "review": {
+        "id": 5,
+        "song_name": "Your Song Title",
+        "band_name": "Your Band"
+      }
+    }
+  ],
+  "unread_count": 3,
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 15,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+### GET /notifications/unread_count
+
+Get count of unread notifications.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "unread_count": 5
+}
+```
+
+---
+
+### PATCH /notifications/:id/read
+
+Mark a specific notification as read.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "Notification marked as read",
+  "notification": {
+    "id": 1,
+    "type": "new_follower",
+    "read": true,
+    "created_at": "2024-12-04T00:00:00.000Z",
+    "actor": { ... },
+    "message": "janedoe started following you"
+  }
+}
+```
+
+---
+
+### PATCH /notifications/read_all
+
+Mark all notifications as read.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "All notifications marked as read"
+}
+```
+
+---
+
 ## Discover Endpoints
 
 Public endpoints for discovering content on the platform. No authentication required.
@@ -1555,3 +1670,10 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
    - Following feed is paginated for performance
    - Public profiles include `followers_count` and `following_count`
    - When viewing a profile while authenticated, `following` boolean indicates if you follow that user
+
+8. **Notifications:**
+   - Users receive notifications when someone follows them
+   - Band owners receive notifications when someone reviews their band
+   - Notification types: `new_follower`, `new_review`
+   - Notifications are paginated and include unread count
+   - Users can mark individual notifications or all notifications as read

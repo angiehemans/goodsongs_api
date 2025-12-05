@@ -12,6 +12,9 @@ class User < ApplicationRecord
   has_many :following, through: :active_follows, source: :followed
   has_many :followers, through: :passive_follows, source: :follower
 
+  # Notifications
+  has_many :notifications, dependent: :destroy
+
   # Geocoding for user location
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?

@@ -1,4 +1,6 @@
 class FollowsController < ApplicationController
+  extend ImageUrlHelper
+
   before_action :authenticate_request
   before_action :set_user, only: [:create, :destroy]
 
@@ -9,6 +11,12 @@ class FollowsController < ApplicationController
     end
 
     current_user.follow(@user)
+
+    # Create notification for the followed user (unless following self)
+    if current_user != @user
+      Notification.notify_new_follower(followed_user: @user, follower: current_user)
+    end
+
     json_response({
       message: "Successfully followed #{@user.display_name}",
       following: true,
@@ -79,7 +87,7 @@ class FollowsController < ApplicationController
       username: user.username,
       display_name: user.display_name,
       account_type: user.account_type,
-      profile_image_url: ImageUrlHelper.profile_image_url(user),
+      profile_image_url: self.class.profile_image_url(user),
       location: user.location,
       following: current_user.following?(user)
     }

@@ -36,6 +36,12 @@ Rails.application.routes.draw do
   get '/followers', to: 'follows#followers'
   get '/users/:user_id/following', to: 'follows#user_following'
   get '/users/:user_id/followers', to: 'follows#user_followers'
+
+  # Notification routes
+  get '/notifications', to: 'notifications#index'
+  get '/notifications/unread_count', to: 'notifications#unread_count'
+  patch '/notifications/:id/read', to: 'notifications#mark_read'
+  patch '/notifications/read_all', to: 'notifications#mark_all_read'
   
   # Band routes - consolidated user bands endpoint
   get '/bands/user', to: 'bands#user_bands'

@@ -20,6 +20,11 @@ class ReviewsController < ApplicationController
     @review = current_user.reviews.build(review_params.merge(band: @band))
 
     if @review.save
+      # Notify band owner if the band has one
+      if @band&.user
+        Notification.notify_new_review(band_owner: @band.user, review: @review)
+      end
+
       json_response(ReviewSerializer.full(@review), :created)
     else
       render_errors(@review)
