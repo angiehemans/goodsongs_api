@@ -100,7 +100,12 @@ class SpotifyService
       {
         id: track['id'],
         name: track['name'],
-        artists: track['artists'].map { |artist| artist['name'] },
+        artists: track['artists'].map { |artist|
+          {
+            name: artist['name'],
+            spotify_url: artist['external_urls']['spotify']
+          }
+        },
         album: {
           name: track['album']['name'],
           images: track['album']['images']

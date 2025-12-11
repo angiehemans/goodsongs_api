@@ -7,6 +7,9 @@ class Band < ApplicationRecord
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?
 
+  # Fetch Spotify artist image when spotify_link changes
+  after_commit :fetch_spotify_image, if: :spotify_link_changed_and_present?
+
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9\-_]+\z/, message: "can only contain lowercase letters, numbers, hyphens, and underscores" }
   validates :spotify_link, format: { with: /\Ahttps:\/\/(open\.)?spotify\.com\//, message: "must be a valid Spotify URL" }, allow_blank: true
@@ -48,7 +51,20 @@ class Band < ApplicationRecord
     city.present? || region.present?
   end
 
+  # Extract Spotify artist ID from the spotify_link
+  def spotify_artist_id
+    SpotifyArtistService.extract_artist_id(spotify_link)
+  end
+
   private
+
+  def spotify_link_changed_and_present?
+    saved_change_to_spotify_link? && spotify_link.present?
+  end
+
+  def fetch_spotify_image
+    FetchSpotifyImageJob.perform_later(id)
+  end
 
   # Only geocode if location fields changed and we have location data
   def should_geocode?

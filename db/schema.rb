@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_12_04_000003) do
+ActiveRecord::Schema[8.0].define(version: 2025_12_11_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -58,11 +58,27 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_04_000003) do
     t.float "latitude"
     t.float "longitude"
     t.boolean "disabled", default: false, null: false
+    t.string "musicbrainz_id"
+    t.string "external_image_url"
+    t.string "spotify_image_url"
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
+    t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
     t.index ["name"], name: "index_bands_on_name"
     t.index ["slug"], name: "index_bands_on_slug", unique: true
     t.index ["user_id"], name: "index_bands_on_user_id"
+  end
+
+  create_table "favorite_bands", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "band_id", null: false
+    t.integer "position", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["band_id"], name: "index_favorite_bands_on_band_id"
+    t.index ["user_id", "band_id"], name: "index_favorite_bands_on_user_id_and_band_id", unique: true
+    t.index ["user_id", "position"], name: "index_favorite_bands_on_user_id_and_position"
+    t.index ["user_id"], name: "index_favorite_bands_on_user_id"
   end
 
   create_table "follows", force: :cascade do |t|
@@ -139,6 +155,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_04_000003) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "bands", "users"
+  add_foreign_key "favorite_bands", "bands"
+  add_foreign_key "favorite_bands", "users"
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "notifications", "users"

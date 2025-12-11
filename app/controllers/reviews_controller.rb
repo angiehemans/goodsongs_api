@@ -94,14 +94,27 @@ class ReviewsController < ApplicationController
   end
 
   def review_params
-    params.require(:review).permit(:song_link, :band_name, :song_name, :artwork_url, 
-                                  :review_text, 
+    params.require(:review).permit(:song_link, :band_name, :song_name, :artwork_url,
+                                  :review_text,
                                   liked_aspects: [])
+  end
+
+  def band_spotify_url
+    params.dig(:review, :band_spotify_url)
   end
 
   def find_or_create_band(band_name)
     return nil if band_name.blank?
-    Band.find_or_create_by(name: band_name.strip)
+
+    band = Band.find_or_initialize_by(name: band_name.strip)
+
+    # Set spotify_link if provided and band doesn't already have one
+    if band_spotify_url.present? && band.spotify_link.blank?
+      band.spotify_link = band_spotify_url
+    end
+
+    band.save! if band.new_record? || band.changed?
+    band
   end
 
 end
