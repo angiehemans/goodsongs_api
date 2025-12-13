@@ -46,9 +46,14 @@ class BandSerializer
   def self.with_reviews(band)
     # Only include reviews from active (non-disabled) users
     active_reviews = QueryService.band_reviews_from_active_users(band)
+    upcoming_events = band.events.active.upcoming.includes(:venue).limit(10)
+
     full(band).merge(
       reviews: active_reviews.map do |review|
         ReviewSerializer.with_author(review)
+      end,
+      upcoming_events: upcoming_events.map do |event|
+        EventSerializer.summary(event)
       end
     )
   end

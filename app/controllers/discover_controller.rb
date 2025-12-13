@@ -53,6 +53,22 @@ class DiscoverController < ApplicationController
     })
   end
 
+  # GET /discover/events
+  def events
+    page = (params[:page] || 1).to_i
+    per_page = (params[:per_page] || 20).to_i
+    per_page = [per_page, 50].min
+
+    events = Event.active.upcoming.from_active_bands.includes(:venue, :band)
+    total_count = events.count
+    paginated_events = events.offset((page - 1) * per_page).limit(per_page)
+
+    json_response({
+      events: paginated_events.map { |event| EventSerializer.full(event) },
+      pagination: pagination_meta(page, per_page, total_count)
+    })
+  end
+
   private
 
   def pagination_meta(page, per_page, total_count)

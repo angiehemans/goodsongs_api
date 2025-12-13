@@ -45,7 +45,16 @@ Rails.application.routes.draw do
   
   # Band routes - consolidated user bands endpoint
   get '/bands/user', to: 'bands#user_bands'
-  resources :bands, except: [:new, :edit], param: :slug
+  resources :bands, except: [:new, :edit], param: :slug do
+    # Events nested under bands
+    resources :events, only: [:index, :create], param: :id, controller: 'events'
+  end
+
+  # Events standalone routes (for show, update, destroy)
+  resources :events, only: [:show, :update, :destroy]
+
+  # Venues routes
+  resources :venues, only: [:index, :show, :create]
 
   # Admin routes
   get '/admin/users', to: 'admin#users'
@@ -62,6 +71,7 @@ Rails.application.routes.draw do
   get '/discover/bands', to: 'discover#bands'
   get '/discover/users', to: 'discover#users'
   get '/discover/reviews', to: 'discover#reviews'
+  get '/discover/events', to: 'discover#events'
 
   # Health check endpoints
   get '/health', to: proc { [200, {}, ['OK']] }

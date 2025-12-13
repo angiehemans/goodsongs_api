@@ -782,6 +782,215 @@ Returns array of bands (same format as GET /bands)
 
 ---
 
+## Event Endpoints
+
+### GET /bands/:slug/events
+
+Get upcoming events for a band.
+
+**Authentication:** None
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Summer Tour Kickoff",
+    "description": "Join us for the first show of our summer tour!",
+    "event_date": "2025-07-15T20:00:00.000Z",
+    "ticket_link": "https://tickets.example.com/event/123",
+    "image_url": "https://...",
+    "price": "$25",
+    "age_restriction": "21+",
+    "venue": {
+      "id": 1,
+      "name": "The Roxy",
+      "address": "9009 Sunset Blvd",
+      "city": "West Hollywood",
+      "region": "California",
+      "latitude": 34.0901,
+      "longitude": -118.3868
+    },
+    "band": {
+      "id": 1,
+      "slug": "band-name",
+      "name": "Band Name",
+      "location": "Los Angeles, California",
+      "profile_picture_url": "https://...",
+      "reviews_count": 5,
+      "user_owned": true
+    },
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  }
+]
+```
+
+---
+
+### POST /bands/:slug/events
+
+Create a new event for a band.
+
+**Authentication:** Required (band owner only)
+
+**Request Body:**
+```json
+{
+  "event": {
+    "name": "Summer Tour Kickoff",
+    "description": "Join us for the first show!",
+    "event_date": "2025-07-15T20:00:00.000Z",
+    "ticket_link": "https://tickets.example.com/event/123",
+    "price": "$25",
+    "age_restriction": "21+",
+    "venue_id": 1
+  }
+}
+```
+
+Or with new venue:
+```json
+{
+  "event": {
+    "name": "Summer Tour Kickoff",
+    "description": "Join us for the first show!",
+    "event_date": "2025-07-15T20:00:00.000Z",
+    "ticket_link": "https://tickets.example.com/event/123",
+    "price": "$25",
+    "age_restriction": "21+",
+    "venue_attributes": {
+      "name": "The Roxy",
+      "address": "9009 Sunset Blvd",
+      "city": "West Hollywood",
+      "region": "California"
+    }
+  }
+}
+```
+
+For image upload, use multipart/form-data:
+```
+event[name]: "Summer Tour Kickoff"
+event[event_date]: "2025-07-15T20:00:00.000Z"
+event[venue_id]: 1
+event[image]: <file>
+```
+
+**Response (201 Created):**
+Returns created event object (same format as GET /bands/:slug/events items)
+
+---
+
+### GET /events/:id
+
+Get a single event by ID.
+
+**Authentication:** None
+
+**Response (200 OK):**
+Returns event object (same format as GET /bands/:slug/events items)
+
+---
+
+### PATCH /events/:id
+
+Update an event.
+
+**Authentication:** Required (band owner only)
+
+**Request Body:**
+```json
+{
+  "event": {
+    "name": "Updated Event Name",
+    "description": "Updated description",
+    "event_date": "2025-07-20T21:00:00.000Z"
+  }
+}
+```
+
+**Response (200 OK):**
+Returns updated event object
+
+---
+
+### DELETE /events/:id
+
+Delete an event.
+
+**Authentication:** Required (band owner only)
+
+**Response (204 No Content)**
+
+---
+
+## Venue Endpoints
+
+### GET /venues
+
+Get all venues. Supports search by name.
+
+**Authentication:** None
+
+**Query Parameters:**
+- `search` (optional): Search venues by name
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "name": "The Roxy",
+    "address": "9009 Sunset Blvd",
+    "city": "West Hollywood",
+    "region": "California",
+    "latitude": 34.0901,
+    "longitude": -118.3868,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  }
+]
+```
+
+---
+
+### GET /venues/:id
+
+Get a single venue by ID.
+
+**Authentication:** None
+
+**Response (200 OK):**
+Returns venue object (same format as GET /venues items)
+
+---
+
+### POST /venues
+
+Create a new venue.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "venue": {
+    "name": "The Roxy",
+    "address": "9009 Sunset Blvd",
+    "city": "West Hollywood",
+    "region": "California"
+  }
+}
+```
+
+Note: Latitude and longitude are automatically calculated via geocoding.
+
+**Response (201 Created):**
+Returns created venue object
+
+---
+
 ## Follow Endpoints
 
 ### POST /users/:user_id/follow

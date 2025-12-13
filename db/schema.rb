@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_12_11_000001) do
+ActiveRecord::Schema[8.0].define(version: 2025_12_12_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -67,6 +67,25 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_11_000001) do
     t.index ["name"], name: "index_bands_on_name"
     t.index ["slug"], name: "index_bands_on_slug", unique: true
     t.index ["user_id"], name: "index_bands_on_user_id"
+  end
+
+  create_table "events", force: :cascade do |t|
+    t.bigint "band_id", null: false
+    t.bigint "venue_id", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.datetime "event_date", null: false
+    t.string "ticket_link"
+    t.string "image_url"
+    t.string "price"
+    t.string "age_restriction"
+    t.boolean "disabled", default: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["band_id"], name: "index_events_on_band_id"
+    t.index ["event_date", "disabled"], name: "index_events_on_event_date_and_disabled"
+    t.index ["event_date"], name: "index_events_on_event_date"
+    t.index ["venue_id"], name: "index_events_on_venue_id"
   end
 
   create_table "favorite_bands", force: :cascade do |t|
@@ -152,9 +171,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_11_000001) do
     t.index ["username"], name: "index_users_on_username", unique: true
   end
 
+  create_table "venues", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "address", null: false
+    t.string "city"
+    t.string "region"
+    t.float "latitude"
+    t.float "longitude"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["latitude", "longitude"], name: "index_venues_on_latitude_and_longitude"
+    t.index ["name"], name: "index_venues_on_name"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "bands", "users"
+  add_foreign_key "events", "bands"
+  add_foreign_key "events", "venues"
   add_foreign_key "favorite_bands", "bands"
   add_foreign_key "favorite_bands", "users"
   add_foreign_key "follows", "users", column: "followed_id"
