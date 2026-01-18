@@ -37,8 +37,7 @@ env:
     - SECRET_KEY_BASE
     - DATABASE_URL
     - JWT_SECRET_KEY
-    - SPOTIFY_CLIENT_ID
-    - SPOTIFY_CLIENT_SECRET
+    - LASTFM_API_KEY
     - ADMIN_EMAIL
   clear:
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
