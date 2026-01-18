@@ -99,8 +99,12 @@ class ReviewsController < ApplicationController
                                   liked_aspects: [])
   end
 
-  def band_spotify_url
-    params.dig(:review, :band_spotify_url)
+  def band_lastfm_artist_name
+    params.dig(:review, :band_lastfm_artist_name)
+  end
+
+  def band_musicbrainz_id
+    params.dig(:review, :band_musicbrainz_id)
   end
 
   def find_or_create_band(band_name)
@@ -108,9 +112,14 @@ class ReviewsController < ApplicationController
 
     band = Band.find_or_initialize_by(name: band_name.strip)
 
-    # Set spotify_link if provided and band doesn't already have one
-    if band_spotify_url.present? && band.spotify_link.blank?
-      band.spotify_link = band_spotify_url
+    # Set lastfm_artist_name if provided and band doesn't already have one
+    if band_lastfm_artist_name.present? && band.lastfm_artist_name.blank?
+      band.lastfm_artist_name = band_lastfm_artist_name
+    end
+
+    # Set musicbrainz_id if provided and band doesn't already have one
+    if band_musicbrainz_id.present? && band.musicbrainz_id.blank?
+      band.musicbrainz_id = band_musicbrainz_id
     end
 
     band.save! if band.new_record? || band.changed?

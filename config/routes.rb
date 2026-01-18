@@ -16,11 +16,11 @@ Rails.application.routes.draw do
   get '/users/:username', to: 'users#profile_by_username'
   get '/recently-played', to: 'users#recently_played'
   
-  # Spotify OAuth routes - consolidated
-  get '/spotify/connect', to: 'spotify#connect'
-  get '/auth/spotify/callback', to: 'spotify#callback'
-  delete '/spotify/disconnect', to: 'spotify#disconnect'
-  get '/spotify/status', to: 'spotify#status'
+  # Last.fm routes
+  post '/lastfm/connect', to: 'lastfm#connect'
+  delete '/lastfm/disconnect', to: 'lastfm#disconnect'
+  get '/lastfm/status', to: 'lastfm#status'
+  get '/lastfm/search-artist', to: 'lastfm#search_artist'
   
   # Review routes - consolidated
   get '/reviews/user', to: 'reviews#current_user_reviews'

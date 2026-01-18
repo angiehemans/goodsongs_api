@@ -23,9 +23,9 @@ class UsersController < ApplicationController
   end
 
   def recently_played
-    spotify_service = SpotifyService.new(current_user)
-    result = spotify_service.recently_played(limit: params[:limit] || 20)
-    
+    lastfm_service = LastfmService.new(current_user)
+    result = lastfm_service.recently_played(limit: params[:limit] || 20)
+
     if result[:error]
       render json: { error: result[:error] }, status: :bad_request
     else

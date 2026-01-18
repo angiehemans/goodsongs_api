@@ -28,6 +28,9 @@ class BandSerializer
       bandcamp_link: band.bandcamp_link,
       apple_music_link: band.apple_music_link,
       youtube_music_link: band.youtube_music_link,
+      musicbrainz_id: band.musicbrainz_id,
+      lastfm_artist_name: band.lastfm_artist_name,
+      lastfm_url: band.lastfm_url,
       about: band.about,
       profile_picture_url: band_image_url(band),
       reviews_count: band.reviews.count,
@@ -38,9 +41,9 @@ class BandSerializer
     }
   end
 
-  # Returns uploaded profile picture if present, otherwise falls back to Spotify image
+  # Returns uploaded profile picture if present, otherwise falls back to artist image from Last.fm
   def self.band_image_url(band)
-    profile_picture_url(band) || band.spotify_image_url
+    profile_picture_url(band) || band.artist_image_url
   end
 
   def self.with_reviews(band)

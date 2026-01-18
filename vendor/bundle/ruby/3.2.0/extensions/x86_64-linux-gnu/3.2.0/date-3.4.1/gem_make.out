@@ -1,0 +1,24 @@
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.2.0/gems/date-3.4.1/ext/date
+/usr/bin/ruby3.2 -I/usr/lib/ruby/vendor_ruby extconf.rb
+checking for rb_category_warn()... yes
+checking for timezone in time.h with  -Werror... yes
+checking for altzone in time.h with  -Werror... no
+creating Makefile
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.2.0/gems/date-3.4.1/ext/date
+make DESTDIR\= sitearchdir\=./.gem.20260114-14702-3giito sitelibdir\=./.gem.20260114-14702-3giito clean
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.2.0/gems/date-3.4.1/ext/date
+make DESTDIR\= sitearchdir\=./.gem.20260114-14702-3giito sitelibdir\=./.gem.20260114-14702-3giito
+compiling date_core.c
+compiling date_parse.c
+compiling date_strftime.c
+compiling date_strptime.c
+linking shared-object date_core.so
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.2.0/gems/date-3.4.1/ext/date
+make DESTDIR\= sitearchdir\=./.gem.20260114-14702-3giito sitelibdir\=./.gem.20260114-14702-3giito install
+/usr/bin/install -c -m 0755 date_core.so ./.gem.20260114-14702-3giito
+
+current directory: /home/angiehemans/Documents/Github/goodsongs_api/vendor/bundle/ruby/3.2.0/gems/date-3.4.1/ext/date
+make DESTDIR\= sitearchdir\=./.gem.20260114-14702-3giito sitelibdir\=./.gem.20260114-14702-3giito clean

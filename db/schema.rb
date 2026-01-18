@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_12_12_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_17_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -60,7 +60,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_12_000002) do
     t.boolean "disabled", default: false, null: false
     t.string "musicbrainz_id"
     t.string "external_image_url"
-    t.string "spotify_image_url"
+    t.string "artist_image_url"
+    t.string "lastfm_artist_name"
+    t.string "lastfm_image_url"
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
     t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
@@ -163,8 +165,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_12_12_000002) do
     t.string "region"
     t.float "latitude"
     t.float "longitude"
+    t.string "lastfm_username"
     t.index ["account_type"], name: "index_users_on_account_type"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["lastfm_username"], name: "index_users_on_lastfm_username"
     t.index ["latitude", "longitude"], name: "index_users_on_latitude_and_longitude"
     t.index ["primary_band_id"], name: "index_users_on_primary_band_id"
     t.index ["spotify_expires_at"], name: "index_users_on_spotify_expires_at"
