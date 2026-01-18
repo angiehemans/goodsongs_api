@@ -96,6 +96,11 @@ class User < ApplicationRecord
     following.include?(other_user)
   end
 
+  # Check if Last.fm account is connected
+  def lastfm_connected?
+    lastfm_username.present?
+  end
+
   private
 
   # Only geocode if location fields changed and we have location data

@@ -8,8 +8,9 @@ class Band < ApplicationRecord
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?
 
-  # Fetch Spotify artist image when spotify_link changes
-  after_commit :fetch_spotify_image, if: :spotify_link_changed_and_present?
+  # Fetch artist image when band is created or musicbrainz_id/lastfm_artist_name changes
+  after_commit :fetch_artist_image_on_create, on: :create, if: :should_fetch_image_on_create?
+  after_commit :fetch_artist_image, on: :update, if: :should_fetch_image_on_update?
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9\-_]+\z/, message: "can only contain lowercase letters, numbers, hyphens, and underscores" }
@@ -52,19 +53,31 @@ class Band < ApplicationRecord
     city.present? || region.present?
   end
 
-  # Extract Spotify artist ID from the spotify_link
-  def spotify_artist_id
-    SpotifyArtistService.extract_artist_id(spotify_link)
+  # Last.fm URL for the artist
+  def lastfm_url
+    return nil unless lastfm_artist_name.present?
+    "https://www.last.fm/music/#{ERB::Util.url_encode(lastfm_artist_name)}"
   end
 
   private
 
-  def spotify_link_changed_and_present?
-    saved_change_to_spotify_link? && spotify_link.present?
+  def should_fetch_image_on_create?
+    # Fetch image for auto-generated bands (no user) that don't have an image yet
+    auto_generated? && artist_image_url.blank?
   end
 
-  def fetch_spotify_image
-    FetchSpotifyImageJob.perform_later(id)
+  def should_fetch_image_on_update?
+    # Fetch image if musicbrainz_id or lastfm_artist_name changed and we don't have an image
+    (saved_change_to_musicbrainz_id? || saved_change_to_lastfm_artist_name?) &&
+      (musicbrainz_id.present? || lastfm_artist_name.present?)
+  end
+
+  def fetch_artist_image_on_create
+    FetchArtistImageJob.perform_later(id)
+  end
+
+  def fetch_artist_image
+    FetchArtistImageJob.perform_later(id)
   end
 
   # Only geocode if location fields changed and we have location data

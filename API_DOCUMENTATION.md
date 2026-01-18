@@ -154,7 +154,8 @@ region: "California" (optional)
     "about_me": "Music lover from NYC",
     "reviews_count": 0,
     "bands_count": 0,
-    "spotify_connected": false,
+    "lastfm_connected": false,
+    "lastfm_username": null,
     "profile_image_url": "https://...",
     "account_type": "fan",
     "onboarding_completed": true,
@@ -201,7 +202,8 @@ profile_picture: <file> (optional)
     "about_me": null,
     "reviews_count": 0,
     "bands_count": 1,
-    "spotify_connected": false,
+    "lastfm_connected": false,
+    "lastfm_username": null,
     "profile_image_url": null,
     "account_type": "band",
     "onboarding_completed": true,
@@ -230,6 +232,9 @@ profile_picture: <file> (optional)
     "bandcamp_link": "https://theband.bandcamp.com",
     "apple_music_link": null,
     "youtube_music_link": null,
+    "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "lastfm_artist_name": "Band Name",
+    "lastfm_url": "https://www.last.fm/music/Band+Name",
     "about": "We make great music",
     "profile_picture_url": "https://...",
     "reviews_count": 0,
@@ -260,7 +265,8 @@ Get current authenticated user's profile.
   "about_me": "Music lover",
   "reviews_count": 10,
   "bands_count": 2,
-  "spotify_connected": true,
+  "lastfm_connected": true,
+  "lastfm_username": "johndoe_lastfm",
   "profile_image_url": "https://...",
   "account_type": "fan",
   "onboarding_completed": true,
@@ -285,7 +291,8 @@ For BAND accounts:
   "about_me": null,
   "reviews_count": 0,
   "bands_count": 1,
-  "spotify_connected": false,
+  "lastfm_connected": false,
+  "lastfm_username": null,
   "profile_image_url": null,
   "account_type": "band",
   "onboarding_completed": true,
@@ -400,9 +407,9 @@ Note: The `following` field is only included if the request includes a valid aut
 
 ### GET /recently-played
 
-Get user's recently played tracks from Spotify.
+Get user's recently played tracks from Last.fm.
 
-**Authentication:** Required (Spotify must be connected)
+**Authentication:** Required (Last.fm must be connected)
 
 **Query Parameters:**
 - `limit` (optional): Number of tracks to return (default: 20)
@@ -410,27 +417,42 @@ Get user's recently played tracks from Spotify.
 **Response (200 OK):**
 ```json
 {
-  "items": [
+  "tracks": [
     {
-      "track": {
-        "name": "Song Name",
-        "artists": [{ "name": "Artist Name" }],
-        "album": {
-          "name": "Album Name",
-          "images": [{ "url": "https://..." }]
-        },
-        "external_urls": { "spotify": "https://open.spotify.com/track/..." }
+      "name": "Song Name",
+      "mbid": "musicbrainz-track-id",
+      "artists": [
+        {
+          "name": "Artist Name",
+          "mbid": "musicbrainz-artist-id",
+          "lastfm_url": "https://www.last.fm/music/Artist+Name"
+        }
+      ],
+      "album": {
+        "name": "Album Name",
+        "mbid": "musicbrainz-album-id",
+        "images": [
+          { "url": "https://...", "size": "small" },
+          { "url": "https://...", "size": "medium" },
+          { "url": "https://...", "size": "large" },
+          { "url": "https://...", "size": "extralarge" }
+        ]
       },
-      "played_at": "2024-12-01T00:00:00.000Z"
+      "lastfm_url": "https://www.last.fm/music/Artist+Name/_/Song+Name",
+      "played_at": "2024-12-01T00:00:00Z",
+      "now_playing": false,
+      "loved": true
     }
   ]
 }
 ```
 
+Note: If the track is currently playing, `now_playing` will be `true` and `played_at` will be `null`.
+
 **Error Response (400 Bad Request):**
 ```json
 {
-  "error": "Spotify not connected"
+  "error": "No Last.fm username connected"
 }
 ```
 
@@ -515,10 +537,14 @@ Create a new review.
     "song_name": "Song Title",
     "artwork_url": "https://...",
     "review_text": "Great song!",
-    "liked_aspects": ["melody", "lyrics", "production"]
+    "liked_aspects": ["melody", "lyrics", "production"],
+    "band_musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "band_lastfm_artist_name": "Artist Name"
   }
 }
 ```
+
+Note: `band_musicbrainz_id` and `band_lastfm_artist_name` are optional. When provided, they are saved to the band record and used to automatically fetch artist images from MusicBrainz/Wikidata.
 
 **Response (201 Created):**
 Returns created review object
@@ -658,6 +684,9 @@ Get all bands (ordered by name).
     "bandcamp_link": "https://bandname.bandcamp.com",
     "apple_music_link": null,
     "youtube_music_link": null,
+    "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "lastfm_artist_name": "Band Name",
+    "lastfm_url": "https://www.last.fm/music/Band+Name",
     "about": "We make great music",
     "profile_picture_url": "https://...",
     "reviews_count": 5,
@@ -692,6 +721,9 @@ Get a single band by slug (includes reviews).
   "bandcamp_link": "https://bandname.bandcamp.com",
   "apple_music_link": null,
   "youtube_music_link": null,
+  "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+  "lastfm_artist_name": "Band Name",
+  "lastfm_url": "https://www.last.fm/music/Band+Name",
   "about": "We make great music",
   "profile_picture_url": "https://...",
   "reviews_count": 5,
@@ -1467,6 +1499,9 @@ Get a single user's profile and all their reviews (admin only).
         "bandcamp_link": null,
         "apple_music_link": null,
         "youtube_music_link": null,
+        "musicbrainz_id": null,
+        "lastfm_artist_name": null,
+        "lastfm_url": null,
         "about": null,
         "profile_picture_url": null,
         "reviews_count": 5,
@@ -1603,6 +1638,9 @@ Get all bands including disabled ones (admin only).
     "bandcamp_link": "https://bandname.bandcamp.com",
     "apple_music_link": null,
     "youtube_music_link": null,
+    "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "lastfm_artist_name": "Band Name",
+    "lastfm_url": "https://www.last.fm/music/Band+Name",
     "about": "We make great music",
     "profile_picture_url": "https://...",
     "reviews_count": 5,
@@ -1694,65 +1732,125 @@ Delete a review (admin only).
 
 ---
 
-## Spotify Integration Endpoints
+## Last.fm Integration Endpoints
 
-### GET /spotify/connect
+### POST /lastfm/connect
 
-Initiate Spotify OAuth flow.
-
-**Authentication:** Required (or via auth_code parameter)
-
-**Query Parameters:**
-- `auth_code` (optional): Temporary auth code for browser-based flow
-
-**Response:**
-- For JSON requests: `{ "auth_url": "https://accounts.spotify.com/authorize?..." }`
-- For browser requests: Redirects to Spotify authorization page
-
----
-
-### GET /auth/spotify/callback
-
-Spotify OAuth callback (called by Spotify after authorization).
-
-**Authentication:** None (uses state parameter)
-
-**Query Parameters:**
-- `code`: Authorization code from Spotify
-- `state`: User ID for verification
-- `error` (optional): Error message if authorization failed
-
-**Response:**
-Redirects to `{FRONTEND_URL}/dashboard?spotify=connected`
-
----
-
-### DELETE /spotify/disconnect
-
-Disconnect Spotify account.
+Connect a Last.fm account by username.
 
 **Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "username": "lastfm_username"
+}
+```
 
 **Response (200 OK):**
 ```json
 {
-  "message": "Spotify account disconnected successfully"
+  "message": "Last.fm account connected successfully",
+  "username": "lastfm_username",
+  "profile": {
+    "name": "lastfm_username",
+    "realname": "John Doe",
+    "url": "https://www.last.fm/user/lastfm_username",
+    "playcount": "12345",
+    "image": "https://..."
+  }
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "error": "Last.fm username is required"
+}
+```
+or
+```json
+{
+  "error": "Last.fm user not found"
 }
 ```
 
 ---
 
-### GET /spotify/status
+### DELETE /lastfm/disconnect
 
-Check Spotify connection status.
+Disconnect Last.fm account.
 
 **Authentication:** Required
 
 **Response (200 OK):**
 ```json
 {
+  "message": "Last.fm account disconnected successfully"
+}
+```
+
+---
+
+### GET /lastfm/status
+
+Check Last.fm connection status.
+
+**Authentication:** Required
+
+**Response (200 OK) - When connected:**
+```json
+{
   "connected": true,
-  "expires_at": "2024-12-01T01:00:00.000Z"
+  "username": "lastfm_username",
+  "profile": {
+    "name": "lastfm_username",
+    "realname": "John Doe",
+    "url": "https://www.last.fm/user/lastfm_username",
+    "playcount": "12345",
+    "image": "https://..."
+  }
+}
+```
+
+**Response (200 OK) - When not connected:**
+```json
+{
+  "connected": false,
+  "username": null
+}
+```
+
+---
+
+### GET /lastfm/search-artist
+
+Search for artists on Last.fm.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `query` (required): Artist name to search for
+- `limit` (optional): Number of results to return (default: 10)
+
+**Response (200 OK):**
+```json
+{
+  "artists": [
+    {
+      "name": "Artist Name",
+      "mbid": "musicbrainz-id",
+      "url": "https://www.last.fm/music/Artist+Name",
+      "image": "https://..."
+    }
+  ]
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "error": "Search query is required"
 }
 ```
 

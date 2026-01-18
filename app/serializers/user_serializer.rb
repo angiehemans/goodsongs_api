@@ -9,13 +9,15 @@ class UserSerializer
       :updated_at,
       :spotify_access_token,
       :spotify_refresh_token,
+      :spotify_expires_at,
       :primary_band_id
     ])
 
     result = base_data.merge(
       reviews_count: user.reviews.count,
       bands_count: user.bands.count,
-      spotify_connected: user.spotify_access_token.present?,
+      lastfm_connected: user.lastfm_connected?,
+      lastfm_username: user.lastfm_username,
       profile_image_url: profile_image_url(user),
       account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
