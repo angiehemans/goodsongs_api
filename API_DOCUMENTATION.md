@@ -1456,7 +1456,7 @@ Get all users (admin only).
 
 ### GET /admin/users/:id
 
-Get a single user's profile and all their reviews (admin only).
+Get a single user's full profile with all editable fields, reviews, and bands (admin only).
 
 **Authentication:** Required (Admin only)
 
@@ -1465,17 +1465,28 @@ Get a single user's profile and all their reviews (admin only).
 {
   "user": {
     "id": 1,
-    "username": "johndoe",
     "email": "user@example.com",
+    "username": "johndoe",
     "about_me": "Music lover",
-    "profile_image_url": "https://...",
-    "reviews_count": 10,
-    "bands_count": 2,
+    "city": "Los Angeles",
+    "region": "California",
+    "location": "Los Angeles, California",
+    "latitude": 34.0522,
+    "longitude": -118.2437,
     "account_type": "fan",
     "onboarding_completed": true,
-    "display_name": "johndoe",
     "admin": false,
-    "disabled": false
+    "disabled": false,
+    "lastfm_username": "johndoe_lastfm",
+    "lastfm_connected": true,
+    "profile_image_url": "https://...",
+    "display_name": "johndoe",
+    "reviews_count": 10,
+    "bands_count": 2,
+    "followers_count": 25,
+    "following_count": 12,
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
   },
   "reviews": [
     {
@@ -1486,37 +1497,22 @@ Get a single user's profile and all their reviews (admin only).
       "artwork_url": "https://...",
       "review_text": "Great song!",
       "liked_aspects": ["melody", "lyrics"],
-      "band": {
-        "id": 1,
-        "slug": "artist-name",
-        "name": "Artist Name",
-        "city": null,
-        "region": null,
-        "location": null,
-        "latitude": null,
-        "longitude": null,
-        "spotify_link": null,
-        "bandcamp_link": null,
-        "apple_music_link": null,
-        "youtube_music_link": null,
-        "musicbrainz_id": null,
-        "lastfm_artist_name": null,
-        "lastfm_url": null,
-        "about": null,
-        "profile_picture_url": null,
-        "reviews_count": 5,
-        "user_owned": false,
-        "owner": null,
-        "created_at": "2024-12-01T00:00:00.000Z",
-        "updated_at": "2024-12-01T00:00:00.000Z"
-      },
-      "author": {
-        "id": 1,
-        "username": "johndoe",
-        "profile_image_url": "https://..."
-      },
+      "band": { ... },
+      "author": { ... },
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "bands": [
+    {
+      "id": 1,
+      "slug": "user-band",
+      "name": "User Band",
+      "city": "Los Angeles",
+      "region": "California",
+      "location": "Los Angeles, California",
+      "disabled": false,
+      ...
     }
   ]
 }
@@ -1533,6 +1529,91 @@ Get a single user's profile and all their reviews (admin only).
 ```json
 {
   "error": "Record not found"
+}
+```
+
+---
+
+### PATCH /admin/users/:id
+
+Update any user's profile (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Request Body:**
+```json
+{
+  "email": "newemail@example.com",
+  "username": "newusername",
+  "about_me": "Updated bio",
+  "city": "New York",
+  "region": "New York",
+  "admin": true,
+  "disabled": false,
+  "account_type": "fan",
+  "lastfm_username": "lastfm_user",
+  "onboarding_completed": true
+}
+```
+
+All fields are optional. For file upload (profile_image), use `multipart/form-data`.
+
+**Editable Fields:**
+- `email` - User's email address
+- `username` - Username (required for fan accounts)
+- `about_me` - Bio text (max 500 chars)
+- `city` - City location (max 100 chars)
+- `region` - Region/state/country (max 100 chars)
+- `admin` - Admin status (cannot modify your own admin status)
+- `disabled` - Account disabled status
+- `account_type` - "fan" or "band"
+- `lastfm_username` - Connected Last.fm username
+- `onboarding_completed` - Onboarding status
+- `profile_image` - Profile image file (multipart/form-data)
+
+**Response (200 OK):**
+```json
+{
+  "message": "User has been updated",
+  "user": {
+    "id": 1,
+    "email": "newemail@example.com",
+    "username": "newusername",
+    "about_me": "Updated bio",
+    "city": "New York",
+    "region": "New York",
+    "location": "New York, New York",
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "account_type": "fan",
+    "onboarding_completed": true,
+    "admin": true,
+    "disabled": false,
+    "lastfm_username": "lastfm_user",
+    "lastfm_connected": true,
+    "profile_image_url": "https://...",
+    "display_name": "newusername",
+    "reviews_count": 10,
+    "bands_count": 2,
+    "followers_count": 25,
+    "following_count": 12,
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "errors": ["Email has already been taken"]
+}
+```
+
+**Error Response (422 Unprocessable Entity) - Self admin modification:**
+```json
+{
+  "error": "You cannot modify your own admin status"
 }
 ```
 
@@ -1651,6 +1732,179 @@ Get all bands including disabled ones (admin only).
     "disabled": false
   }
 ]
+```
+
+---
+
+### GET /admin/bands/:id
+
+Get a single band's full profile with all editable fields, reviews, and events (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+```json
+{
+  "band": {
+    "id": 1,
+    "name": "Band Name",
+    "slug": "band-name",
+    "about": "We make great music",
+    "city": "New York",
+    "region": "New York",
+    "location": "New York, New York",
+    "latitude": 40.7128,
+    "longitude": -74.006,
+    "disabled": false,
+    "user_id": 1,
+    "user_owned": true,
+    "owner": {
+      "id": 1,
+      "username": "johndoe",
+      "email": "johndoe@example.com"
+    },
+    "spotify_link": "https://open.spotify.com/artist/...",
+    "bandcamp_link": "https://bandname.bandcamp.com",
+    "apple_music_link": null,
+    "youtube_music_link": null,
+    "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "lastfm_artist_name": "Band Name",
+    "lastfm_url": "https://www.last.fm/music/Band+Name",
+    "artist_image_url": "https://...",
+    "profile_picture_url": "https://...",
+    "reviews_count": 5,
+    "events_count": 3,
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  },
+  "reviews": [
+    {
+      "id": 1,
+      "song_link": "https://open.spotify.com/track/...",
+      "band_name": "Band Name",
+      "song_name": "Song Title",
+      "artwork_url": "https://...",
+      "review_text": "Great song!",
+      "liked_aspects": ["melody", "lyrics"],
+      "band": { ... },
+      "author": { ... },
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "events": [
+    {
+      "id": 1,
+      "name": "Summer Tour",
+      "description": "Join us for the tour!",
+      "event_date": "2025-07-15T20:00:00.000Z",
+      "venue": { ... },
+      "band": { ... },
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "error": "Record not found"
+}
+```
+
+---
+
+### PATCH /admin/bands/:id
+
+Update any band's information (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Request Body:**
+```json
+{
+  "name": "New Band Name",
+  "slug": "new-band-name",
+  "about": "Updated description",
+  "city": "Los Angeles",
+  "region": "California",
+  "disabled": false,
+  "user_id": 2,
+  "spotify_link": "https://open.spotify.com/artist/...",
+  "bandcamp_link": "https://newband.bandcamp.com",
+  "apple_music_link": "https://music.apple.com/...",
+  "youtube_music_link": "https://music.youtube.com/...",
+  "musicbrainz_id": "new-mbid",
+  "lastfm_artist_name": "New Band Name",
+  "artist_image_url": "https://..."
+}
+```
+
+All fields are optional. For file upload (profile_picture), use `multipart/form-data`.
+
+**Editable Fields:**
+- `name` - Band name
+- `slug` - URL slug
+- `about` - Band description
+- `city` - City location (max 100 chars)
+- `region` - Region/state/country (max 100 chars)
+- `disabled` - Band disabled status
+- `user_id` - Owner user ID (reassign ownership)
+- `spotify_link` - Spotify artist URL
+- `bandcamp_link` - Bandcamp URL
+- `apple_music_link` - Apple Music URL
+- `youtube_music_link` - YouTube Music URL
+- `musicbrainz_id` - MusicBrainz artist ID
+- `lastfm_artist_name` - Last.fm artist name
+- `artist_image_url` - Artist image URL (from Last.fm/MusicBrainz)
+- `profile_picture` - Profile picture file (multipart/form-data)
+
+**Response (200 OK):**
+```json
+{
+  "message": "Band has been updated",
+  "band": {
+    "id": 1,
+    "name": "New Band Name",
+    "slug": "new-band-name",
+    "about": "Updated description",
+    "city": "Los Angeles",
+    "region": "California",
+    "location": "Los Angeles, California",
+    "latitude": 34.0522,
+    "longitude": -118.2437,
+    "disabled": false,
+    "user_id": 2,
+    "user_owned": true,
+    "owner": {
+      "id": 2,
+      "username": "newowner",
+      "email": "newowner@example.com"
+    },
+    "spotify_link": "https://open.spotify.com/artist/...",
+    "bandcamp_link": "https://newband.bandcamp.com",
+    "apple_music_link": "https://music.apple.com/...",
+    "youtube_music_link": "https://music.youtube.com/...",
+    "musicbrainz_id": "new-mbid",
+    "lastfm_artist_name": "New Band Name",
+    "lastfm_url": "https://www.last.fm/music/New+Band+Name",
+    "artist_image_url": "https://...",
+    "profile_picture_url": "https://...",
+    "reviews_count": 5,
+    "events_count": 3,
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "errors": ["Name has already been taken"]
+}
 ```
 
 ---

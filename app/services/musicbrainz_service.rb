@@ -3,10 +3,27 @@ class MusicbrainzService
   base_uri 'https://musicbrainz.org/ws/2'
 
   # MusicBrainz requires a User-Agent header identifying your application
-  headers 'User-Agent' => 'GoodSongs/1.0 (https://goodsongs.app)'
+  headers 'User-Agent' => 'GoodSongs/1.0 (https://goodsongs.app; api@goodsongs.app)'
   headers 'Accept' => 'application/json'
 
+  # Rate limiting: 1 request per second
+  RATE_LIMIT_DELAY = 1.1
+  @rate_limit_mutex = Mutex.new
+  @last_request_time = nil
+
   class << self
+    # Rate-limited request wrapper
+    def rate_limited_get(path, options = {})
+      @rate_limit_mutex.synchronize do
+        if @last_request_time
+          elapsed = Time.current - @last_request_time
+          sleep(RATE_LIMIT_DELAY - elapsed) if elapsed < RATE_LIMIT_DELAY
+        end
+        @last_request_time = Time.current
+      end
+
+      get(path, options)
+    end
     # Search for artists by name
     def search_artist(query, limit: 10)
       return [] if query.blank?
@@ -69,7 +86,96 @@ class MusicbrainzService
       get_artist(mbid) || results.first
     end
 
+    # Search for recordings by track name and artist name
+    def search_recording(track_name, artist_name, limit: 5)
+      return [] if track_name.blank? || artist_name.blank?
+
+      # Build Lucene query for MusicBrainz
+      query = "recording:\"#{escape_query(track_name)}\" AND artist:\"#{escape_query(artist_name)}\""
+
+      response = rate_limited_get('/recording', query: {
+        query: query,
+        fmt: 'json',
+        limit: limit
+      })
+
+      return [] unless response.success?
+
+      recordings = response.parsed_response['recordings']
+      return [] unless recordings.is_a?(Array)
+
+      recordings.map { |recording| format_recording_search_result(recording) }
+    rescue Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError,
+           Errno::ECONNRESET, Errno::ECONNREFUSED, SocketError => e
+      Rails.logger.error("MusicbrainzService network error: #{e.message}")
+      raise
+    rescue StandardError => e
+      Rails.logger.error("MusicbrainzService search_recording error: #{e.message}")
+      []
+    end
+
+    # Get detailed recording info by MBID
+    def get_recording(mbid)
+      return nil if mbid.blank?
+
+      response = rate_limited_get("/recording/#{mbid}", query: {
+        fmt: 'json',
+        inc: 'artists+releases+isrcs'
+      })
+
+      return nil unless response.success?
+
+      format_recording_detail(response.parsed_response)
+    rescue Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError,
+           Errno::ECONNRESET, Errno::ECONNREFUSED, SocketError => e
+      Rails.logger.error("MusicbrainzService network error: #{e.message}")
+      raise
+    rescue StandardError => e
+      Rails.logger.error("MusicbrainzService get_recording error: #{e.message}")
+      nil
+    end
+
+    # Get detailed release (album) info by MBID
+    def get_release(mbid)
+      return nil if mbid.blank?
+
+      response = rate_limited_get("/release/#{mbid}", query: {
+        fmt: 'json',
+        inc: 'artists+recordings+release-groups'
+      })
+
+      return nil unless response.success?
+
+      format_release_detail(response.parsed_response)
+    rescue Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError,
+           Errno::ECONNRESET, Errno::ECONNREFUSED, SocketError => e
+      Rails.logger.error("MusicbrainzService network error: #{e.message}")
+      raise
+    rescue StandardError => e
+      Rails.logger.error("MusicbrainzService get_release error: #{e.message}")
+      nil
+    end
+
+    # Search and get first matching recording with details
+    def find_recording(track_name, artist_name)
+      return nil if track_name.blank? || artist_name.blank?
+
+      results = search_recording(track_name, artist_name, limit: 1)
+      return nil if results.empty?
+
+      mbid = results.first[:mbid]
+      return results.first unless mbid
+
+      get_recording(mbid) || results.first
+    end
+
     private
+
+    # Escape special Lucene query characters
+    def escape_query(str)
+      # Escape: + - && || ! ( ) { } [ ] ^ " ~ * ? : \ /
+      str.gsub(/([+\-&|!(){}\[\]^"~*?:\\\/])/, '\\\\\1')
+    end
 
     def format_artist_search_result(artist)
       {
@@ -151,6 +257,87 @@ class MusicbrainzService
       end
 
       urls
+    end
+
+    def format_recording_search_result(recording)
+      {
+        mbid: recording['id'],
+        title: recording['title'],
+        length: recording['length'], # duration in milliseconds
+        score: recording['score'],
+        artists: extract_artist_credits(recording['artist-credit']),
+        releases: extract_releases(recording['releases']),
+        first_release_date: recording.dig('first-release-date')
+      }
+    end
+
+    def format_recording_detail(recording)
+      {
+        mbid: recording['id'],
+        title: recording['title'],
+        length: recording['length'],
+        disambiguation: recording['disambiguation'],
+        artists: extract_artist_credits(recording['artist-credit']),
+        releases: extract_releases(recording['releases']),
+        isrcs: recording['isrcs'] || [],
+        first_release_date: recording.dig('first-release-date')
+      }
+    end
+
+    def format_release_detail(release)
+      {
+        mbid: release['id'],
+        title: release['title'],
+        status: release['status'],
+        date: release['date'],
+        country: release['country'],
+        barcode: release['barcode'],
+        artists: extract_artist_credits(release['artist-credit']),
+        release_group: extract_release_group(release['release-group']),
+        track_count: release.dig('media', 0, 'track-count')
+      }
+    end
+
+    def extract_artist_credits(credits)
+      return [] unless credits.is_a?(Array)
+
+      credits.map do |credit|
+        artist = credit['artist']
+        next unless artist
+
+        {
+          mbid: artist['id'],
+          name: artist['name'],
+          sort_name: artist['sort-name'],
+          join_phrase: credit['joinphrase']
+        }
+      end.compact
+    end
+
+    def extract_releases(releases)
+      return [] unless releases.is_a?(Array)
+
+      releases.first(5).map do |release|
+        {
+          mbid: release['id'],
+          title: release['title'],
+          status: release['status'],
+          date: release['date'],
+          country: release['country'],
+          release_group_mbid: release.dig('release-group', 'id')
+        }
+      end
+    end
+
+    def extract_release_group(release_group)
+      return nil unless release_group
+
+      {
+        mbid: release_group['id'],
+        title: release_group['title'],
+        primary_type: release_group['primary-type'],
+        secondary_types: release_group['secondary-types'] || []
+      }
     end
   end
 end

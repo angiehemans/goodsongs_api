@@ -61,19 +61,21 @@ class LastfmService
 
     tracks = recent_tracks.map do |track|
       now_playing = track.dig('@attr', 'nowplaying') == 'true'
+      artist_name = track.dig('artist', 'name') || track['artist'].to_s
+      album_name = track.dig('album', '#text') || track['album'].to_s
 
       {
         name: track['name'],
         mbid: track['mbid'].presence,
         artists: [
           {
-            name: track.dig('artist', 'name') || track['artist'].to_s,
+            name: artist_name,
             mbid: track.dig('artist', 'mbid').presence,
-            lastfm_url: "https://www.last.fm/music/#{ERB::Util.url_encode(track.dig('artist', 'name') || track['artist'].to_s)}"
+            lastfm_url: "https://www.last.fm/music/#{ERB::Util.url_encode(artist_name)}"
           }
         ],
         album: {
-          name: track.dig('album', '#text') || track['album'].to_s,
+          name: album_name,
           mbid: track.dig('album', 'mbid').presence,
           images: format_images(track['image'])
         },

@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_17_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_19_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pgcrypto"
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
@@ -40,6 +41,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_17_000001) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "albums", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.uuid "artist_id"
+    t.string "musicbrainz_release_id"
+    t.string "cover_art_url"
+    t.date "release_date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["artist_id"], name: "index_albums_on_artist_id"
+    t.index ["musicbrainz_release_id"], name: "index_albums_on_musicbrainz_release_id", unique: true
+    t.index ["name"], name: "index_albums_on_name"
+  end
+
+  create_table "artists", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.string "musicbrainz_artist_id"
+    t.string "image_url"
+    t.text "bio"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["musicbrainz_artist_id"], name: "index_artists_on_musicbrainz_artist_id", unique: true
+    t.index ["name"], name: "index_artists_on_name"
   end
 
   create_table "bands", force: :cascade do |t|
@@ -146,6 +171,42 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_17_000001) do
     t.index ["user_id"], name: "index_reviews_on_user_id"
   end
 
+  create_table "scrobbles", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.uuid "track_id"
+    t.string "track_name", null: false
+    t.string "artist_name", null: false
+    t.string "album_name"
+    t.integer "duration_ms", null: false
+    t.datetime "played_at", null: false
+    t.string "source_app", null: false
+    t.string "source_device"
+    t.string "musicbrainz_recording_id"
+    t.integer "metadata_status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["metadata_status", "created_at"], name: "index_scrobbles_on_metadata_status_and_created_at"
+    t.index ["track_id"], name: "index_scrobbles_on_track_id"
+    t.index ["user_id", "played_at"], name: "index_scrobbles_on_user_id_and_played_at", order: { played_at: :desc }
+    t.index ["user_id", "track_name", "artist_name", "played_at"], name: "index_scrobbles_duplicate_check"
+    t.index ["user_id"], name: "index_scrobbles_on_user_id"
+  end
+
+  create_table "tracks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.uuid "artist_id"
+    t.uuid "album_id"
+    t.integer "duration_ms"
+    t.string "musicbrainz_recording_id"
+    t.string "isrc"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["album_id"], name: "index_tracks_on_album_id"
+    t.index ["artist_id"], name: "index_tracks_on_artist_id"
+    t.index ["musicbrainz_recording_id"], name: "index_tracks_on_musicbrainz_recording_id", unique: true
+    t.index ["name"], name: "index_tracks_on_name"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", null: false
     t.string "password_digest", null: false
@@ -190,6 +251,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_17_000001) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "albums", "artists"
   add_foreign_key "bands", "users"
   add_foreign_key "events", "bands"
   add_foreign_key "events", "venues"
@@ -201,5 +263,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_17_000001) do
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "reviews", "bands"
   add_foreign_key "reviews", "users"
+  add_foreign_key "scrobbles", "tracks"
+  add_foreign_key "scrobbles", "users"
+  add_foreign_key "tracks", "albums"
+  add_foreign_key "tracks", "artists"
   add_foreign_key "users", "bands", column: "primary_band_id"
 end

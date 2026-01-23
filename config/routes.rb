@@ -59,9 +59,12 @@ Rails.application.routes.draw do
   # Admin routes
   get '/admin/users', to: 'admin#users'
   get '/admin/users/:id', to: 'admin#user_detail'
+  patch '/admin/users/:id', to: 'admin#update_user'
   patch '/admin/users/:id/toggle-disabled', to: 'admin#toggle_disabled'
   delete '/admin/users/:id', to: 'admin#destroy_user'
   get '/admin/bands', to: 'admin#bands'
+  get '/admin/bands/:id', to: 'admin#band_detail'
+  patch '/admin/bands/:id', to: 'admin#update_band'
   patch '/admin/bands/:id/toggle-disabled', to: 'admin#toggle_band_disabled'
   delete '/admin/bands/:id', to: 'admin#destroy_band'
   get '/admin/reviews', to: 'admin#reviews'
@@ -76,4 +79,16 @@ Rails.application.routes.draw do
   # Health check endpoints
   get '/health', to: proc { [200, {}, ['OK']] }
   get '/up', to: proc { [200, {}, ['OK']] }
+
+  # API v1 namespace for scrobbling
+  namespace :api do
+    namespace :v1 do
+      resources :scrobbles, only: [:index, :create, :destroy] do
+        collection do
+          get :recent
+        end
+      end
+      get 'users/:user_id/scrobbles', to: 'scrobbles#user_scrobbles'
+    end
+  end
 end
