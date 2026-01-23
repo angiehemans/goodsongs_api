@@ -26,6 +26,7 @@ class BandSerializer
       longitude: band.longitude,
       spotify_link: band.spotify_link,
       bandcamp_link: band.bandcamp_link,
+      bandcamp_embed: band.bandcamp_embed,
       apple_music_link: band.apple_music_link,
       youtube_music_link: band.youtube_music_link,
       musicbrainz_id: band.musicbrainz_id,

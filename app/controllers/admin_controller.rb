@@ -80,7 +80,7 @@ class AdminController < ApplicationController
   def band_detail
     band = Band.find(params[:id])
     reviews = band.reviews.includes(:user).order(created_at: :desc)
-    events = band.events.includes(:venue).order(start_time: :desc)
+    events = band.events.includes(:venue).order(event_date: :desc)
 
     json_response({
       band: admin_band_data_full(band),
@@ -203,6 +203,7 @@ class AdminController < ApplicationController
       :user_id,
       :spotify_link,
       :bandcamp_link,
+      :bandcamp_embed,
       :apple_music_link,
       :youtube_music_link,
       :musicbrainz_id,
@@ -236,6 +237,7 @@ class AdminController < ApplicationController
       owner: band.user ? { id: band.user.id, username: band.user.username, email: band.user.email } : nil,
       spotify_link: band.spotify_link,
       bandcamp_link: band.bandcamp_link,
+      bandcamp_embed: band.bandcamp_embed,
       apple_music_link: band.apple_music_link,
       youtube_music_link: band.youtube_music_link,
       musicbrainz_id: band.musicbrainz_id,

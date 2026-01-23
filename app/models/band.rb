@@ -14,13 +14,14 @@ class Band < ApplicationRecord
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9\-_]+\z/, message: "can only contain lowercase letters, numbers, hyphens, and underscores" }
-  validates :spotify_link, format: { with: /\Ahttps:\/\/(open\.)?spotify\.com\//, message: "must be a valid Spotify URL" }, allow_blank: true
-  validates :bandcamp_link, format: { with: /\Ahttps:\/\/.*\.bandcamp\.com\//, message: "must be a valid Bandcamp URL" }, allow_blank: true
-  validates :apple_music_link, format: { with: /\Ahttps:\/\/music\.apple\.com\//, message: "must be a valid Apple Music URL" }, allow_blank: true
-  validates :youtube_music_link, format: { with: /\Ahttps:\/\/music\.youtube\.com\//, message: "must be a valid YouTube Music URL" }, allow_blank: true
+  validates :spotify_link, format: { with: /\Ahttps:\/\/(open\.)?spotify\.com(\/|\z)/, message: "must be a valid Spotify URL" }, allow_blank: true
+  validates :bandcamp_link, format: { with: /\Ahttps:\/\/[\w\-]+\.bandcamp\.com(\/|\z)/, message: "must be a valid Bandcamp URL" }, allow_blank: true
+  validates :apple_music_link, format: { with: /\Ahttps:\/\/music\.apple\.com(\/|\z)/, message: "must be a valid Apple Music URL" }, allow_blank: true
+  validates :youtube_music_link, format: { with: /\Ahttps:\/\/music\.youtube\.com(\/|\z)/, message: "must be a valid YouTube Music URL" }, allow_blank: true
   validates :city, length: { maximum: 100 }, allow_blank: true
   validates :region, length: { maximum: 100 }, allow_blank: true
 
+  before_validation :normalize_links
   before_validation :generate_slug
   
   scope :user_created, -> { where.not(user_id: nil) }
@@ -60,6 +61,30 @@ class Band < ApplicationRecord
   end
 
   private
+
+  # Normalize links to ensure consistent format
+  def normalize_links
+    self.bandcamp_link = normalize_url(bandcamp_link, 'bandcamp.com')
+    self.spotify_link = normalize_url(spotify_link, 'spotify.com')
+    self.apple_music_link = normalize_url(apple_music_link, 'apple.com')
+    self.youtube_music_link = normalize_url(youtube_music_link, 'youtube.com')
+  end
+
+  def normalize_url(url, domain)
+    return nil if url.blank?
+
+    url = url.strip
+
+    # Add https:// if no protocol specified
+    unless url.match?(/\Ahttps?:\/\//i)
+      url = "https://#{url}"
+    end
+
+    # Upgrade http to https
+    url = url.sub(/\Ahttp:\/\//i, 'https://')
+
+    url
+  end
 
   def should_fetch_image_on_create?
     # Fetch image for auto-generated bands (no user) that don't have an image yet

@@ -99,6 +99,6 @@ class OnboardingController < ApplicationController
 
   def band_profile_params
     params.permit(:name, :about, :city, :region, :spotify_link, :bandcamp_link,
-                  :apple_music_link, :youtube_music_link, :profile_picture)
+                  :bandcamp_embed, :apple_music_link, :youtube_music_link, :profile_picture)
   end
 end

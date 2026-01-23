@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_19_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_23_202712) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -88,6 +88,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_19_000001) do
     t.string "artist_image_url"
     t.string "lastfm_artist_name"
     t.string "lastfm_image_url"
+    t.text "bandcamp_embed"
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
     t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
