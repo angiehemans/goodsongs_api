@@ -64,11 +64,11 @@ Rails.application.configure do
     host: ENV.fetch('FRONTEND_URL', 'https://goodsongs.app')
   }
 
-  # Mailgun SMTP configuration
+  # Mailgun SMTP configuration (using port 2525 to bypass common SMTP blocks)
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
     address: 'smtp.mailgun.org',
-    port: 587,
+    port: 2525,
     domain: ENV.fetch('MAILGUN_DOMAIN', 'mg.goodsongs.app'),
     user_name: ENV.fetch('MAILGUN_SMTP_USERNAME', ''),
     password: ENV.fetch('MAILGUN_SMTP_PASSWORD', ''),
