@@ -53,8 +53,11 @@ env:
     # Set number of cores available to the application on each server (default: 1).
     # WEB_CONCURRENCY: 2
 
-    # Use the PostgreSQL accessory for database  
+    # Use the PostgreSQL accessory for database
     DB_HOST: goodsongs-api-db
+
+    # Redis URL for Action Cable
+    REDIS_URL: redis://goodsongs-api-redis:6379/1
 
     # Frontend URL for OAuth redirects in production
     FRONTEND_URL: https://www.goodsongs.app
