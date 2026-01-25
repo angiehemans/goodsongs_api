@@ -70,7 +70,7 @@ Rails.application.configure do
     address: 'smtp.mailgun.org',
     port: 587,
     domain: ENV.fetch('MAILGUN_DOMAIN', 'mg.goodsongs.app'),
-    user_name: ENV.fetch("MAILGUN_SMTP_USERNAME"),
+    user_name: ENV.fetch('MAILGUN_SMTP_USERNAME', ''),
     password: ENV.fetch('MAILGUN_SMTP_PASSWORD', ''),
     authentication: :plain,
     enable_starttls_auto: true
