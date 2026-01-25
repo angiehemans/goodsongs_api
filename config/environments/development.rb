@@ -32,19 +32,31 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
-  # Don't care if the mailer can't send.
-  config.action_mailer.raise_delivery_errors = false
-
   # Make template changes take effect immediately.
   config.action_mailer.perform_caching = false
-
-  # Use letter_opener_web in development (view emails at /letter_opener)
-  config.action_mailer.delivery_method = :letter_opener_web
 
   # Set frontend URL for links in emails
   config.action_mailer.default_url_options = {
     host: ENV.fetch('FRONTEND_URL', 'http://localhost:3001')
   }
+
+  # Use Mailgun for testing when TEST_MAILGUN=true, otherwise use letter_opener
+  if ENV['TEST_MAILGUN'] == 'true'
+    config.action_mailer.raise_delivery_errors = true
+    config.action_mailer.delivery_method = :smtp
+    config.action_mailer.smtp_settings = {
+      address: 'smtp.mailgun.org',
+      port: 587,
+      domain: ENV.fetch('MAILGUN_DOMAIN', 'mg.goodsongs.app'),
+      user_name: ENV.fetch('MAILGUN_SMTP_USERNAME'),
+      password: ENV.fetch('MAILGUN_SMTP_PASSWORD'),
+      authentication: :plain,
+      enable_starttls_auto: true
+    }
+  else
+    config.action_mailer.raise_delivery_errors = false
+    config.action_mailer.delivery_method = :letter_opener_web
+  end
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

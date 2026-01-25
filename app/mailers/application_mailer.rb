@@ -1,5 +1,5 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: '"GoodSongs" <noreply@goodsongs.app>'
+  default from: '"GoodSongs" <noreply@mg.goodsongs.app>'
   layout "mailer"
 
   private
