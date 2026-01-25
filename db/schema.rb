@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_23_202712) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -228,10 +228,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_23_202712) do
     t.float "latitude"
     t.float "longitude"
     t.string "lastfm_username"
+    t.boolean "email_confirmed", default: false, null: false
+    t.string "email_confirmation_token"
+    t.datetime "email_confirmation_sent_at"
+    t.string "password_reset_token"
+    t.datetime "password_reset_sent_at"
     t.index ["account_type"], name: "index_users_on_account_type"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
     t.index ["lastfm_username"], name: "index_users_on_lastfm_username"
     t.index ["latitude", "longitude"], name: "index_users_on_latitude_and_longitude"
+    t.index ["password_reset_token"], name: "index_users_on_password_reset_token", unique: true
     t.index ["primary_band_id"], name: "index_users_on_primary_band_id"
     t.index ["spotify_expires_at"], name: "index_users_on_spotify_expires_at"
     t.index ["username"], name: "index_users_on_username", unique: true

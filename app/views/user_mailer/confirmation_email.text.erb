@@ -1,0 +1,9 @@
+Hi <%= @user.display_name %>!
+
+Thanks for signing up for GoodSongs! Please confirm your email address by visiting the link below:
+
+<%= @confirmation_url %>
+
+This link will expire in <%= @expiry_hours %> hours.
+
+If you didn't create a GoodSongs account, you can safely ignore this email.

@@ -39,7 +39,10 @@ env:
     - JWT_SECRET_KEY
     - LASTFM_API_KEY
     - ADMIN_EMAIL
+    - MAILGUN_SMTP_USERNAME                                                                                   
+    - MAILGUN_SMTP_PASSWORD   
   clear:
+    MAILGUN_DOMAIN: mg.goodsongs.app
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     # SOLID_QUEUE_IN_PUMA: false  # Disabled - not setting this env var at all
@@ -59,8 +62,8 @@ env:
     # Log everything from Rails
     RAILS_LOG_LEVEL: info
 
-    # Rails environment - using development for simplified deployment
-    RAILS_ENV: development
+    # Rails environment
+    RAILS_ENV: production
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal logs -r job" will tail logs from the first server in the job section.
@@ -117,3 +120,4 @@ accessories:
     port: "127.0.0.1:6379:6379"
     directories:
       - data:/data
+

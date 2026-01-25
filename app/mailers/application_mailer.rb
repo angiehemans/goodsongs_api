@@ -1,4 +1,10 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: "from@example.com"
+  default from: '"GoodSongs" <noreply@goodsongs.app>'
   layout "mailer"
+
+  private
+
+  def frontend_url
+    ENV.fetch('FRONTEND_URL', 'https://goodsongs.app')
+  end
 end

@@ -54,21 +54,27 @@ Rails.application.configure do
   config.active_storage.analyze = false
   config.active_storage.variant_processor = :mini_magick
 
-  # Ignore bad email addresses and do not raise email delivery errors.
-  # Set this to true and configure the email server for immediate delivery to raise delivery errors.
-  # config.action_mailer.raise_delivery_errors = false
+  # Enable email delivery errors in production
+  config.action_mailer.raise_delivery_errors = true
+  config.action_mailer.perform_deliveries = true 
+  config.action_mailer.perform_caching = false
 
-  # Set host to be used by links generated in mailer templates and Active Storage URLs.
-  config.action_mailer.default_url_options = { host: "api.goodsongs.app", protocol: "https" }
+  # Set host to be used by links generated in mailer templates
+  config.action_mailer.default_url_options = {
+    host: ENV.fetch('FRONTEND_URL', 'https://goodsongs.app')
+  }
 
-  # Specify outgoing SMTP server. Remember to add smtp/* credentials via rails credentials:edit.
-  # config.action_mailer.smtp_settings = {
-  #   user_name: Rails.application.credentials.dig(:smtp, :user_name),
-  #   password: Rails.application.credentials.dig(:smtp, :password),
-  #   address: "smtp.example.com",
-  #   port: 587,
-  #   authentication: :plain
-  # }
+  # Mailgun SMTP configuration
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = {
+    address: 'smtp.mailgun.org',
+    port: 587,
+    domain: ENV.fetch('MAILGUN_DOMAIN', 'mg.goodsongs.app'),
+    user_name: ENV.fetch("MAILGUN_SMTP_USERNAME"),
+    password: ENV.fetch('MAILGUN_SMTP_PASSWORD', ''),
+    authentication: :plain,
+    enable_starttls_auto: true
+  }
 
   # Enable locale fallbacks for I18n (makes lookups for any locale fall back to
   # the I18n.default_locale when a translation cannot be found).

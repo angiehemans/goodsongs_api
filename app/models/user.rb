@@ -20,6 +20,10 @@ class User < ApplicationRecord
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?
 
+  # Token expiration constants
+  EMAIL_CONFIRMATION_EXPIRY = 24.hours
+  PASSWORD_RESET_EXPIRY = 2.hours
+
   enum :account_type, { fan: 0, band: 1 }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false }
@@ -41,6 +45,7 @@ class User < ApplicationRecord
   validates :primary_band, presence: true, if: :primary_band_required?
 
   before_save :downcase_email, :downcase_username
+  after_create :send_confirmation_email
 
   def profile_data
     UserSerializer.profile_data(self)
@@ -102,6 +107,72 @@ class User < ApplicationRecord
     lastfm_username.present?
   end
 
+  # Email confirmation token generation
+  def generate_email_confirmation_token!
+    loop do
+      self.email_confirmation_token = SecureRandom.urlsafe_base64(32)
+      break unless User.exists?(email_confirmation_token: email_confirmation_token)
+    end
+    self.email_confirmation_sent_at = Time.current
+    save!
+    email_confirmation_token
+  end
+
+  # Password reset token generation
+  def generate_password_reset_token!
+    loop do
+      self.password_reset_token = SecureRandom.urlsafe_base64(32)
+      break unless User.exists?(password_reset_token: password_reset_token)
+    end
+    self.password_reset_sent_at = Time.current
+    save!
+    password_reset_token
+  end
+
+  # Check if email confirmation token is still valid
+  def email_confirmation_token_valid?
+    email_confirmation_token.present? &&
+      email_confirmation_sent_at.present? &&
+      email_confirmation_sent_at > EMAIL_CONFIRMATION_EXPIRY.ago
+  end
+
+  # Check if password reset token is still valid
+  def password_reset_token_valid?
+    password_reset_token.present? &&
+      password_reset_sent_at.present? &&
+      password_reset_sent_at > PASSWORD_RESET_EXPIRY.ago
+  end
+
+  # Confirm email and clear token
+  def confirm_email!
+    update!(
+      email_confirmed: true,
+      email_confirmation_token: nil,
+      email_confirmation_sent_at: nil
+    )
+  end
+
+  # Clear password reset token after use
+  def clear_password_reset_token!
+    update!(
+      password_reset_token: nil,
+      password_reset_sent_at: nil
+    )
+  end
+
+  # Check if user can request another confirmation email (rate limit: 1 minute)
+  def can_resend_confirmation?
+    return false if email_confirmed?
+    return true if email_confirmation_sent_at.nil?
+    email_confirmation_sent_at < 1.minute.ago
+  end
+
+  # Check if user can request password reset (rate limit: 1 minute)
+  def can_request_password_reset?
+    return true if password_reset_sent_at.nil?
+    password_reset_sent_at < 1.minute.ago
+  end
+
   private
 
   # Only geocode if location fields changed and we have location data
@@ -123,5 +194,10 @@ class User < ApplicationRecord
 
   def downcase_username
     self.username = username&.downcase
+  end
+
+  def send_confirmation_email
+    generate_email_confirmation_token!
+    UserMailerJob.perform_later(id, :confirmation)
   end
 end

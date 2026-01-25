@@ -1,7 +1,19 @@
 # config/routes.rb
 Rails.application.routes.draw do
+  # Letter Opener for viewing emails in development
+  mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+
   post '/login', to: 'authentication#authenticate'
   post '/signup', to: 'users#create'
+
+  # Email verification routes
+  post '/email/resend-confirmation', to: 'email_verification#resend_confirmation'
+  post '/email/confirm', to: 'email_verification#confirm'
+
+  # Password reset routes
+  post '/password/forgot', to: 'password_reset#create'
+  post '/password/reset', to: 'password_reset#update'
+  get '/password/validate-token', to: 'password_reset#validate_token'
 
   # Onboarding routes
   get '/onboarding/status', to: 'onboarding#status'

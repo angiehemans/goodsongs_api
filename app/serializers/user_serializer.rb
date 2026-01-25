@@ -10,7 +10,11 @@ class UserSerializer
       :spotify_access_token,
       :spotify_refresh_token,
       :spotify_expires_at,
-      :primary_band_id
+      :primary_band_id,
+      :email_confirmation_token,
+      :email_confirmation_sent_at,
+      :password_reset_token,
+      :password_reset_sent_at
     ])
 
     result = base_data.merge(
@@ -29,7 +33,9 @@ class UserSerializer
       latitude: user.latitude,
       longitude: user.longitude,
       followers_count: user.followers.count,
-      following_count: user.following.count
+      following_count: user.following.count,
+      email_confirmed: user.email_confirmed?,
+      can_resend_confirmation: user.can_resend_confirmation?
     )
 
     # Include primary band for BAND accounts

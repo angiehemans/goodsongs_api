@@ -1,0 +1,46 @@
+class PasswordResetService
+  class TokenExpired < StandardError; end
+  class TokenInvalid < StandardError; end
+  class InvalidPassword < StandardError
+    attr_reader :errors
+
+    def initialize(errors)
+      @errors = errors
+      super('Invalid password')
+    end
+  end
+
+  def initialize(token, new_password, new_password_confirmation)
+    @token = token
+    @new_password = new_password
+    @new_password_confirmation = new_password_confirmation
+  end
+
+  def call
+    validate_token!
+    reset_password!
+    @user
+  end
+
+  private
+
+  def validate_token!
+    raise TokenInvalid if @token.blank?
+
+    @user = User.find_by(password_reset_token: @token)
+    raise TokenInvalid unless @user
+    raise TokenExpired unless @user.password_reset_token_valid?
+  end
+
+  def reset_password!
+    @user.password = @new_password
+    @user.password_confirmation = @new_password_confirmation
+
+    unless @user.valid?
+      raise InvalidPassword.new(@user.errors.full_messages)
+    end
+
+    @user.clear_password_reset_token!
+    @user.save!
+  end
+end
