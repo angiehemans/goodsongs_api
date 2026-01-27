@@ -5,7 +5,6 @@ class Review < ApplicationRecord
   # Scope to exclude reviews from disabled users
   scope :from_active_users, -> { joins(:user).where(users: { disabled: false }) }
 
-  validates :song_link, presence: true
   validates :band_name, presence: true
   validates :song_name, presence: true
   validates :review_text, presence: true

@@ -8,21 +8,50 @@ class MusicbrainzService
 
   # Rate limiting: 1 request per second
   RATE_LIMIT_DELAY = 1.1
+  MAX_RETRIES = 3
+  NETWORK_ERRORS = [
+    Net::OpenTimeout,
+    Net::ReadTimeout,
+    OpenSSL::SSL::SSLError,
+    Errno::ECONNRESET,
+    Errno::ECONNREFUSED,
+    Errno::ETIMEDOUT,
+    SocketError
+  ].freeze
+
   @rate_limit_mutex = Mutex.new
   @last_request_time = nil
 
   class << self
-    # Rate-limited request wrapper
+    # Rate-limited request wrapper with retry logic
     def rate_limited_get(path, options = {})
-      @rate_limit_mutex.synchronize do
-        if @last_request_time
-          elapsed = Time.current - @last_request_time
-          sleep(RATE_LIMIT_DELAY - elapsed) if elapsed < RATE_LIMIT_DELAY
-        end
-        @last_request_time = Time.current
-      end
+      retries = 0
 
-      get(path, options)
+      begin
+        @rate_limit_mutex.synchronize do
+          if @last_request_time
+            elapsed = Time.current - @last_request_time
+            sleep(RATE_LIMIT_DELAY - elapsed) if elapsed < RATE_LIMIT_DELAY
+          end
+          @last_request_time = Time.current
+        end
+
+        # Set reasonable timeouts
+        options[:timeout] ||= 10
+        get(path, options)
+      rescue *NETWORK_ERRORS => e
+        retries += 1
+        if retries <= MAX_RETRIES
+          # Exponential backoff: 1s, 2s, 4s
+          sleep_time = 2 ** (retries - 1)
+          Rails.logger.warn("MusicBrainz request failed (attempt #{retries}/#{MAX_RETRIES}): #{e.message}. Retrying in #{sleep_time}s...")
+          sleep(sleep_time)
+          retry
+        else
+          Rails.logger.error("MusicBrainz request failed after #{MAX_RETRIES} retries: #{e.message}")
+          raise
+        end
+      end
     end
     # Search for artists by name
     def search_artist(query, limit: 10)
@@ -86,12 +115,13 @@ class MusicbrainzService
       get_artist(mbid) || results.first
     end
 
-    # Search for recordings by track name and artist name
-    def search_recording(track_name, artist_name, limit: 5)
-      return [] if track_name.blank? || artist_name.blank?
+    # Search for recordings by track name and optional artist name
+    def search_recording(track_name, artist_name = nil, limit: 5)
+      return [] if track_name.blank?
 
       # Build Lucene query for MusicBrainz
-      query = "recording:\"#{escape_query(track_name)}\" AND artist:\"#{escape_query(artist_name)}\""
+      query = "recording:\"#{escape_query(track_name)}\""
+      query += " AND artist:\"#{escape_query(artist_name)}\"" if artist_name.present?
 
       response = rate_limited_get('/recording', query: {
         query: query,

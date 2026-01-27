@@ -33,6 +33,10 @@ Rails.application.routes.draw do
   delete '/lastfm/disconnect', to: 'lastfm#disconnect'
   get '/lastfm/status', to: 'lastfm#status'
   get '/lastfm/search-artist', to: 'lastfm#search_artist'
+
+  # MusicBrainz search routes
+  get '/musicbrainz/search', to: 'musicbrainz_search#search'
+  get '/musicbrainz/recording/:mbid', to: 'musicbrainz_search#recording'
   
   # Review routes - consolidated
   get '/reviews/user', to: 'reviews#current_user_reviews'
