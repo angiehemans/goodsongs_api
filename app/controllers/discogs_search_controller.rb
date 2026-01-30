@@ -97,9 +97,8 @@ class DiscogsSearchController < ApplicationController
 
   private
 
-  # Cache the full track search result (includes tracklist fetching)
   def cached_track_search(track:, artist:, limit:)
-    cache_key = "discogs:track_search:v2:#{Digest::SHA256.hexdigest("#{track}:#{artist}:#{limit}")}"
+    cache_key = "discogs:track_search:v3:#{Digest::SHA256.hexdigest("#{track}:#{artist}:#{limit}")}"
 
     Rails.cache.fetch(cache_key, expires_in: 24.hours) do
       search_and_match_tracks(track: track, artist: artist, limit: limit)
@@ -114,139 +113,79 @@ class DiscogsSearchController < ApplicationController
     end
   end
 
-  # Search for releases and find matching tracks - prioritizes albums over singles
+  def cached_release(release_id)
+    cache_key = "discogs:release:#{release_id}"
+
+    Rails.cache.fetch(cache_key, expires_in: 24.hours) do
+      DiscogsService.get_release(release_id)
+    end
+  end
+
+  # Search for releases matching the track/artist query.
+  # Uses Discogs search results directly instead of fetching master details
+  # for each result. Tracklist details are available via GET /discogs/master/:id.
   def search_and_match_tracks(track:, artist:, limit:)
     return [] if track.blank? && artist.blank?
 
-    # Two search strategies combined:
-    # 1. Search by track name to find releases containing that track
-    # 2. Search by artist + album-style query to find main albums
-    track_results = DiscogsService.search(track: track, artist: artist, limit: 20) if track.present?
-    track_results ||= []
+    results = DiscogsService.search(track: track, artist: artist, limit: limit * 2)
 
-    # Also search for artist's main releases (helps find studio albums)
-    artist_results = []
-    if artist.present?
-      artist_results = DiscogsService.search(artist: artist, query: nil, limit: 10)
-    end
+    return [] if results.blank?
 
-    # Combine and dedupe by master_id
+    # Dedupe by master_id
     seen_masters = Set.new
-    all_results = []
-
-    (track_results + artist_results).each do |r|
-      next unless r[:master_id]
-      next if seen_masters.include?(r[:master_id])
+    unique_results = results.select do |r|
+      next false unless r[:master_id]
+      next false if seen_masters.include?(r[:master_id])
       seen_masters.add(r[:master_id])
-      all_results << r
+      true
     end
 
-    return [] if all_results.blank?
-
-    matching_tracks = []
-    normalized_query = normalize_for_matching(track) if track.present?
-
-    # Sort to prioritize likely studio albums
-    sorted_results = all_results.sort_by do |release|
-      score = 0
-      format = release[:format]&.downcase || ''
-      title = release[:title]&.downcase || ''
-
-      # Heavy penalty for obvious non-albums
-      score += 200 if title.include?('live at') || title.include?('live in')
-      score += 200 if title.include?('bootleg')
-      score += 150 if title.include?('compilation') || title.include?('best of') || title.include?('greatest hits')
-      score += 100 if title.include?('acoustic') || title.include?('unplugged')
-      score += 100 if title.include?(' ep') || title.end_with?(' ep')
-      score += 50 if title.include?('remix')
-      score += 50 if title.include?('special') || title.include?('deluxe')
-
-      # Prefer vinyl/LP (often studio albums)
-      score -= 30 if format.include?('lp') || format.include?('vinyl')
-
-      # Slight preference for older releases
-      year = release[:year].to_i
-      score -= 10 if year > 0 && year < 2005
-
-      score
+    # Score and sort to prioritize studio albums
+    scored = unique_results.map do |release|
+      { release: release, score: score_release(release) }
     end
 
-    # Check up to 10 releases for matching tracks
-    sorted_results.first(10).each do |release|
-      next unless release[:master_id]
-
-      master_data = cached_master(release[:master_id])
-      next unless master_data&.dig(:tracklist)
-
-      # If no track query, just return the release info
-      if track.blank?
-        matching_tracks << format_result(release, master_data, nil)
-        next
-      end
-
-      # Find matching track in tracklist
-      master_data[:tracklist].each do |t|
-        next unless t[:title]
-        normalized_title = normalize_for_matching(t[:title])
-
-        if track_matches?(normalized_title, normalized_query)
-          matching_tracks << format_result(release, master_data, t)
-          break  # Only one match per release
-        end
-      end
-
-      break if matching_tracks.size >= limit
-    end
-
-    # Score and sort results - prefer albums with exact track matches
-    matching_tracks
-      .sort_by { |t| -calculate_result_score(t, normalized_query) }
+    scored
+      .sort_by { |r| -r[:score] }
       .first(limit)
+      .map { |r| format_search_result(r[:release], track) }
   end
 
-  def format_result(release, master_data, track)
+  def format_search_result(release, track_query)
     {
-      song_name: track&.dig(:title),
-      band_name: master_data[:artist] || release[:artist],
-      album_title: master_data[:title] || release[:title],
-      release_year: master_data[:year] || release[:year],
-      artwork_url: master_data[:cover_image] || release[:cover_image],
+      song_name: track_query,
+      band_name: release[:artist],
+      album_title: release[:title],
+      release_year: release[:year],
+      artwork_url: release[:cover_image],
+      master_id: release[:master_id],
       discogs_url: "https://www.discogs.com/master/#{release[:master_id]}",
       genre: release[:genre],
       style: release[:style]
     }
   end
 
-  def track_matches?(normalized_title, normalized_query)
-    return false if normalized_query.blank?
-    normalized_title.include?(normalized_query) || normalized_query.include?(normalized_title)
-  end
-
-  def calculate_result_score(result, track_query)
+  def score_release(release)
     score = 0
-    song = normalize_for_matching(result[:song_name])
-    album = normalize_for_matching(result[:album_title])
+    format = release[:format]&.downcase || ''
+    title = release[:title]&.downcase || ''
 
-    # Exact track match is best
-    score += 100 if song == track_query
+    # Penalize non-studio albums
+    score -= 200 if title.include?('live at') || title.include?('live in') || title.include?('bootleg')
+    score -= 150 if title.include?('compilation') || title.include?('best of') || title.include?('greatest hits')
+    score -= 100 if title.include?('acoustic') || title.include?('unplugged')
+    score -= 100 if title.include?(' ep') || title.end_with?(' ep')
+    score -= 50 if title.include?('remix') || title.include?('single')
+    score -= 50 if title.include?('special') || title.include?('deluxe')
 
-    # Penalize if album title suggests it's a single/compilation
-    score -= 50 if album.include?('single')
-    score -= 50 if album.include?('compilation')
-    score -= 30 if album.include?('live')
-    score -= 30 if album.include?('acoustic')
-    score -= 30 if album.include?('remix')
-    score -= 20 if album.include?(' ep')
+    # Prefer vinyl/LP (often studio albums)
+    score += 30 if format.include?('lp') || format.include?('vinyl')
 
-    # Prefer older releases (likely the original album)
-    year = result[:release_year].to_i
-    score += 10 if year > 0 && year < 2010
+    # Slight preference for older releases (likely the original)
+    year = release[:year].to_i
+    score += 10 if year > 0 && year < 2005
 
     score
-  end
-
-  def normalize_for_matching(str)
-    str.to_s.downcase.gsub(/[^a-z0-9\s]/, '').strip
   end
 
   def format_track_for_review(track, release_data)
