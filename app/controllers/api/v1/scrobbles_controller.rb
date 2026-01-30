@@ -166,7 +166,7 @@ module Api
           scrobbles = scrobbles.where('played_at < ?', cursor_time)
         end
 
-        scrobbles.limit(limit + 1).includes(track: [:artist, :album])
+        scrobbles.limit(limit + 1).includes(track: [:band, :album])
       end
 
       def pagination_metadata(scrobbles)
@@ -217,16 +217,16 @@ module Api
           id: track.id,
           name: track.name,
           duration_ms: track.duration_ms,
-          artist: track.artist ? serialize_artist(track.artist) : nil,
+          artist: track.band ? serialize_artist(track.band) : nil,
           album: track.album ? serialize_album(track.album) : nil
         }
       end
 
-      def serialize_artist(artist)
+      def serialize_artist(band)
         {
-          id: artist.id,
-          name: artist.name,
-          image_url: artist.image_url
+          id: band.id,
+          name: band.name,
+          image_url: band.artist_image_url
         }
       end
 

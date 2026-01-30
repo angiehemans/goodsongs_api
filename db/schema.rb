@@ -10,9 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
+ActiveRecord::Schema[8.0].define(version: 2026_01_30_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+  enable_extension "pg_trgm"
   enable_extension "pgcrypto"
 
   create_table "active_storage_attachments", force: :cascade do |t|
@@ -45,26 +46,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
 
   create_table "albums", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
-    t.uuid "artist_id"
     t.string "musicbrainz_release_id"
     t.string "cover_art_url"
     t.date "release_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["artist_id"], name: "index_albums_on_artist_id"
+    t.bigint "band_id"
+    t.integer "source", default: 0, null: false
+    t.string "discogs_master_id"
+    t.string "release_type"
+    t.jsonb "genres", default: []
+    t.string "label"
+    t.string "country"
+    t.integer "track_count"
+    t.boolean "verified", default: false, null: false
+    t.bigint "submitted_by_id"
+    t.index ["band_id"], name: "index_albums_on_band_id"
+    t.index ["discogs_master_id"], name: "index_albums_on_discogs_master_id", unique: true
     t.index ["musicbrainz_release_id"], name: "index_albums_on_musicbrainz_release_id", unique: true
     t.index ["name"], name: "index_albums_on_name"
+    t.index ["name"], name: "index_albums_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["submitted_by_id"], name: "index_albums_on_submitted_by_id"
   end
 
-  create_table "artists", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+  create_table "band_aliases", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.bigint "band_id", null: false
     t.string "name", null: false
-    t.string "musicbrainz_artist_id"
-    t.string "image_url"
-    t.text "bio"
+    t.string "locale"
     t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["musicbrainz_artist_id"], name: "index_artists_on_musicbrainz_artist_id", unique: true
-    t.index ["name"], name: "index_artists_on_name"
+    t.index ["band_id"], name: "index_band_aliases_on_band_id"
+    t.index ["name"], name: "index_band_aliases_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
   create_table "bands", force: :cascade do |t|
@@ -89,11 +100,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
     t.string "lastfm_artist_name"
     t.string "lastfm_image_url"
     t.text "bandcamp_embed"
+    t.integer "source", default: 0, null: false
+    t.string "discogs_artist_id"
+    t.string "country"
+    t.string "artist_type"
+    t.string "sort_name"
+    t.jsonb "aliases", default: []
+    t.jsonb "genres", default: []
+    t.boolean "verified", default: false, null: false
+    t.bigint "submitted_by_id"
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
     t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
     t.index ["name"], name: "index_bands_on_name"
+    t.index ["name"], name: "index_bands_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["slug"], name: "index_bands_on_slug", unique: true
+    t.index ["submitted_by_id"], name: "index_bands_on_submitted_by_id"
     t.index ["user_id"], name: "index_bands_on_user_id"
   end
 
@@ -195,17 +217,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
 
   create_table "tracks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "name", null: false
-    t.uuid "artist_id"
     t.uuid "album_id"
     t.integer "duration_ms"
     t.string "musicbrainz_recording_id"
     t.string "isrc"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "band_id"
+    t.integer "source", default: 0, null: false
+    t.string "discogs_track_id"
+    t.integer "track_number"
+    t.integer "disc_number", default: 1
+    t.jsonb "genres", default: []
+    t.boolean "verified", default: false, null: false
+    t.bigint "submitted_by_id"
     t.index ["album_id"], name: "index_tracks_on_album_id"
-    t.index ["artist_id"], name: "index_tracks_on_artist_id"
+    t.index ["band_id"], name: "index_tracks_on_band_id"
     t.index ["musicbrainz_recording_id"], name: "index_tracks_on_musicbrainz_recording_id", unique: true
     t.index ["name"], name: "index_tracks_on_name"
+    t.index ["name"], name: "index_tracks_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["submitted_by_id"], name: "index_tracks_on_submitted_by_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -259,8 +290,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "albums", "artists"
+  add_foreign_key "albums", "bands"
+  add_foreign_key "albums", "users", column: "submitted_by_id"
+  add_foreign_key "band_aliases", "bands", on_delete: :cascade
   add_foreign_key "bands", "users"
+  add_foreign_key "bands", "users", column: "submitted_by_id"
   add_foreign_key "events", "bands"
   add_foreign_key "events", "venues"
   add_foreign_key "favorite_bands", "bands"
@@ -274,6 +308,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_25_195235) do
   add_foreign_key "scrobbles", "tracks"
   add_foreign_key "scrobbles", "users"
   add_foreign_key "tracks", "albums"
-  add_foreign_key "tracks", "artists"
+  add_foreign_key "tracks", "bands"
+  add_foreign_key "tracks", "users", column: "submitted_by_id"
   add_foreign_key "users", "bands", column: "primary_band_id"
 end

@@ -110,14 +110,39 @@ class ReviewsController < ApplicationController
   def find_or_create_band(band_name)
     return nil if band_name.blank?
 
-    band = Band.find_or_initialize_by(name: band_name.strip)
+    name = band_name.strip
+    mbid = band_musicbrainz_id
 
-    # Set lastfm_artist_name if provided and band doesn't already have one
+    # 1. Exact MBID match (most reliable identifier)
+    if mbid.present?
+      band = Band.find_by(musicbrainz_id: mbid)
+      return backfill_band(band) if band
+    end
+
+    # 2. Case-insensitive exact name match
+    band = Band.where("LOWER(name) = LOWER(?)", name).first
+    return backfill_band(band) if band
+
+    # 3. Handle "The" prefix variations — "The Beatles" ↔ "Beatles"
+    normalized = name.sub(/\Athe\s+/i, '')
+    with_the = "The #{normalized}"
+    band = Band.where("LOWER(name) = LOWER(?) OR LOWER(name) = LOWER(?)", normalized, with_the).first
+    return backfill_band(band) if band
+
+    # 4. Check band aliases
+    band_alias = BandAlias.where("LOWER(name) = LOWER(?)", name).first
+    return backfill_band(band_alias.band) if band_alias
+
+    # 5. Create new band
+    band = Band.new(name: name)
+    backfill_band(band)
+  end
+
+  def backfill_band(band)
     if band_lastfm_artist_name.present? && band.lastfm_artist_name.blank?
       band.lastfm_artist_name = band_lastfm_artist_name
     end
 
-    # Set musicbrainz_id if provided and band doesn't already have one
     if band_musicbrainz_id.present? && band.musicbrainz_id.blank?
       band.musicbrainz_id = band_musicbrainz_id
     end

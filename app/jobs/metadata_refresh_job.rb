@@ -48,18 +48,19 @@ class MetadataRefreshJob < ApplicationJob
   end
 
   def refresh_stale_artists
-    stale_artists = Artist
+    stale_bands = Band
+                    .where(user_id: nil)
                     .where('updated_at < ?', 30.days.ago)
-                    .where.not(musicbrainz_artist_id: nil)
+                    .where.not(musicbrainz_id: nil)
                     .limit(BATCH_SIZE)
 
-    count = stale_artists.count
+    count = stale_bands.count
     return if count.zero?
 
-    Rails.logger.info("MetadataRefreshJob: Refreshing #{count} stale artists")
+    Rails.logger.info("MetadataRefreshJob: Refreshing #{count} stale bands")
 
-    stale_artists.find_each do |artist|
-      refresh_artist(artist)
+    stale_bands.find_each do |band|
+      refresh_band(band)
     end
   end
 
@@ -80,27 +81,27 @@ class MetadataRefreshJob < ApplicationJob
     end
   end
 
-  def refresh_artist(artist)
-    artist_data = MusicbrainzService.get_artist(artist.musicbrainz_artist_id)
+  def refresh_band(band)
+    artist_data = MusicbrainzService.get_artist(band.musicbrainz_id)
     return unless artist_data
 
     updates = {}
 
     # Try to get image if missing
-    if artist.image_url.blank? && defined?(FanartTvService)
-      image = FanartTvService.get_artist_thumb(artist.musicbrainz_artist_id)
-      updates[:image_url] = image if image.present?
+    if band.artist_image_url.blank? && defined?(FanartTvService)
+      image = FanartTvService.get_artist_thumb(band.musicbrainz_id)
+      updates[:artist_image_url] = image if image.present?
     end
 
-    # Update bio if missing
-    if artist.bio.blank?
+    # Update about if missing
+    if band.about.blank?
       bio = build_artist_bio(artist_data)
-      updates[:bio] = bio if bio.present?
+      updates[:about] = bio if bio.present?
     end
 
-    artist.update!(updates) if updates.any?
+    band.update!(updates) if updates.any?
   rescue StandardError => e
-    Rails.logger.error("MetadataRefreshJob: Failed to refresh artist #{artist.id}: #{e.message}")
+    Rails.logger.error("MetadataRefreshJob: Failed to refresh band #{band.id}: #{e.message}")
   end
 
   def refresh_album(album)

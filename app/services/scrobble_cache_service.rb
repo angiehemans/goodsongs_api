@@ -16,7 +16,7 @@ class ScrobbleCacheService
       cache_key = recent_scrobbles_key(user.id, limit)
 
       Rails.cache.fetch(cache_key, expires_in: RECENT_SCROBBLES_TTL) do
-        user.scrobbles.recent.limit(limit).includes(track: [:artist, :album]).to_a
+        user.scrobbles.recent.limit(limit).includes(track: [:band, :album]).to_a
       end
     end
 

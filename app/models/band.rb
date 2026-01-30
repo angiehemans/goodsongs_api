@@ -1,8 +1,14 @@
 class Band < ApplicationRecord
   belongs_to :user, optional: true
+  belongs_to :submitted_by, class_name: 'User', optional: true
+  has_many :albums, dependent: :destroy
+  has_many :tracks, dependent: :destroy
   has_many :reviews, dependent: :destroy
   has_many :events, dependent: :destroy
+  has_many :band_aliases, dependent: :destroy
   has_one_attached :profile_picture
+
+  enum :source, { musicbrainz: 0, user_submitted: 1 }
 
   # Geocoding for band location
   geocoded_by :full_location
@@ -12,7 +18,8 @@ class Band < ApplicationRecord
   after_commit :fetch_artist_image_on_create, on: :create, if: :should_fetch_image_on_create?
   after_commit :fetch_artist_image, on: :update, if: :should_fetch_image_on_update?
 
-  validates :name, presence: true, uniqueness: { case_sensitive: false }
+  validates :name, presence: true
+  validates :name, uniqueness: { case_sensitive: false, scope: :user_id }, if: :user_submitted?
   validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9\-_]+\z/, message: "can only contain lowercase letters, numbers, hyphens, and underscores" }
   validates :spotify_link, format: { with: /\Ahttps:\/\/(open\.)?spotify\.com(\/|\z)/, message: "must be a valid Spotify URL" }, allow_blank: true
   validates :bandcamp_link, format: { with: /\Ahttps:\/\/[\w\-]+\.bandcamp\.com(\/|\z)/, message: "must be a valid Bandcamp URL" }, allow_blank: true
@@ -26,6 +33,13 @@ class Band < ApplicationRecord
   
   scope :user_created, -> { where.not(user_id: nil) }
   scope :auto_generated, -> { where(user_id: nil) }
+  scope :verified, -> { where(verified: true) }
+  scope :canonical, -> { where(source: :musicbrainz) }
+  scope :user_contributed, -> { where(source: :user_submitted) }
+  scope :search_by_name, ->(query) {
+    where("name % ?", query)
+      .order(Arel.sql("similarity(name, #{connection.quote(query)}) DESC"))
+  }
   
   def user_owned?
     user_id.present?

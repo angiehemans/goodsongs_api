@@ -18,9 +18,9 @@ class ScrobbleEnrichmentService
     end
 
     # Get or create canonical records
-    artist = find_or_create_artist(recording)
-    album = find_or_create_album(recording, artist)
-    track = find_or_create_track(recording, artist, album)
+    band = find_or_create_band(recording)
+    album = find_or_create_album(recording, band)
+    track = find_or_create_track(recording, band, album)
 
     # Update scrobble with enriched data
     scrobble.update!(
@@ -43,28 +43,43 @@ class ScrobbleEnrichmentService
     ScrobbleCacheService.get_musicbrainz_recording(scrobble.track_name, scrobble.artist_name)
   end
 
-  def find_or_create_artist(recording)
+  def find_or_create_band(recording)
     artist_data = recording[:artists]&.first
-    return nil unless artist_data && artist_data[:mbid]
+    return nil unless artist_data
 
-    artist = Artist.find_by(musicbrainz_artist_id: artist_data[:mbid])
-    return artist if artist
+    mbid = artist_data[:mbid]
+    name = artist_data[:name]
 
-    # Fetch full artist details from MusicBrainz
-    full_artist = MusicbrainzService.get_artist(artist_data[:mbid])
+    # 1. Exact MBID match
+    if mbid.present?
+      band = Band.find_by(musicbrainz_id: mbid)
+      return band if band
+    end
 
-    # Try to get artist image from existing sources
+    # 2. Case-insensitive name match, backfill MBID
+    if name.present?
+      band = Band.where("LOWER(name) = LOWER(?)", name).first
+      if band
+        if mbid.present? && band.musicbrainz_id.blank?
+          band.update!(musicbrainz_id: mbid)
+        end
+        return band
+      end
+    end
+
+    # 3. Create new band — fetch full artist details from MusicBrainz
+    full_artist = mbid.present? ? MusicbrainzService.get_artist(mbid) : nil
     image_url = fetch_artist_image(full_artist)
 
-    Artist.create!(
-      name: artist_data[:name],
-      musicbrainz_artist_id: artist_data[:mbid],
-      image_url: image_url,
-      bio: extract_artist_bio(full_artist)
+    Band.create!(
+      name: name,
+      musicbrainz_id: mbid,
+      artist_image_url: image_url,
+      about: extract_artist_bio(full_artist)
     )
   end
 
-  def find_or_create_album(recording, artist)
+  def find_or_create_album(recording, band)
     release = select_best_release(recording[:releases])
     return nil unless release && release[:mbid]
 
@@ -76,20 +91,20 @@ class ScrobbleEnrichmentService
 
     Album.create!(
       name: release[:title],
-      artist: artist,
+      band: band,
       musicbrainz_release_id: release[:mbid],
       cover_art_url: cover_art_url,
       release_date: parse_release_date(release[:date])
     )
   end
 
-  def find_or_create_track(recording, artist, album)
+  def find_or_create_track(recording, band, album)
     track = Track.find_by(musicbrainz_recording_id: recording[:mbid])
     return track if track
 
     Track.create!(
       name: recording[:title],
-      artist: artist,
+      band: band,
       album: album,
       duration_ms: recording[:length],
       musicbrainz_recording_id: recording[:mbid],

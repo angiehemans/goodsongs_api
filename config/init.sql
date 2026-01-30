@@ -6,7 +6,7 @@
 
 -- Create any additional extensions needed
 -- CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
--- CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
 -- Set up any additional database configurations
 ALTER DATABASE goodsongs_api_production SET timezone = 'UTC';

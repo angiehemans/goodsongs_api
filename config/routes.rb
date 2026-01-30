@@ -110,6 +110,7 @@ Rails.application.routes.draw do
         end
       end
       get 'users/:user_id/scrobbles', to: 'scrobbles#user_scrobbles'
+      get 'search', to: 'search#index'
     end
   end
 end
