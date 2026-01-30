@@ -144,6 +144,44 @@ class MusicbrainzService
       []
     end
 
+    # Flexible search that can search by track, artist, or both
+    def search_recording_flexible(track: nil, artist: nil, limit: 5)
+      return [] if track.blank? && artist.blank?
+
+      # Build Lucene query based on what's provided
+      query_parts = []
+      query_parts << "recording:\"#{escape_query(track)}\"" if track.present?
+      query_parts << "artist:\"#{escape_query(artist)}\"" if artist.present?
+
+      # If both are the same (combined search), use OR to find either matches
+      if track.present? && artist.present? && track == artist
+        query = "(recording:\"#{escape_query(track)}\" OR artist:\"#{escape_query(artist)}\")"
+      else
+        query = query_parts.join(' AND ')
+      end
+
+      # Include release-groups to get release type info (Album, Single, Compilation, etc.)
+      response = rate_limited_get('/recording', query: {
+        query: query,
+        fmt: 'json',
+        limit: limit
+      })
+
+      return [] unless response.success?
+
+      recordings = response.parsed_response['recordings']
+      return [] unless recordings.is_a?(Array)
+
+      recordings.map { |recording| format_recording_search_result(recording) }
+    rescue Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError,
+           Errno::ECONNRESET, Errno::ECONNREFUSED, SocketError => e
+      Rails.logger.error("MusicbrainzService network error: #{e.message}")
+      raise
+    rescue StandardError => e
+      Rails.logger.error("MusicbrainzService search_recording_flexible error: #{e.message}")
+      []
+    end
+
     # Get detailed recording info by MBID
     def get_recording(mbid)
       return nil if mbid.blank?
@@ -347,14 +385,18 @@ class MusicbrainzService
     def extract_releases(releases)
       return [] unless releases.is_a?(Array)
 
-      releases.first(5).map do |release|
+      # Get more releases to find the best one
+      releases.first(10).map do |release|
+        release_group = release['release-group']
         {
           mbid: release['id'],
           title: release['title'],
           status: release['status'],
           date: release['date'],
           country: release['country'],
-          release_group_mbid: release.dig('release-group', 'id')
+          release_group_mbid: release_group&.dig('id'),
+          release_type: release_group&.dig('primary-type'),
+          secondary_types: release_group&.dig('secondary-types') || []
         }
       end
     end

@@ -37,6 +37,11 @@ Rails.application.routes.draw do
   # MusicBrainz search routes
   get '/musicbrainz/search', to: 'musicbrainz_search#search'
   get '/musicbrainz/recording/:mbid', to: 'musicbrainz_search#recording'
+
+  # Discogs search routes
+  get '/discogs/search', to: 'discogs_search#search'
+  get '/discogs/master/:id', to: 'discogs_search#master'
+  get '/discogs/release/:id', to: 'discogs_search#release'
   
   # Review routes - consolidated
   get '/reviews/user', to: 'reviews#current_user_reviews'

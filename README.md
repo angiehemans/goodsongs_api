@@ -6,6 +6,7 @@ A Ruby on Rails API for music reviews and recommendations. Users can create acco
 
 - **User Authentication**: JWT-based authentication system
 - **Song Reviews**: Write reviews with ratings (1-3), liked aspects, and detailed text
+- **Music Search**: Search for songs via MusicBrainz and Discogs APIs with cover art
 - **Band Management**: Automatic band creation and organization
 - **Review Feed**: Discover new music through community reviews
 - **User Profiles**: Public user profiles showing all reviews
@@ -18,6 +19,10 @@ A Ruby on Rails API for music reviews and recommendations. Users can create acco
 - **JWT** (authentication)
 - **BCrypt** (password encryption)
 - **Rack-CORS** (cross-origin requests)
+- **MusicBrainz API** (music metadata and search)
+- **Discogs API** (music search with cover art)
+- **CoverArtArchive** (album artwork)
+- **Last.fm API** (scrobbling)
 
 ## Prerequisites
 
@@ -96,6 +101,20 @@ The API will be available at `http://localhost:3000`
 - `GET /users/:username` - Get public user profile with reviews
 - `GET /feed` - Get latest reviews feed (requires auth)
 
+### Music Search (MusicBrainz)
+
+- `GET /musicbrainz/search` - Search for songs/artists (requires auth)
+  - Query params: `track`, `artist`, `q` (combined search), `limit`, `sort`, `official_only`
+  - Sort options: `relevance`, `releases`, `date`, `original` (default)
+- `GET /musicbrainz/recording/:mbid` - Get recording details with artwork (requires auth)
+
+### Music Search (Discogs)
+
+- `GET /discogs/search` - Search for releases (requires auth)
+  - Query params: `track`, `artist`, `q` (combined search), `limit`
+- `GET /discogs/master/:id` - Get master release with tracklist (requires auth)
+- `GET /discogs/release/:id` - Get release with tracklist (requires auth)
+
 ### Health Check
 
 - `GET /health` - API health check
@@ -149,6 +168,98 @@ curl -X POST http://localhost:3000/reviews \
 
 ```bash
 curl http://localhost:3000/users/musiclover
+```
+
+### Search for Songs (MusicBrainz)
+
+```bash
+# Search by track name
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  "http://localhost:3000/musicbrainz/search?track=Hey%20Jude&limit=5"
+
+# Search by artist
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  "http://localhost:3000/musicbrainz/search?artist=Beatles&limit=5"
+
+# Combined search
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  "http://localhost:3000/musicbrainz/search?q=Beatles&sort=original"
+```
+
+Response:
+```json
+{
+  "results": [
+    {
+      "mbid": "recording-uuid",
+      "song_name": "Hey Jude",
+      "band_name": "The Beatles",
+      "release_name": "Hey Jude / Revolution",
+      "release_date": "1968-08-26",
+      "artwork_url": "https://coverartarchive.org/release/xxx/front-500",
+      "is_original_release": true
+    }
+  ]
+}
+```
+
+### Search for Songs (Discogs)
+
+```bash
+# Search by track and artist
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  "http://localhost:3000/discogs/search?track=Yellow&artist=Coldplay&limit=5"
+
+# Get master release with tracklist
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  "http://localhost:3000/discogs/master/31927"
+```
+
+Response (search):
+```json
+{
+  "results": [
+    {
+      "id": 123456,
+      "master_id": 123456,
+      "type": "master",
+      "song_name": null,
+      "band_name": "Coldplay",
+      "release_name": "Parachutes",
+      "release_year": "2000",
+      "artwork_url": "https://i.discogs.com/...",
+      "genre": "Rock",
+      "style": "Alternative Rock"
+    }
+  ]
+}
+```
+
+Response (master with tracks):
+```json
+{
+  "master": {
+    "id": 123456,
+    "title": "Parachutes",
+    "artist": "Coldplay",
+    "year": 2000,
+    "cover_image": "https://i.discogs.com/..."
+  },
+  "tracks": [
+    {
+      "position": "1",
+      "song_name": "Don't Panic",
+      "band_name": "Coldplay",
+      "release_name": "Parachutes",
+      "artwork_url": "https://i.discogs.com/...",
+      "prefill": {
+        "song_name": "Don't Panic",
+        "band_name": "Coldplay",
+        "artwork_url": "https://i.discogs.com/..."
+      }
+    }
+  ]
+}
 ```
 
 ## Data Models
@@ -233,6 +344,13 @@ Create a `.env` file (not tracked in git) for sensitive configuration:
 ```
 JWT_SECRET_KEY=your_secret_key_here
 DATABASE_URL=postgresql://user:password@localhost/goodsongs_api_development
+
+# Last.fm API (for scrobbling)
+LASTFM_API_KEY=your_lastfm_api_key
+
+# Discogs API (for music search)
+DISCOGS_CONSUMER_KEY=your_discogs_consumer_key
+DISCOGS_CONSUMER_SECRET=your_discogs_consumer_secret
 ```
 
 ## Contributing

@@ -39,8 +39,10 @@ env:
     - JWT_SECRET_KEY
     - LASTFM_API_KEY
     - ADMIN_EMAIL
-    - MAILGUN_SMTP_USERNAME                                                                                   
-    - MAILGUN_SMTP_PASSWORD   
+    - MAILGUN_SMTP_USERNAME
+    - MAILGUN_SMTP_PASSWORD
+    - DISCOGS_CONSUMER_KEY
+    - DISCOGS_CONSUMER_SECRET   
   clear:
     MAILGUN_DOMAIN: mg.goodsongs.app
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.

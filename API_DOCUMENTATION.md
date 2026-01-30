@@ -2110,6 +2110,219 @@ Search for artists on Last.fm.
 
 ---
 
+## Scrobble Endpoints
+
+All scrobble endpoints are namespaced under `/api/v1`. Scrobbles represent track listening history.
+
+### POST /api/v1/scrobbles
+
+Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seconds) are silently skipped.
+
+**Authentication:** Required
+
+**Rate Limit:** 100 submissions per hour per user
+
+**Request Body:**
+```json
+{
+  "scrobbles": [
+    {
+      "track_name": "Song Title",
+      "artist_name": "Artist Name",
+      "album_name": "Album Name",
+      "duration_ms": 240000,
+      "played_at": "2025-01-15T20:30:00Z",
+      "source_app": "goodsongs-ios",
+      "source_device": "iPhone 15"
+    }
+  ]
+}
+```
+
+**Fields:**
+- `track_name` (required): Track name (max 500 chars)
+- `artist_name` (required): Artist name (max 500 chars)
+- `album_name` (optional): Album name (max 500 chars)
+- `duration_ms` (required): Track duration in milliseconds (minimum 30000)
+- `played_at` (required): ISO 8601 timestamp, must be within the last 14 days and not in the future
+- `source_app` (required): Submitting application identifier (max 100 chars)
+- `source_device` (optional): Device identifier (max 100 chars)
+
+Maximum 50 scrobbles per request.
+
+**Response (201 Created):**
+```json
+{
+  "data": {
+    "accepted": 1,
+    "rejected": 0,
+    "scrobbles": [
+      {
+        "id": 1,
+        "track_name": "Song Title",
+        "artist_name": "Artist Name",
+        "album_name": "Album Name",
+        "played_at": "2025-01-15T20:30:00Z",
+        "metadata_status": "pending"
+      }
+    ]
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "One or more scrobbles failed validation",
+    "details": [
+      {
+        "index": 0,
+        "errors": [
+          { "field": "track_name", "message": "can't be blank" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity) - Batch too large:**
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "Maximum 50 scrobbles per request"
+  }
+}
+```
+
+**Error Response (429 Too Many Requests):**
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Too many scrobble submissions. Maximum 100 per hour.",
+    "details": {
+      "retry_after": 1705363200
+    }
+  }
+}
+```
+
+---
+
+### GET /api/v1/scrobbles
+
+Get the current user's scrobbles with cursor-based pagination.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `since` (optional): ISO 8601 timestamp, return scrobbles after this time
+- `until` (optional): ISO 8601 timestamp, return scrobbles before this time
+- `cursor` (optional): ISO 8601 timestamp cursor for pagination
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "scrobbles": [
+      {
+        "id": 1,
+        "track_name": "Song Title",
+        "artist_name": "Artist Name",
+        "album_name": "Album Name",
+        "played_at": "2025-01-15T20:30:00Z",
+        "source_app": "goodsongs-ios",
+        "track": {
+          "id": 10,
+          "name": "Song Title",
+          "duration_ms": 240000,
+          "artist": {
+            "id": 5,
+            "name": "Artist Name",
+            "image_url": "https://..."
+          },
+          "album": {
+            "id": 3,
+            "name": "Album Name",
+            "cover_art_url": "https://..."
+          }
+        }
+      }
+    ],
+    "pagination": {
+      "next_cursor": "2025-01-15T20:30:00Z",
+      "has_more": true
+    }
+  }
+}
+```
+
+Note: The `track` field is `null` when metadata enrichment has not yet completed.
+
+---
+
+### GET /api/v1/scrobbles/recent
+
+Get the current user's recent scrobbles. Cached for 60 seconds.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `limit` (optional): Number of results (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "scrobbles": [
+      {
+        "id": 1,
+        "track_name": "Song Title",
+        "artist_name": "Artist Name",
+        "album_name": "Album Name",
+        "played_at": "2025-01-15T20:30:00Z",
+        "source_app": "goodsongs-ios",
+        "track": null
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /api/v1/users/:user_id/scrobbles
+
+Get scrobbles for a specific user with cursor-based pagination.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `since` (optional): ISO 8601 timestamp, return scrobbles after this time
+- `until` (optional): ISO 8601 timestamp, return scrobbles before this time
+- `cursor` (optional): ISO 8601 timestamp cursor for pagination
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response (200 OK):**
+Same format as `GET /api/v1/scrobbles`.
+
+---
+
+### DELETE /api/v1/scrobbles/:id
+
+Delete a scrobble (owner only).
+
+**Authentication:** Required
+
+**Response (204 No Content)**
+
+---
+
 ## Health Check Endpoints
 
 ### GET /health
@@ -2232,7 +2445,18 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
    - Public profiles include `followers_count` and `following_count`
    - When viewing a profile while authenticated, `following` boolean indicates if you follow that user
 
-8. **Notifications:**
+8. **Scrobbling:**
+   - Scrobble endpoints use the `/api/v1` namespace
+   - Batch submissions accept up to 50 scrobbles per request
+   - Rate limited to 100 submissions per hour per user
+   - `played_at` must be within the last 14 days and not in the future
+   - `duration_ms` must be at least 30000 (30 seconds)
+   - Duplicate scrobbles (same track/artist/played_at within 30 seconds) are silently skipped
+   - After creation, scrobbles are asynchronously enriched with metadata (track, artist, album info)
+   - The `metadata_status` field tracks enrichment: `pending`, `enriched`, `not_found`, `failed`
+   - Uses cursor-based pagination (not page-based) via `next_cursor` and `has_more`
+
+9. **Notifications:**
    - Users receive notifications when someone follows them
    - Band owners receive notifications when someone reviews their band
    - Notification types: `new_follower`, `new_review`
