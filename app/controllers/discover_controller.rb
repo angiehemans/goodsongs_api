@@ -10,9 +10,21 @@ class DiscoverController < ApplicationController
     per_page = (params[:per_page] || 20).to_i
     per_page = [per_page, 50].min
 
-    bands = Band.where(disabled: false).includes(:user, :reviews).order(:name)
-    total_count = bands.count
-    paginated_bands = bands.offset((page - 1) * per_page).limit(per_page)
+    total_count = Band.where(disabled: false).count
+
+    band_ids = Band.where(disabled: false)
+                   .left_joins(:reviews)
+                   .group('bands.id')
+                   .order(Arel.sql('COUNT(reviews.id) DESC, bands.name ASC'))
+                   .offset((page - 1) * per_page)
+                   .limit(per_page)
+                   .pluck(:id)
+
+    paginated_bands = Band.where(id: band_ids)
+                         .includes(:user, :reviews)
+                         .index_by(&:id)
+                         .values_at(*band_ids)
+                         .compact
 
     json_response({
       bands: paginated_bands.map { |band| BandSerializer.full(band) },
