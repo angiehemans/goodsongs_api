@@ -4,8 +4,18 @@ class AdminController < ApplicationController
 
   # GET /admin/users
   def users
+    page = (params[:page] || 1).to_i
+    per_page = (params[:per_page] || 20).to_i
+    per_page = [per_page, 100].min
+
     users = User.all.order(created_at: :desc)
-    json_response(users.map { |user| admin_user_data(user) })
+    total_count = users.count
+    paginated_users = users.offset((page - 1) * per_page).limit(per_page)
+
+    json_response({
+      users: paginated_users.map { |user| admin_user_data(user) },
+      pagination: pagination_meta(page, per_page, total_count)
+    })
   end
 
   # GET /admin/users/:id
@@ -16,7 +26,7 @@ class AdminController < ApplicationController
 
     json_response({
       user: admin_user_data_full(user),
-      reviews: reviews.map { |review| ReviewSerializer.full(review) },
+      reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
       bands: bands.map { |band| admin_band_data(band) }
     })
   end
@@ -72,8 +82,18 @@ class AdminController < ApplicationController
 
   # GET /admin/bands
   def bands
+    page = (params[:page] || 1).to_i
+    per_page = (params[:per_page] || 20).to_i
+    per_page = [per_page, 100].min
+
     bands = Band.all.includes(:user, :reviews).order(:name)
-    json_response(bands.map { |band| admin_band_data(band) })
+    total_count = bands.count
+    paginated_bands = bands.offset((page - 1) * per_page).limit(per_page)
+
+    json_response({
+      bands: paginated_bands.map { |band| admin_band_data(band) },
+      pagination: pagination_meta(page, per_page, total_count)
+    })
   end
 
   # GET /admin/bands/:id
@@ -84,7 +104,7 @@ class AdminController < ApplicationController
 
     json_response({
       band: admin_band_data_full(band),
-      reviews: reviews.map { |review| ReviewSerializer.full(review) },
+      reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
       events: events.map { |event| EventSerializer.full(event) }
     })
   end
@@ -127,8 +147,18 @@ class AdminController < ApplicationController
 
   # GET /admin/reviews
   def reviews
+    page = (params[:page] || 1).to_i
+    per_page = (params[:per_page] || 20).to_i
+    per_page = [per_page, 100].min
+
     reviews = Review.all.includes(:user, :band).order(created_at: :desc)
-    json_response(reviews.map { |review| ReviewSerializer.full(review) })
+    total_count = reviews.count
+    paginated_reviews = reviews.offset((page - 1) * per_page).limit(per_page)
+
+    json_response({
+      reviews: paginated_reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
+      pagination: pagination_meta(page, per_page, total_count)
+    })
   end
 
   # DELETE /admin/reviews/:id
@@ -139,6 +169,18 @@ class AdminController < ApplicationController
   end
 
   private
+
+  def pagination_meta(page, per_page, total_count)
+    total_pages = (total_count.to_f / per_page).ceil
+    {
+      current_page: page,
+      per_page: per_page,
+      total_count: total_count,
+      total_pages: total_pages,
+      has_next_page: page < total_pages,
+      has_previous_page: page > 1
+    }
+  end
 
   def admin_user_params
     params.permit(

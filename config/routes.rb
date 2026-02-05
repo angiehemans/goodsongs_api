@@ -45,7 +45,13 @@ Rails.application.routes.draw do
   
   # Review routes - consolidated
   get '/reviews/user', to: 'reviews#current_user_reviews'
-  resources :reviews, except: [:new, :edit]
+  get '/reviews/liked', to: 'review_likes#index'
+  resources :reviews, except: [:new, :edit] do
+    member do
+      post 'like', to: 'review_likes#create'
+      delete 'like', to: 'review_likes#destroy'
+    end
+  end
   get '/feed', to: 'reviews#feed'
   get '/feed/following', to: 'reviews#following_feed'
   get '/users/:user_id/reviews', to: 'reviews#user_reviews'

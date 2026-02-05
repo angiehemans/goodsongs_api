@@ -1,9 +1,20 @@
 class Review < ApplicationRecord
   belongs_to :band
   belongs_to :user
+  has_many :review_likes, dependent: :destroy
+  has_many :likers, through: :review_likes, source: :user
 
   # Scope to exclude reviews from disabled users
   scope :from_active_users, -> { joins(:user).where(users: { disabled: false }) }
+
+  def likes_count
+    review_likes.count
+  end
+
+  def liked_by?(user)
+    return false unless user
+    review_likes.exists?(user_id: user.id)
+  end
 
   validates :band_name, presence: true
   validates :song_name, presence: true

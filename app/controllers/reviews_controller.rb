@@ -8,11 +8,11 @@ class ReviewsController < ApplicationController
 
   def index
     reviews = QueryService.recent_reviews
-    json_response(reviews.map { |review| ReviewSerializer.full(review) })
+    json_response(reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) })
   end
 
   def show
-    json_response(ReviewSerializer.full(@review))
+    json_response(ReviewSerializer.full(@review, current_user: current_user))
   end
 
   def create
@@ -25,7 +25,7 @@ class ReviewsController < ApplicationController
         Notification.notify_new_review(band_owner: @band.user, review: @review)
       end
 
-      json_response(ReviewSerializer.full(@review), :created)
+      json_response(ReviewSerializer.full(@review, current_user: current_user), :created)
     else
       render_errors(@review)
     end
@@ -37,7 +37,7 @@ class ReviewsController < ApplicationController
     update_params[:band] = @band if @band
 
     if @review.update(update_params)
-      json_response(ReviewSerializer.full(@review))
+      json_response(ReviewSerializer.full(@review, current_user: current_user))
     else
       render_errors(@review)
     end
@@ -50,7 +50,7 @@ class ReviewsController < ApplicationController
 
   def feed
     reviews = QueryService.recent_reviews
-    json_response(reviews.map { |review| ReviewSerializer.full(review) })
+    json_response(reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) })
   end
 
   # GET /feed/following
@@ -64,7 +64,7 @@ class ReviewsController < ApplicationController
     total_pages = (total_count.to_f / per_page).ceil
 
     json_response({
-      reviews: reviews.map { |review| ReviewSerializer.full(review) },
+      reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
       pagination: {
         current_page: page,
         per_page: per_page,
@@ -79,12 +79,12 @@ class ReviewsController < ApplicationController
   def user_reviews
     user = User.find(params[:user_id])
     reviews = QueryService.user_reviews_with_associations(user)
-    json_response(reviews.map { |review| ReviewSerializer.full(review) })
+    json_response(reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) })
   end
 
   def current_user_reviews
     reviews = QueryService.user_reviews_with_associations(current_user).limit(5)
-    json_response(reviews.map { |review| ReviewSerializer.full(review) })
+    json_response(reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) })
   end
 
   private

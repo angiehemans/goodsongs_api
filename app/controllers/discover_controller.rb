@@ -60,7 +60,7 @@ class DiscoverController < ApplicationController
     paginated_reviews = reviews.offset((page - 1) * per_page).limit(per_page)
 
     json_response({
-      reviews: paginated_reviews.map { |review| ReviewSerializer.full(review) },
+      reviews: paginated_reviews.map { |review| ReviewSerializer.full(review, current_user: authenticated_user) },
       pagination: pagination_meta(page, per_page, total_count)
     })
   end

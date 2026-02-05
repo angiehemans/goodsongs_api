@@ -10,7 +10,9 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_01_30_000003) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_05_190233) do
+  create_schema "musicbrainz_staging"
+
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
@@ -176,6 +178,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_30_000003) do
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
+  create_table "review_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "review_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["review_id"], name: "index_review_likes_on_review_id"
+    t.index ["user_id", "review_id"], name: "index_review_likes_on_user_id_and_review_id", unique: true
+    t.index ["user_id"], name: "index_review_likes_on_user_id"
+  end
+
   create_table "reviews", force: :cascade do |t|
     t.string "song_link"
     t.string "band_name"
@@ -303,6 +315,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_01_30_000003) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
+  add_foreign_key "review_likes", "reviews"
+  add_foreign_key "review_likes", "users"
   add_foreign_key "reviews", "bands"
   add_foreign_key "reviews", "users"
   add_foreign_key "scrobbles", "tracks"

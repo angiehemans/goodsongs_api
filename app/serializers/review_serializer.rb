@@ -2,7 +2,7 @@ class ReviewSerializer
   include Rails.application.routes.url_helpers
   extend ImageUrlHelper
 
-  def self.full(review)
+  def self.full(review, current_user: nil)
     {
       id: review.id,
       song_link: review.song_link,
@@ -17,12 +17,14 @@ class ReviewSerializer
         username: review.user.username,
         profile_image_url: profile_image_url(review.user)
       },
+      likes_count: review.likes_count,
+      liked_by_current_user: review.liked_by?(current_user),
       created_at: review.created_at,
       updated_at: review.updated_at
     }
   end
 
-  def self.with_author(review)
+  def self.with_author(review, current_user: nil)
     {
       id: review.id,
       song_link: review.song_link,
@@ -35,6 +37,8 @@ class ReviewSerializer
         username: review.user.username,
         profile_image_url: profile_image_url(review.user)
       },
+      likes_count: review.likes_count,
+      liked_by_current_user: review.liked_by?(current_user),
       created_at: review.created_at,
       updated_at: review.updated_at
     }

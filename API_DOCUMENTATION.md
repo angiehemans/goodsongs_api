@@ -503,6 +503,8 @@ Get all reviews (paginated, most recent first).
       "username": "johndoe",
       "profile_image_url": "https://..."
     },
+    "likes_count": 5,
+    "liked_by_current_user": false,
     "created_at": "2024-12-01T00:00:00.000Z",
     "updated_at": "2024-12-01T00:00:00.000Z"
   }
@@ -621,6 +623,8 @@ Get paginated feed of reviews from users you follow and reviews about bands owne
         "username": "followeduser",
         "profile_image_url": "https://..."
       },
+      "likes_count": 3,
+      "liked_by_current_user": true,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -657,6 +661,103 @@ Get all reviews by a specific user.
 
 **Response (200 OK):**
 Returns array of reviews (same format as GET /reviews)
+
+---
+
+## Review Likes Endpoints
+
+### POST /reviews/:id/like
+
+Like a review.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "Review liked successfully",
+  "liked": true,
+  "likes_count": 6
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": "You have already liked this review"
+}
+```
+
+---
+
+### DELETE /reviews/:id/like
+
+Unlike a review.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "Review unliked successfully",
+  "liked": false,
+  "likes_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": "You have not liked this review"
+}
+```
+
+---
+
+### GET /reviews/liked
+
+Get paginated list of reviews the current user has liked.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "reviews": [
+    {
+      "id": 1,
+      "song_link": "https://open.spotify.com/track/...",
+      "band_name": "Artist Name",
+      "song_name": "Song Title",
+      "artwork_url": "https://...",
+      "review_text": "Great song!",
+      "liked_aspects": ["melody", "lyrics"],
+      "band": { ... },
+      "author": {
+        "id": 2,
+        "username": "anotheruser",
+        "profile_image_url": "https://..."
+      },
+      "likes_count": 10,
+      "liked_by_current_user": true,
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 45,
+    "total_pages": 3,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
 
 ---
 
@@ -1377,6 +1478,8 @@ Get paginated list of all reviews (from active users only).
         "username": "johndoe",
         "profile_image_url": "https://..."
       },
+      "likes_count": 8,
+      "liked_by_current_user": false,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -1398,51 +1501,65 @@ Get paginated list of all reviews (from active users only).
 
 ### GET /admin/users
 
-Get all users (admin only).
+Get paginated list of all users (admin only).
 
 **Authentication:** Required (Admin only)
 
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 100)
+
 **Response (200 OK):**
 ```json
-[
-  {
-    "id": 1,
-    "username": "johndoe",
-    "email": "user@example.com",
-    "about_me": "Music lover",
-    "profile_image_url": "https://...",
-    "reviews_count": 10,
-    "bands_count": 2,
-    "account_type": "fan",
-    "onboarding_completed": true,
-    "display_name": "johndoe",
-    "admin": false,
-    "disabled": false
-  },
-  {
-    "id": 2,
-    "username": null,
-    "email": "band@example.com",
-    "about_me": null,
-    "profile_image_url": null,
-    "reviews_count": 0,
-    "bands_count": 1,
-    "account_type": "band",
-    "onboarding_completed": true,
-    "display_name": "The Band Name",
-    "admin": false,
-    "disabled": true,
-    "primary_band": {
+{
+  "users": [
+    {
       "id": 1,
-      "slug": "the-band-name",
-      "name": "The Band Name",
-      "location": "New York",
-      "profile_picture_url": "https://...",
-      "reviews_count": 5,
-      "user_owned": true
+      "username": "johndoe",
+      "email": "user@example.com",
+      "about_me": "Music lover",
+      "profile_image_url": "https://...",
+      "reviews_count": 10,
+      "bands_count": 2,
+      "account_type": "fan",
+      "onboarding_completed": true,
+      "display_name": "johndoe",
+      "admin": false,
+      "disabled": false
+    },
+    {
+      "id": 2,
+      "username": null,
+      "email": "band@example.com",
+      "about_me": null,
+      "profile_image_url": null,
+      "reviews_count": 0,
+      "bands_count": 1,
+      "account_type": "band",
+      "onboarding_completed": true,
+      "display_name": "The Band Name",
+      "admin": false,
+      "disabled": true,
+      "primary_band": {
+        "id": 1,
+        "slug": "the-band-name",
+        "name": "The Band Name",
+        "location": "New York",
+        "profile_picture_url": "https://...",
+        "reviews_count": 5,
+        "user_owned": true
+      }
     }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 150,
+    "total_pages": 8,
+    "has_next_page": true,
+    "has_previous_page": false
   }
-]
+}
 ```
 
 **Error Response (403 Forbidden):**
@@ -1699,39 +1816,53 @@ Delete a user and all their associated data (admin only).
 
 ### GET /admin/bands
 
-Get all bands including disabled ones (admin only).
+Get paginated list of all bands including disabled ones (admin only).
 
 **Authentication:** Required (Admin only)
 
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 100)
+
 **Response (200 OK):**
 ```json
-[
-  {
-    "id": 1,
-    "slug": "band-name",
-    "name": "Band Name",
-    "city": "New York",
-    "region": "New York",
-    "location": "New York, New York",
-    "latitude": 40.7128,
-    "longitude": -74.006,
-    "spotify_link": "https://open.spotify.com/artist/...",
-    "bandcamp_link": "https://bandname.bandcamp.com",
-    "apple_music_link": null,
-    "youtube_music_link": null,
-    "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
-    "lastfm_artist_name": "Band Name",
-    "lastfm_url": "https://www.last.fm/music/Band+Name",
-    "about": "We make great music",
-    "profile_picture_url": "https://...",
-    "reviews_count": 5,
-    "user_owned": true,
-    "owner": { "id": 1, "username": "johndoe" },
-    "created_at": "2024-12-01T00:00:00.000Z",
-    "updated_at": "2024-12-01T00:00:00.000Z",
-    "disabled": false
+{
+  "bands": [
+    {
+      "id": 1,
+      "slug": "band-name",
+      "name": "Band Name",
+      "city": "New York",
+      "region": "New York",
+      "location": "New York, New York",
+      "latitude": 40.7128,
+      "longitude": -74.006,
+      "spotify_link": "https://open.spotify.com/artist/...",
+      "bandcamp_link": "https://bandname.bandcamp.com",
+      "apple_music_link": null,
+      "youtube_music_link": null,
+      "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+      "lastfm_artist_name": "Band Name",
+      "lastfm_url": "https://www.last.fm/music/Band+Name",
+      "about": "We make great music",
+      "profile_picture_url": "https://...",
+      "reviews_count": 5,
+      "user_owned": true,
+      "owner": { "id": 1, "username": "johndoe" },
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z",
+      "disabled": false
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 500,
+    "total_pages": 25,
+    "has_next_page": true,
+    "has_previous_page": false
   }
-]
+}
 ```
 
 ---
@@ -1962,12 +2093,48 @@ Delete a band and all its reviews (admin only).
 
 ### GET /admin/reviews
 
-Get all reviews (admin only).
+Get paginated list of all reviews (admin only).
 
 **Authentication:** Required (Admin only)
 
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 100)
+
 **Response (200 OK):**
-Returns array of reviews (same format as GET /reviews)
+```json
+{
+  "reviews": [
+    {
+      "id": 1,
+      "song_link": "https://open.spotify.com/track/...",
+      "band_name": "Artist Name",
+      "song_name": "Song Title",
+      "artwork_url": "https://...",
+      "review_text": "Great song!",
+      "liked_aspects": ["melody", "lyrics"],
+      "band": { ... },
+      "author": {
+        "id": 1,
+        "username": "johndoe",
+        "profile_image_url": "https://..."
+      },
+      "likes_count": 5,
+      "liked_by_current_user": false,
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 1000,
+    "total_pages": 50,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
 
 ---
 
@@ -2462,3 +2629,9 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
    - Notification types: `new_follower`, `new_review`
    - Notifications are paginated and include unread count
    - Users can mark individual notifications or all notifications as read
+
+10. **Review Likes:**
+    - Users can like and unlike reviews
+    - Each review displays `likes_count` (total number of likes) and `liked_by_current_user` (boolean)
+    - Users can view a paginated list of all reviews they have liked via `GET /reviews/liked`
+    - A user can only like a review once (duplicate likes return an error)

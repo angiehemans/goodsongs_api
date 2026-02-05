@@ -46,7 +46,7 @@ class UsersController < ApplicationController
     bands = user.bands.order(:name)
 
     user_data = UserSerializer.public_profile(user).merge(
-      reviews: reviews.map { |review| ReviewSerializer.full(review) },
+      reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: authenticated_user) },
       bands: bands.map { |band| BandSerializer.summary(band) }
     )
 

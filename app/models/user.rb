@@ -19,6 +19,10 @@ class User < ApplicationRecord
   # Notifications
   has_many :notifications, dependent: :destroy
 
+  # Review likes
+  has_many :review_likes, dependent: :destroy
+  has_many :liked_reviews, through: :review_likes, source: :review
+
   # Geocoding for user location
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?
@@ -103,6 +107,21 @@ class User < ApplicationRecord
   # Check if following a user
   def following?(other_user)
     following.include?(other_user)
+  end
+
+  # Like a review
+  def like_review(review)
+    liked_reviews << review unless likes_review?(review)
+  end
+
+  # Unlike a review
+  def unlike_review(review)
+    liked_reviews.delete(review)
+  end
+
+  # Check if user likes a review
+  def likes_review?(review)
+    liked_reviews.include?(review)
   end
 
   # Check if Last.fm account is connected
