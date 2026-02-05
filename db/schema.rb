@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_05_190233) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_05_225007) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -178,6 +178,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_05_190233) do
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
+  create_table "review_comments", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "review_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["review_id", "created_at"], name: "index_review_comments_on_review_id_and_created_at"
+    t.index ["review_id"], name: "index_review_comments_on_review_id"
+    t.index ["user_id"], name: "index_review_comments_on_user_id"
+  end
+
   create_table "review_likes", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "review_id", null: false
@@ -315,6 +326,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_05_190233) do
   add_foreign_key "follows", "users", column: "follower_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
+  add_foreign_key "review_comments", "reviews"
+  add_foreign_key "review_comments", "users"
   add_foreign_key "review_likes", "reviews"
   add_foreign_key "review_likes", "users"
   add_foreign_key "reviews", "bands"

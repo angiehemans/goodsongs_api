@@ -23,6 +23,9 @@ class User < ApplicationRecord
   has_many :review_likes, dependent: :destroy
   has_many :liked_reviews, through: :review_likes, source: :review
 
+  # Review comments
+  has_many :review_comments, dependent: :destroy
+
   # Geocoding for user location
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?

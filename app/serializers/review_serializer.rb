@@ -19,6 +19,7 @@ class ReviewSerializer
       },
       likes_count: review.likes_count,
       liked_by_current_user: review.liked_by?(current_user),
+      comments_count: review.comments_count,
       created_at: review.created_at,
       updated_at: review.updated_at
     }
@@ -39,6 +40,7 @@ class ReviewSerializer
       },
       likes_count: review.likes_count,
       liked_by_current_user: review.liked_by?(current_user),
+      comments_count: review.comments_count,
       created_at: review.created_at,
       updated_at: review.updated_at
     }

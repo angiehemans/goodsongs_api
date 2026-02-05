@@ -51,6 +51,7 @@ Rails.application.routes.draw do
       post 'like', to: 'review_likes#create'
       delete 'like', to: 'review_likes#destroy'
     end
+    resources :comments, controller: 'review_comments', only: [:index, :create, :update, :destroy]
   end
   get '/feed', to: 'reviews#feed'
   get '/feed/following', to: 'reviews#following_feed'

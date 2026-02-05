@@ -348,9 +348,13 @@ Alias for PATCH /profile (for frontend compatibility).
 
 ### GET /users/:username
 
-Get public profile for a user by username.
+Get public profile for a user by username with paginated reviews.
 
-**Authentication:** None (optional - if authenticated, includes `following` field)
+**Authentication:** None (optional - if authenticated, includes `following` field and `liked_by_current_user` for reviews)
+
+**Query Parameters:**
+- `page` (optional): Page number for reviews (default: 1)
+- `per_page` (optional): Reviews per page (default: 20, max: 50)
 
 **Response (200 OK):**
 ```json
@@ -383,10 +387,21 @@ Get public profile for a user by username.
         "username": "johndoe",
         "profile_image_url": "https://..."
       },
+      "likes_count": 5,
+      "liked_by_current_user": true,
+      "comments_count": 2,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
   ],
+  "reviews_pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 45,
+    "total_pages": 3,
+    "has_next_page": true,
+    "has_previous_page": false
+  },
   "bands": [
     {
       "id": 1,
@@ -401,7 +416,7 @@ Get public profile for a user by username.
 }
 ```
 
-Note: The `following` field is only included if the request includes a valid authentication token.
+Note: The `following` field is only included if the request includes a valid authentication token. The `liked_by_current_user` field on reviews reflects whether the authenticated user has liked each review.
 
 ---
 
@@ -505,6 +520,7 @@ Get all reviews (paginated, most recent first).
     },
     "likes_count": 5,
     "liked_by_current_user": false,
+    "comments_count": 3,
     "created_at": "2024-12-01T00:00:00.000Z",
     "updated_at": "2024-12-01T00:00:00.000Z"
   }
@@ -625,6 +641,7 @@ Get paginated feed of reviews from users you follow and reviews about bands owne
       },
       "likes_count": 3,
       "liked_by_current_user": true,
+      "comments_count": 1,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -744,6 +761,7 @@ Get paginated list of reviews the current user has liked.
       },
       "likes_count": 10,
       "liked_by_current_user": true,
+      "comments_count": 4,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -756,6 +774,166 @@ Get paginated list of reviews the current user has liked.
     "has_next_page": true,
     "has_previous_page": false
   }
+}
+```
+
+---
+
+## Review Comments Endpoints
+
+### GET /reviews/:review_id/comments
+
+Get paginated list of comments for a review.
+
+**Authentication:** Required
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "body": "Great review! I totally agree.",
+      "author": {
+        "id": 2,
+        "username": "musicfan",
+        "display_name": "musicfan",
+        "profile_image_url": "https://..."
+      },
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "updated_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 5,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+### POST /reviews/:review_id/comments
+
+Add a comment to a review.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "comment": {
+    "body": "Great review! I totally agree."
+  }
+}
+```
+
+Note: Comment body is limited to 300 characters.
+
+**Response (201 Created):**
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 1,
+    "body": "Great review! I totally agree.",
+    "author": {
+      "id": 2,
+      "username": "musicfan",
+      "display_name": "musicfan",
+      "profile_image_url": "https://..."
+    },
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  },
+  "comments_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "errors": ["Body can't be blank"]
+}
+```
+or
+```json
+{
+  "errors": ["Body is too long (maximum is 300 characters)"]
+}
+```
+
+---
+
+### PATCH /reviews/:review_id/comments/:id
+
+Update a comment (owner only).
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "comment": {
+    "body": "Updated comment text."
+  }
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Comment updated successfully",
+  "comment": {
+    "id": 1,
+    "body": "Updated comment text.",
+    "author": {
+      "id": 2,
+      "username": "musicfan",
+      "display_name": "musicfan",
+      "profile_image_url": "https://..."
+    },
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  }
+}
+```
+
+**Error Response (403 Forbidden):**
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+---
+
+### DELETE /reviews/:review_id/comments/:id
+
+Delete a comment (owner or admin only).
+
+**Authentication:** Required
+
+**Response (200 OK):**
+```json
+{
+  "message": "Comment deleted successfully",
+  "comments_count": 4
+}
+```
+
+**Error Response (403 Forbidden):**
+```json
+{
+  "error": "You are not authorized to modify this comment"
 }
 ```
 
@@ -1480,6 +1658,7 @@ Get paginated list of all reviews (from active users only).
       },
       "likes_count": 8,
       "liked_by_current_user": false,
+      "comments_count": 2,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -2121,6 +2300,7 @@ Get paginated list of all reviews (admin only).
       },
       "likes_count": 5,
       "liked_by_current_user": false,
+      "comments_count": 1,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -2635,3 +2815,10 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - Each review displays `likes_count` (total number of likes) and `liked_by_current_user` (boolean)
     - Users can view a paginated list of all reviews they have liked via `GET /reviews/liked`
     - A user can only like a review once (duplicate likes return an error)
+
+11. **Review Comments:**
+    - Users can comment on reviews
+    - Comments are limited to 300 characters
+    - Each review displays `comments_count` (total number of comments)
+    - Comments are returned in chronological order (oldest first)
+    - Only the comment owner or an admin can edit/delete a comment

@@ -3,12 +3,18 @@ class Review < ApplicationRecord
   belongs_to :user
   has_many :review_likes, dependent: :destroy
   has_many :likers, through: :review_likes, source: :user
+  has_many :review_comments, dependent: :destroy
+  has_many :commenters, through: :review_comments, source: :user
 
   # Scope to exclude reviews from disabled users
   scope :from_active_users, -> { joins(:user).where(users: { disabled: false }) }
 
   def likes_count
     review_likes.count
+  end
+
+  def comments_count
+    review_comments.count
   end
 
   def liked_by?(user)
