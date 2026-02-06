@@ -72,6 +72,31 @@ class NotificationsController < ApplicationController
           band_name: review.band_name
         }
       end
+    when 'review_like'
+      if notification.notifiable.is_a?(Review)
+        review = notification.notifiable
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} liked your review of #{review.song_name}"
+        data[:review] = {
+          id: review.id,
+          song_name: review.song_name,
+          band_name: review.band_name
+        }
+      end
+    when 'review_comment'
+      if notification.notifiable.is_a?(ReviewComment)
+        comment = notification.notifiable
+        review = comment.review
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} commented on your review of #{review.song_name}"
+        data[:review] = {
+          id: review.id,
+          song_name: review.song_name,
+          band_name: review.band_name
+        }
+        data[:comment] = {
+          id: comment.id,
+          body: comment.body.truncate(100)
+        }
+      end
     end
 
     data

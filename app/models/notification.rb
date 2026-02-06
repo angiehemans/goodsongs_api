@@ -3,7 +3,7 @@ class Notification < ApplicationRecord
   belongs_to :actor, class_name: 'User', optional: true
   belongs_to :notifiable, polymorphic: true, optional: true
 
-  TYPES = %w[new_follower new_review].freeze
+  TYPES = %w[new_follower new_review review_like review_comment].freeze
 
   validates :notification_type, presence: true, inclusion: { in: TYPES }
 
@@ -29,6 +29,30 @@ class Notification < ApplicationRecord
       notification_type: 'new_review',
       actor: review.user,
       notifiable: review
+    )
+  end
+
+  def self.notify_review_like(review:, liker:)
+    # Don't notify if the liker is the review author
+    return if review.user_id == liker.id
+
+    create!(
+      user: review.user,
+      notification_type: 'review_like',
+      actor: liker,
+      notifiable: review
+    )
+  end
+
+  def self.notify_review_comment(review:, commenter:, comment:)
+    # Don't notify if the commenter is the review author
+    return if review.user_id == commenter.id
+
+    create!(
+      user: review.user,
+      notification_type: 'review_comment',
+      actor: commenter,
+      notifiable: comment
     )
   end
 end

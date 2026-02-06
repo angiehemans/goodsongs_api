@@ -32,6 +32,9 @@ class ReviewCommentsController < ApplicationController
     @comment = @review.review_comments.build(comment_params.merge(user: current_user))
 
     if @comment.save
+      # Notify the review author
+      Notification.notify_review_comment(review: @review, commenter: current_user, comment: @comment)
+
       json_response({
         message: "Comment added successfully",
         comment: serialize_comment(@comment),

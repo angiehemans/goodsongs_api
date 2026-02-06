@@ -10,6 +10,9 @@ class ReviewLikesController < ApplicationController
 
     current_user.like_review(@review)
 
+    # Notify the review author
+    Notification.notify_review_like(review: @review, liker: current_user)
+
     json_response({
       message: "Review liked successfully",
       liked: true,

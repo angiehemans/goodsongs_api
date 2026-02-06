@@ -1465,6 +1465,46 @@ Get paginated list of notifications for the current user.
         "song_name": "Your Song Title",
         "band_name": "Your Band"
       }
+    },
+    {
+      "id": 3,
+      "type": "review_like",
+      "read": false,
+      "created_at": "2024-12-02T00:00:00.000Z",
+      "actor": {
+        "id": 4,
+        "username": "listener",
+        "display_name": "listener",
+        "profile_image_url": "https://..."
+      },
+      "message": "listener liked your review of Song Title",
+      "review": {
+        "id": 10,
+        "song_name": "Song Title",
+        "band_name": "Band Name"
+      }
+    },
+    {
+      "id": 4,
+      "type": "review_comment",
+      "read": false,
+      "created_at": "2024-12-01T00:00:00.000Z",
+      "actor": {
+        "id": 5,
+        "username": "commenter",
+        "display_name": "commenter",
+        "profile_image_url": "https://..."
+      },
+      "message": "commenter commented on your review of Song Title",
+      "review": {
+        "id": 10,
+        "song_name": "Song Title",
+        "band_name": "Band Name"
+      },
+      "comment": {
+        "id": 1,
+        "body": "Great review! I totally agree with your take..."
+      }
     }
   ],
   "unread_count": 3,
@@ -2806,9 +2846,12 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
 9. **Notifications:**
    - Users receive notifications when someone follows them
    - Band owners receive notifications when someone reviews their band
-   - Notification types: `new_follower`, `new_review`
+   - Review authors receive notifications when someone likes their review
+   - Review authors receive notifications when someone comments on their review
+   - Notification types: `new_follower`, `new_review`, `review_like`, `review_comment`
    - Notifications are paginated and include unread count
    - Users can mark individual notifications or all notifications as read
+   - Users do not receive notifications for their own actions (e.g., liking their own review)
 
 10. **Review Likes:**
     - Users can like and unlike reviews
