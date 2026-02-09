@@ -26,6 +26,11 @@ class FetchArtistImageJob < ApplicationJob
     # Try to fetch image from Fanart.tv first (if API key is configured)
     image_url = FanartTvService.get_artist_thumb(mbid) if mbid
 
+    # Fallback: Try TheAudioDB
+    if image_url.blank?
+      image_url = fetch_audiodb_image(band.name, mbid)
+    end
+
     # Fallback: Try to get image from Wikidata/Wikipedia via MusicBrainz URLs
     if image_url.blank? && artist_data[:urls]
       image_url = fetch_wikipedia_image(artist_data[:urls])
@@ -231,6 +236,35 @@ class FetchArtistImageJob < ApplicationJob
 
     sleep(MUSICBRAINZ_DELAY)
     MusicbrainzService.find_artist(artist_name)
+  end
+
+  def fetch_audiodb_image(artist_name, mbid = nil)
+    # Try by MusicBrainz ID first
+    if mbid.present?
+      artist = ScrobbleCacheService.get_audiodb_artist_by_mbid(mbid)
+      if artist && artist[:artist_thumb].present?
+        Rails.logger.info("FetchArtistImageJob: Found TheAudioDB image via MBID for #{artist_name}")
+        return artist[:artist_thumb]
+      end
+    end
+
+    # Fallback to name search
+    artist = ScrobbleCacheService.get_audiodb_artist(artist_name)
+    return nil unless artist
+
+    # Prefer thumb, then wide thumb, then fanart
+    image = artist[:artist_thumb].presence ||
+            artist[:artist_wide_thumb].presence ||
+            artist[:artist_fanart].presence
+
+    if image.present?
+      Rails.logger.info("FetchArtistImageJob: Found TheAudioDB image for #{artist_name}")
+    end
+
+    image
+  rescue StandardError => e
+    Rails.logger.warn("FetchArtistImageJob TheAudioDB error: #{e.message}")
+    nil
   end
 
   def fetch_wikipedia_image(urls)

@@ -23,14 +23,15 @@ class UsersController < ApplicationController
   end
 
   def recently_played
-    lastfm_service = LastfmService.new(current_user)
-    result = lastfm_service.recently_played(limit: params[:limit] || 20)
+    service = RecentlyPlayedService.new(current_user)
+    sources = params[:sources]&.split(',')&.map(&:strip)
 
-    if result[:error]
-      render json: { error: result[:error] }, status: :bad_request
-    else
-      render json: result
-    end
+    result = service.fetch(
+      limit: (params[:limit] || 20).to_i,
+      sources: sources
+    )
+
+    render json: result
   end
 
 

@@ -42,7 +42,10 @@ Rails.application.routes.draw do
   get '/discogs/search', to: 'discogs_search#search'
   get '/discogs/master/:id', to: 'discogs_search#master'
   get '/discogs/release/:id', to: 'discogs_search#release'
-  
+
+  # Artwork search routes (aggregates from multiple sources)
+  get '/artwork/search', to: 'artwork_search#search'
+
   # Review routes - consolidated
   get '/reviews/user', to: 'reviews#current_user_reviews'
   get '/reviews/liked', to: 'review_likes#index'
@@ -94,11 +97,14 @@ Rails.application.routes.draw do
   get '/admin/bands/:id', to: 'admin#band_detail'
   patch '/admin/bands/:id', to: 'admin#update_band'
   patch '/admin/bands/:id/toggle-disabled', to: 'admin#toggle_band_disabled'
+  post '/admin/bands/:id/enrich', to: 'admin#enrich_band'
   delete '/admin/bands/:id', to: 'admin#destroy_band'
   get '/admin/reviews', to: 'admin#reviews'
+  post '/admin/reviews/:id/enrich', to: 'admin#enrich_review'
   delete '/admin/reviews/:id', to: 'admin#destroy_review'
 
   # Discover routes (public, no auth required)
+  get '/discover/search', to: 'discover#search'
   get '/discover/bands', to: 'discover#bands'
   get '/discover/users', to: 'discover#users'
   get '/discover/reviews', to: 'discover#reviews'

@@ -422,12 +422,22 @@ Note: The `following` field is only included if the request includes a valid aut
 
 ### GET /recently-played
 
-Get user's recently played tracks from Last.fm.
+Get user's recently played tracks aggregated from multiple sources (Last.fm, local scrobbles, etc.).
 
-**Authentication:** Required (Last.fm must be connected)
+Tracks are merged from all connected sources, sorted by `played_at` (most recent first), and deduplicated. Consecutive plays of the same track within 5 minutes are collapsed into a single entry.
+
+**Authentication:** Required
 
 **Query Parameters:**
 - `limit` (optional): Number of tracks to return (default: 20)
+- `sources` (optional): Comma-separated list of sources to include. Valid values: `lastfm`, `scrobble`. If omitted, all connected sources are used.
+
+**Examples:**
+- `GET /recently-played` - All sources
+- `GET /recently-played?limit=50` - All sources, 50 tracks
+- `GET /recently-played?sources=lastfm` - Last.fm only
+- `GET /recently-played?sources=scrobble` - Local scrobbles only
+- `GET /recently-played?sources=lastfm,scrobble` - Both sources explicitly
 
 **Response (200 OK):**
 ```json
@@ -435,41 +445,49 @@ Get user's recently played tracks from Last.fm.
   "tracks": [
     {
       "name": "Song Name",
-      "mbid": "musicbrainz-track-id",
-      "artists": [
-        {
-          "name": "Artist Name",
-          "mbid": "musicbrainz-artist-id",
-          "lastfm_url": "https://www.last.fm/music/Artist+Name"
-        }
-      ],
-      "album": {
-        "name": "Album Name",
-        "mbid": "musicbrainz-album-id",
-        "images": [
-          { "url": "https://...", "size": "small" },
-          { "url": "https://...", "size": "medium" },
-          { "url": "https://...", "size": "large" },
-          { "url": "https://...", "size": "extralarge" }
-        ]
-      },
-      "lastfm_url": "https://www.last.fm/music/Artist+Name/_/Song+Name",
+      "artist": "Artist Name",
+      "album": "Album Name",
       "played_at": "2024-12-01T00:00:00Z",
       "now_playing": false,
+      "source": "lastfm",
+      "mbid": "musicbrainz-track-id",
+      "album_art_url": "https://...",
       "loved": true
+    },
+    {
+      "name": "Another Song",
+      "artist": "Another Artist",
+      "album": "Another Album",
+      "played_at": "2024-12-01T00:05:00Z",
+      "now_playing": false,
+      "source": "scrobble",
+      "mbid": "musicbrainz-track-id",
+      "album_art_url": "https://..."
     }
-  ]
+  ],
+  "sources": ["lastfm", "scrobble"]
 }
 ```
 
-Note: If the track is currently playing, `now_playing` will be `true` and `played_at` will be `null`.
+**Response Fields:**
+- `tracks` - Array of recently played tracks, sorted by `played_at` descending
+  - `name` - Track name
+  - `artist` - Artist name
+  - `album` - Album name (may be null)
+  - `played_at` - ISO 8601 timestamp (null if `now_playing` is true)
+  - `now_playing` - True if track is currently playing (Last.fm only)
+  - `source` - Source of this track: `lastfm` or `scrobble`
+  - `mbid` - MusicBrainz recording ID (may be null)
+  - `album_art_url` - Album artwork URL (may be null)
+  - `loved` - True if track is loved on Last.fm (Last.fm only, omitted for scrobbles)
+- `sources` - Array of source names that were queried
 
-**Error Response (400 Bad Request):**
-```json
-{
-  "error": "No Last.fm username connected"
-}
-```
+**Notes:**
+- If Last.fm is not connected, only local scrobbles are returned
+- If no scrobbles exist and Last.fm is not connected, returns empty tracks array
+- Tracks from different sources are interleaved based on `played_at` timestamp
+- Deduplication: If the same track (by name + artist, case-insensitive) appears consecutively within 5 minutes, only the most recent entry is shown
+- The `sources` array in the response shows which sources were actually queried (based on availability and filter)
 
 ---
 
@@ -2865,3 +2883,12 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - Each review displays `comments_count` (total number of comments)
     - Comments are returned in chronological order (oldest first)
     - Only the comment owner or an admin can edit/delete a comment
+
+12. **Recently Played Aggregation:**
+    - The `/recently-played` endpoint aggregates tracks from multiple sources
+    - Currently supported sources: `lastfm` (Last.fm API), `scrobble` (local scrobbles from `/api/v1/scrobbles`)
+    - Sources are fetched in parallel for optimal performance
+    - Tracks are merged and sorted by `played_at` timestamp (most recent first)
+    - Consecutive duplicate tracks (same name + artist within 5 minutes) are deduplicated
+    - Use the `sources` query parameter to filter to specific sources
+    - Designed to be extensible for future sources (e.g., Apple Music)

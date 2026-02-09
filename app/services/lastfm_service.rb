@@ -2,6 +2,78 @@ class LastfmService
   include HTTParty
   base_uri 'https://ws.audioscrobbler.com/2.0'
 
+  class << self
+    # Get album info (class method - no user required)
+    def get_album_info(artist:, album:)
+      return nil if artist.blank? || album.blank?
+
+      response = get('/', query: {
+        method: 'album.getInfo',
+        artist: artist,
+        album: album,
+        api_key: api_key,
+        format: 'json',
+        autocorrect: 1
+      })
+
+      return nil unless response.success?
+
+      album_data = response.parsed_response['album']
+      return nil unless album_data
+
+      {
+        name: album_data['name'],
+        artist: album_data['artist'],
+        mbid: album_data['mbid'].presence,
+        url: album_data['url'],
+        image: album_data['image'],
+        listeners: album_data['listeners'].to_i,
+        playcount: album_data['playcount'].to_i
+      }
+    rescue StandardError => e
+      Rails.logger.warn("LastfmService.get_album_info error: #{e.message}")
+      nil
+    end
+
+    # Get artist's top albums (class method - no user required)
+    def get_artist_top_albums(artist:, limit: 5)
+      return [] if artist.blank?
+
+      response = get('/', query: {
+        method: 'artist.getTopAlbums',
+        artist: artist,
+        api_key: api_key,
+        format: 'json',
+        autocorrect: 1,
+        limit: limit
+      })
+
+      return [] unless response.success?
+
+      albums = response.parsed_response.dig('topalbums', 'album')
+      return [] unless albums.is_a?(Array)
+
+      albums.map do |album|
+        {
+          name: album['name'],
+          mbid: album['mbid'].presence,
+          url: album['url'],
+          image: album['image'],
+          playcount: album['playcount'].to_i
+        }
+      end
+    rescue StandardError => e
+      Rails.logger.warn("LastfmService.get_artist_top_albums error: #{e.message}")
+      []
+    end
+
+    private
+
+    def api_key
+      ENV['LASTFM_API_KEY']
+    end
+  end
+
   def initialize(user)
     @user = user
     @username = user.lastfm_username

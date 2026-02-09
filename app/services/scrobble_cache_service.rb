@@ -4,6 +4,7 @@ class ScrobbleCacheService
   RECENT_SCROBBLES_TTL = 60.seconds
   MUSICBRAINZ_CACHE_TTL = 24.hours
   COVER_ART_CACHE_TTL = 24.hours
+  DISCOGS_CACHE_TTL = 24.hours
 
   class << self
     # Cache key for user's recent scrobbles
@@ -83,6 +84,153 @@ class ScrobbleCacheService
 
       Rails.cache.fetch(cache_key, expires_in: MUSICBRAINZ_CACHE_TTL) do
         MusicbrainzService.get_recording(mbid)
+      end
+    end
+
+    # Cache key for Discogs search results
+    def discogs_search_key(track_name, artist_name)
+      normalized_key = "#{track_name.downcase.strip}:#{artist_name.downcase.strip}"
+      "discogs:search:#{Digest::SHA256.hexdigest(normalized_key)}"
+    end
+
+    # Get cached Discogs search results or fetch from API
+    def get_discogs_search(track_name, artist_name)
+      cache_key = discogs_search_key(track_name, artist_name)
+
+      Rails.cache.fetch(cache_key, expires_in: DISCOGS_CACHE_TTL) do
+        DiscogsService.search(track: track_name, artist: artist_name, limit: 5)
+      end
+    end
+
+    # Cache key for Discogs master release
+    def discogs_master_key(master_id)
+      "discogs:master:#{master_id}"
+    end
+
+    # Get cached Discogs master release or fetch from API
+    def get_discogs_master(master_id)
+      cache_key = discogs_master_key(master_id)
+
+      Rails.cache.fetch(cache_key, expires_in: DISCOGS_CACHE_TTL) do
+        DiscogsService.get_master(master_id)
+      end
+    end
+
+    # Cache key for Discogs release
+    def discogs_release_key(release_id)
+      "discogs:release:#{release_id}"
+    end
+
+    # Get cached Discogs release or fetch from API
+    def get_discogs_release(release_id)
+      cache_key = discogs_release_key(release_id)
+
+      Rails.cache.fetch(cache_key, expires_in: DISCOGS_CACHE_TTL) do
+        DiscogsService.get_release(release_id)
+      end
+    end
+
+    # Cache key for Discogs cover art lookup
+    def discogs_cover_art_key(album_name, artist_name)
+      normalized_key = "#{album_name.downcase.strip}:#{artist_name.downcase.strip}"
+      "discogs:coverart:#{Digest::SHA256.hexdigest(normalized_key)}"
+    end
+
+    # Get cached Discogs cover art URL or fetch from API
+    def get_discogs_cover_art(album_name, artist_name)
+      cache_key = discogs_cover_art_key(album_name, artist_name)
+
+      Rails.cache.fetch(cache_key, expires_in: COVER_ART_CACHE_TTL) do
+        fetch_discogs_cover_art_uncached(album_name, artist_name)
+      end
+    end
+
+    # Fetch cover art from Discogs (not cached - called by get_discogs_cover_art)
+    def fetch_discogs_cover_art_uncached(album_name, artist_name)
+      # Search for the album
+      results = get_discogs_search(album_name, artist_name)
+      return nil if results.blank?
+
+      # Find a result with cover art
+      results.each do |result|
+        cover_image = result[:cover_image]
+        next if cover_image.blank? || cover_image.include?('spacer.gif')
+        return cover_image
+      end
+
+      # Try master release
+      master_id = results.first[:master_id] || results.first[:id]
+      if master_id
+        master = get_discogs_master(master_id)
+        if master && master[:cover_image].present? && !master[:cover_image].include?('spacer.gif')
+          return master[:cover_image]
+        end
+      end
+
+      nil
+    end
+
+    # ============================================
+    # TheAudioDB Caching
+    # ============================================
+
+    AUDIODB_CACHE_TTL = 24.hours
+
+    # Cache key for AudioDB artist search
+    def audiodb_artist_key(artist_name)
+      "audiodb:artist:#{Digest::SHA256.hexdigest(artist_name.downcase.strip)}"
+    end
+
+    # Get cached AudioDB artist or fetch from API
+    def get_audiodb_artist(artist_name)
+      cache_key = audiodb_artist_key(artist_name)
+
+      Rails.cache.fetch(cache_key, expires_in: AUDIODB_CACHE_TTL) do
+        AudioDbService.search_artist(artist_name)
+      end
+    end
+
+    # Cache key for AudioDB album search
+    def audiodb_album_key(artist_name, album_name)
+      normalized_key = "#{artist_name.downcase.strip}:#{album_name.downcase.strip}"
+      "audiodb:album:#{Digest::SHA256.hexdigest(normalized_key)}"
+    end
+
+    # Get cached AudioDB album or fetch from API
+    def get_audiodb_album(artist_name, album_name)
+      cache_key = audiodb_album_key(artist_name, album_name)
+
+      Rails.cache.fetch(cache_key, expires_in: AUDIODB_CACHE_TTL) do
+        AudioDbService.search_album(artist: artist_name, album: album_name)
+      end
+    end
+
+    # Cache key for AudioDB track search
+    def audiodb_track_key(artist_name, track_name)
+      normalized_key = "#{artist_name.downcase.strip}:#{track_name.downcase.strip}"
+      "audiodb:track:#{Digest::SHA256.hexdigest(normalized_key)}"
+    end
+
+    # Get cached AudioDB track or fetch from API
+    def get_audiodb_track(artist_name, track_name)
+      cache_key = audiodb_track_key(artist_name, track_name)
+
+      Rails.cache.fetch(cache_key, expires_in: AUDIODB_CACHE_TTL) do
+        AudioDbService.search_track(artist: artist_name, track: track_name)
+      end
+    end
+
+    # Cache key for AudioDB artist by MusicBrainz ID
+    def audiodb_artist_mbid_key(mbid)
+      "audiodb:artist_mbid:#{mbid}"
+    end
+
+    # Get cached AudioDB artist by MusicBrainz ID or fetch from API
+    def get_audiodb_artist_by_mbid(mbid)
+      cache_key = audiodb_artist_mbid_key(mbid)
+
+      Rails.cache.fetch(cache_key, expires_in: AUDIODB_CACHE_TTL) do
+        AudioDbService.get_artist_by_mbid(mbid)
       end
     end
   end
