@@ -32,7 +32,8 @@ module RecentlyPlayed
           now_playing: false,
           mbid: scrobble.musicbrainz_recording_id,
           album_art_url: extract_album_art(scrobble),
-          loved: false
+          loved: false,
+          scrobble_id: scrobble.id
         )
       end
     end

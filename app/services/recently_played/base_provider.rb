@@ -41,7 +41,8 @@ module RecentlyPlayed
         source: source_name,
         mbid: attrs[:mbid],
         album_art_url: attrs[:album_art_url],
-        loved: attrs[:loved] || false
+        loved: attrs[:loved] || false,
+        scrobble_id: attrs[:scrobble_id]
       }
     end
   end

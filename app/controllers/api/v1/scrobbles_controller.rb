@@ -117,6 +117,49 @@ module Api
         head :no_content
       end
 
+      # POST /api/v1/scrobbles/:id/refresh_artwork
+      # Manually refresh artwork for a scrobble's track
+      def refresh_artwork
+        scrobble = current_user.scrobbles.find(params[:id])
+
+        result = ArtworkRefreshService.refresh_for_scrobble(scrobble)
+
+        case result[:status]
+        when 'success'
+          # Invalidate cache so the new artwork shows up
+          ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+
+          render json: {
+            data: {
+              status: 'success',
+              message: 'Artwork refreshed successfully',
+              artwork_url: result[:artwork_url],
+              scrobble: serialize_scrobble(scrobble.reload)
+            }
+          }
+        when 'already_has_artwork'
+          render json: {
+            data: {
+              status: 'already_has_artwork',
+              message: 'This track already has artwork',
+              artwork_url: result[:artwork_url]
+            }
+          }
+        when 'no_track'
+          render json: error_response(
+            'no_track',
+            'This scrobble has no associated track metadata'
+          ), status: :unprocessable_entity
+        else
+          render json: {
+            data: {
+              status: 'not_found',
+              message: 'Could not find artwork from any source'
+            }
+          }
+        end
+      end
+
       private
 
       def build_scrobble(data)

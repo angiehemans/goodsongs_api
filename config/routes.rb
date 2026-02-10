@@ -46,6 +46,11 @@ Rails.application.routes.draw do
   # Artwork search routes (aggregates from multiple sources)
   get '/artwork/search', to: 'artwork_search#search'
 
+  # Artwork refresh routes
+  post '/artwork/refresh/track/:id', to: 'artwork#refresh_track'
+  post '/artwork/refresh/album/:id', to: 'artwork#refresh_album'
+  post '/artwork/refresh/scrobble/:id', to: 'artwork#refresh_scrobble'
+
   # Review routes - consolidated
   get '/reviews/user', to: 'reviews#current_user_reviews'
   get '/reviews/liked', to: 'review_likes#index'
@@ -120,6 +125,9 @@ Rails.application.routes.draw do
       resources :scrobbles, only: [:index, :create, :destroy] do
         collection do
           get :recent
+        end
+        member do
+          post :refresh_artwork
         end
       end
       get 'users/:user_id/scrobbles', to: 'scrobbles#user_scrobbles'
