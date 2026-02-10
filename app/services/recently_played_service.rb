@@ -126,7 +126,9 @@ class RecentlyPlayedService
         mbid: track[:mbid],
         album_art_url: track[:album_art_url],
         loved: track[:loved],
-        scrobble_id: track[:scrobble_id]
+        scrobble_id: track[:scrobble_id],
+        metadata_status: track[:metadata_status],
+        can_refresh_artwork: track[:can_refresh_artwork]
       }.compact
     end
   end

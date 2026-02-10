@@ -28,14 +28,21 @@ class ScrobbleEnrichmentService
       return enrich_from_musicbrainz!(recording)
     end
 
+    # Fallback to TheAudioDB
+    Rails.logger.info("MusicBrainz not found for '#{scrobble.track_name}' by '#{scrobble.artist_name}', trying TheAudioDB...")
+    audiodb_result = find_audiodb_recording
+    if audiodb_result
+      return enrich_from_audiodb!(audiodb_result)
+    end
+
     # Fallback to Discogs
-    Rails.logger.info("MusicBrainz not found for '#{scrobble.track_name}' by '#{scrobble.artist_name}', trying Discogs...")
+    Rails.logger.info("TheAudioDB not found for '#{scrobble.track_name}' by '#{scrobble.artist_name}', trying Discogs...")
     discogs_result = find_discogs_recording
     if discogs_result
       return enrich_from_discogs!(discogs_result)
     end
 
-    # Neither source found the track
+    # No source found the track
     scrobble.update!(metadata_status: :not_found)
     false
   rescue StandardError => e
@@ -355,6 +362,208 @@ class ScrobbleEnrichmentService
     end
   rescue ArgumentError
     nil
+  end
+
+  # ============================================
+  # TheAudioDB Fallback Enrichment
+  # ============================================
+
+  def find_audiodb_recording
+    # Search TheAudioDB for the track
+    track_data = ScrobbleCacheService.get_audiodb_track(scrobble.artist_name, scrobble.track_name)
+    return nil unless track_data
+
+    # Get the album data if available
+    album_data = nil
+    if track_data[:album_id]
+      album_data = AudioDbService.get_album(track_data[:album_id])
+    end
+
+    # Get the artist data
+    artist_data = ScrobbleCacheService.get_audiodb_artist(scrobble.artist_name)
+
+    Rails.logger.info("TheAudioDB match found: '#{track_data[:name]}' by '#{track_data[:artist_name]}'")
+    { track: track_data, album: album_data, artist: artist_data }
+  end
+
+  def enrich_from_audiodb!(audiodb_result)
+    track_data = audiodb_result[:track]
+    album_data = audiodb_result[:album]
+    artist_data = audiodb_result[:artist]
+
+    band = find_or_create_band_from_audiodb(artist_data, track_data)
+    album = find_or_create_album_from_audiodb(album_data, band, track_data)
+    track = find_or_create_track_from_audiodb(track_data, band, album)
+
+    scrobble.update!(
+      track: track,
+      metadata_status: :enriched
+    )
+
+    Rails.logger.info("Successfully enriched scrobble #{scrobble.id} from TheAudioDB")
+    true
+  end
+
+  def find_or_create_band_from_audiodb(artist_data, track_data)
+    artist_name = artist_data&.dig(:name) || track_data[:artist_name]
+    audiodb_id = artist_data&.dig(:id)&.to_s
+    musicbrainz_id = artist_data&.dig(:musicbrainz_id)
+
+    # 1. Check by MusicBrainz ID if available
+    if musicbrainz_id.present?
+      band = Band.find_by(musicbrainz_id: musicbrainz_id)
+      return band if band
+    end
+
+    # 2. Check by TheAudioDB artist ID
+    if audiodb_id.present?
+      band = Band.find_by(audiodb_artist_id: audiodb_id)
+      return band if band
+    end
+
+    # 3. Case-insensitive name match
+    if artist_name.present?
+      band = Band.where("LOWER(name) = LOWER(?)", artist_name).first
+      if band
+        # Backfill IDs if missing
+        updates = {}
+        updates[:audiodb_artist_id] = audiodb_id if audiodb_id.present? && band.audiodb_artist_id.blank?
+        updates[:musicbrainz_id] = musicbrainz_id if musicbrainz_id.present? && band.musicbrainz_id.blank?
+        updates[:genres] = extract_audiodb_genres(artist_data) if band.genres.blank? && artist_data
+        updates[:artist_image_url] = artist_data[:artist_thumb] if band.artist_image_url.blank? && artist_data&.dig(:artist_thumb).present?
+        band.update!(updates) if updates.any?
+        return band
+      end
+    end
+
+    # 4. Create new band from TheAudioDB data
+    Band.create!(
+      name: artist_name,
+      audiodb_artist_id: audiodb_id,
+      musicbrainz_id: musicbrainz_id,
+      genres: extract_audiodb_genres(artist_data),
+      artist_image_url: artist_data&.dig(:artist_thumb),
+      about: artist_data&.dig(:biography)&.truncate(1000),
+      country: artist_data&.dig(:country),
+      source: :musicbrainz
+    )
+  end
+
+  def find_or_create_album_from_audiodb(album_data, band, track_data)
+    return nil unless album_data || track_data[:album_id]
+
+    audiodb_album_id = album_data&.dig(:id)&.to_s || track_data[:album_id]&.to_s
+    album_name = album_data&.dig(:name) || track_data[:album_name]
+    musicbrainz_id = album_data&.dig(:musicbrainz_id)
+
+    return nil if album_name.blank?
+
+    # 1. Check by MusicBrainz release ID if available
+    if musicbrainz_id.present?
+      album = Album.find_by(musicbrainz_release_id: musicbrainz_id)
+      return album if album
+    end
+
+    # 2. Check by TheAudioDB album ID
+    if audiodb_album_id.present?
+      album = Album.find_by(audiodb_album_id: audiodb_album_id)
+      return album if album
+    end
+
+    # 3. Check by name + band
+    if album_name.present? && band
+      album = Album.where("LOWER(name) = LOWER(?)", album_name).where(band: band).first
+      if album
+        updates = {}
+        updates[:audiodb_album_id] = audiodb_album_id if audiodb_album_id.present? && album.audiodb_album_id.blank?
+        updates[:musicbrainz_release_id] = musicbrainz_id if musicbrainz_id.present? && album.musicbrainz_release_id.blank?
+        updates[:cover_art_url] = extract_audiodb_album_art(album_data) if album.cover_art_url.blank? && album_data
+        album.update!(updates) if updates.any?
+        return album
+      end
+    end
+
+    # 4. Create new album from TheAudioDB data
+    Album.create!(
+      name: album_name,
+      band: band,
+      audiodb_album_id: audiodb_album_id,
+      musicbrainz_release_id: musicbrainz_id,
+      cover_art_url: extract_audiodb_album_art(album_data),
+      release_date: parse_audiodb_year(album_data&.dig(:release_year)),
+      genres: album_data&.dig(:genre).present? ? [album_data[:genre]] : (band&.genres || []),
+      release_type: normalize_audiodb_release_type(album_data&.dig(:format))
+    )
+  end
+
+  def find_or_create_track_from_audiodb(track_data, band, album)
+    audiodb_track_id = track_data[:id]&.to_s
+    musicbrainz_id = track_data[:musicbrainz_id]
+
+    # 1. Check by MusicBrainz recording ID if available
+    if musicbrainz_id.present?
+      track = Track.find_by(musicbrainz_recording_id: musicbrainz_id)
+      return track if track
+    end
+
+    # 2. Check by TheAudioDB track ID
+    if audiodb_track_id.present?
+      track = Track.find_by(audiodb_track_id: audiodb_track_id)
+      return track if track
+    end
+
+    # 3. Create new track from TheAudioDB data
+    Track.create!(
+      name: track_data[:name],
+      band: band,
+      album: album,
+      audiodb_track_id: audiodb_track_id,
+      musicbrainz_recording_id: musicbrainz_id,
+      duration_ms: track_data[:duration_ms],
+      track_number: track_data[:track_number],
+      genres: album&.genres.presence || band&.genres || []
+    )
+  end
+
+  def extract_audiodb_genres(artist_data)
+    return [] unless artist_data
+
+    genres = []
+    genres << artist_data[:genre] if artist_data[:genre].present?
+    genres << artist_data[:style] if artist_data[:style].present?
+    genres.compact.uniq.first(5)
+  end
+
+  def extract_audiodb_album_art(album_data)
+    return nil unless album_data
+
+    album_data[:album_thumb_hq].presence || album_data[:album_thumb].presence
+  end
+
+  def parse_audiodb_year(year)
+    return nil if year.blank?
+    Date.new(year.to_i, 1, 1)
+  rescue ArgumentError
+    nil
+  end
+
+  def normalize_audiodb_release_type(format)
+    return 'album' if format.blank?
+
+    case format.downcase
+    when 'album', 'studio'
+      'album'
+    when 'single'
+      'single'
+    when 'ep'
+      'ep'
+    when 'live'
+      'live'
+    when 'compilation'
+      'compilation'
+    else
+      'album'
+    end
   end
 
   # ============================================

@@ -42,7 +42,9 @@ module RecentlyPlayed
         mbid: attrs[:mbid],
         album_art_url: attrs[:album_art_url],
         loved: attrs[:loved] || false,
-        scrobble_id: attrs[:scrobble_id]
+        scrobble_id: attrs[:scrobble_id],
+        metadata_status: attrs[:metadata_status],
+        can_refresh_artwork: attrs[:can_refresh_artwork]
       }
     end
   end

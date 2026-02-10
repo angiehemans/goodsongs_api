@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_05_225007) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_10_015014) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -63,6 +63,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_05_225007) do
     t.integer "track_count"
     t.boolean "verified", default: false, null: false
     t.bigint "submitted_by_id"
+    t.string "audiodb_album_id"
+    t.index ["audiodb_album_id"], name: "index_albums_on_audiodb_album_id", unique: true, where: "(audiodb_album_id IS NOT NULL)"
     t.index ["band_id"], name: "index_albums_on_band_id"
     t.index ["discogs_master_id"], name: "index_albums_on_discogs_master_id", unique: true
     t.index ["musicbrainz_release_id"], name: "index_albums_on_musicbrainz_release_id", unique: true
@@ -111,6 +113,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_05_225007) do
     t.jsonb "genres", default: []
     t.boolean "verified", default: false, null: false
     t.bigint "submitted_by_id"
+    t.string "audiodb_artist_id"
+    t.index ["audiodb_artist_id"], name: "index_bands_on_audiodb_artist_id", unique: true, where: "(audiodb_artist_id IS NOT NULL)"
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
     t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
@@ -254,7 +258,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_05_225007) do
     t.jsonb "genres", default: []
     t.boolean "verified", default: false, null: false
     t.bigint "submitted_by_id"
+    t.string "audiodb_track_id"
     t.index ["album_id"], name: "index_tracks_on_album_id"
+    t.index ["audiodb_track_id"], name: "index_tracks_on_audiodb_track_id", unique: true, where: "(audiodb_track_id IS NOT NULL)"
     t.index ["band_id"], name: "index_tracks_on_band_id"
     t.index ["musicbrainz_recording_id"], name: "index_tracks_on_musicbrainz_recording_id", unique: true
     t.index ["name"], name: "index_tracks_on_name"
