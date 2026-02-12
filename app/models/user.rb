@@ -26,6 +26,9 @@ class User < ApplicationRecord
   # Review comments
   has_many :review_comments, dependent: :destroy
 
+  # Refresh tokens for authentication
+  has_many :refresh_tokens, dependent: :destroy
+
   # Geocoding for user location
   geocoded_by :full_location
   after_validation :geocode, if: :should_geocode?

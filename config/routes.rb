@@ -6,6 +6,13 @@ Rails.application.routes.draw do
   post '/login', to: 'authentication#authenticate'
   post '/signup', to: 'users#create'
 
+  # Auth routes for token management
+  post '/auth/refresh', to: 'authentication#refresh'
+  post '/auth/logout', to: 'authentication#logout'
+  post '/auth/logout-all', to: 'authentication#logout_all'
+  get '/auth/sessions', to: 'authentication#sessions'
+  delete '/auth/sessions/:id', to: 'authentication#revoke_session'
+
   # Email verification routes
   post '/email/resend-confirmation', to: 'email_verification#resend_confirmation'
   post '/email/confirm', to: 'email_verification#confirm'
