@@ -11,7 +11,7 @@ class DiscogsSearchController < ApplicationController
   MAX_LIMIT = 25
 
   # GET /discogs/search?track=...&artist=...&limit=...
-  # Search for songs - returns albums containing the track, prioritizing studio albums
+  # Search for songs - uses local DB first, then AudioDB, then Discogs
   def search
     track = params[:track]&.strip.presence
     artist = params[:artist]&.strip.presence
@@ -24,15 +24,16 @@ class DiscogsSearchController < ApplicationController
     limit = [[params[:limit]&.to_i || DEFAULT_LIMIT, MAX_LIMIT].min, 1].max
 
     begin
-      formatted = cached_track_search(track: track, artist: artist, limit: limit)
+      # Use the fast song search service (local DB → AudioDB → Discogs)
+      results = SongSearchService.search(track: track, artist: artist, limit: limit)
     rescue Errno::ECONNRESET, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError, SocketError => e
-      Rails.logger.warn("Discogs search failed: #{e.message}")
+      Rails.logger.warn("Song search failed: #{e.message}")
       render json: { error: 'Music search is temporarily unavailable. Please try again.' }, status: :service_unavailable
       return
     end
 
     json_response({
-      results: formatted,
+      results: results,
       query: { track: track, artist: artist }
     })
   end
@@ -97,14 +98,6 @@ class DiscogsSearchController < ApplicationController
 
   private
 
-  def cached_track_search(track:, artist:, limit:)
-    cache_key = "discogs:track_search:v3:#{Digest::SHA256.hexdigest("#{track}:#{artist}:#{limit}")}"
-
-    Rails.cache.fetch(cache_key, expires_in: 24.hours) do
-      search_and_match_tracks(track: track, artist: artist, limit: limit)
-    end
-  end
-
   def cached_master(master_id)
     cache_key = "discogs:master:#{master_id}"
 
@@ -119,73 +112,6 @@ class DiscogsSearchController < ApplicationController
     Rails.cache.fetch(cache_key, expires_in: 24.hours) do
       DiscogsService.get_release(release_id)
     end
-  end
-
-  # Search for releases matching the track/artist query.
-  # Uses Discogs search results directly instead of fetching master details
-  # for each result. Tracklist details are available via GET /discogs/master/:id.
-  def search_and_match_tracks(track:, artist:, limit:)
-    return [] if track.blank? && artist.blank?
-
-    results = DiscogsService.search(track: track, artist: artist, limit: limit * 2)
-
-    return [] if results.blank?
-
-    # Dedupe by master_id
-    seen_masters = Set.new
-    unique_results = results.select do |r|
-      next false unless r[:master_id]
-      next false if seen_masters.include?(r[:master_id])
-      seen_masters.add(r[:master_id])
-      true
-    end
-
-    # Score and sort to prioritize studio albums
-    scored = unique_results.map do |release|
-      { release: release, score: score_release(release) }
-    end
-
-    scored
-      .sort_by { |r| -r[:score] }
-      .first(limit)
-      .map { |r| format_search_result(r[:release], track) }
-  end
-
-  def format_search_result(release, track_query)
-    {
-      song_name: track_query,
-      band_name: release[:artist],
-      album_title: release[:title],
-      release_year: release[:year],
-      artwork_url: release[:cover_image],
-      master_id: release[:master_id],
-      discogs_url: "https://www.discogs.com/master/#{release[:master_id]}",
-      genre: release[:genre],
-      style: release[:style]
-    }
-  end
-
-  def score_release(release)
-    score = 0
-    format = release[:format]&.downcase || ''
-    title = release[:title]&.downcase || ''
-
-    # Penalize non-studio albums
-    score -= 200 if title.include?('live at') || title.include?('live in') || title.include?('bootleg')
-    score -= 150 if title.include?('compilation') || title.include?('best of') || title.include?('greatest hits')
-    score -= 100 if title.include?('acoustic') || title.include?('unplugged')
-    score -= 100 if title.include?(' ep') || title.end_with?(' ep')
-    score -= 50 if title.include?('remix') || title.include?('single')
-    score -= 50 if title.include?('special') || title.include?('deluxe')
-
-    # Prefer vinyl/LP (often studio albums)
-    score += 30 if format.include?('lp') || format.include?('vinyl')
-
-    # Slight preference for older releases (likely the original)
-    year = release[:year].to_i
-    score += 10 if year > 0 && year < 2005
-
-    score
   end
 
   def format_track_for_review(track, release_data)

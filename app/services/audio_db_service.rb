@@ -43,19 +43,27 @@ class AudioDbService
     end
 
     # Search for a track by artist and track name
+    # Returns a single best match (for backwards compatibility)
     def search_track(artist:, track:)
-      return nil if artist.blank? || track.blank?
+      results = search_tracks(artist: artist, track: track, limit: 1)
+      results&.first
+    end
+
+    # Search for tracks - returns multiple matches
+    # AudioDB searchtrack endpoint requires both artist and track
+    def search_tracks(artist:, track:, limit: 10)
+      return [] if track.blank? || artist.blank?
 
       response = rate_limited_get("/#{api_key}/searchtrack.php", query: { s: artist, t: track })
-      return nil unless response.success?
+      return [] unless response.success?
 
       tracks = response.parsed_response['track']
-      return nil unless tracks.is_a?(Array) && tracks.any?
+      return [] unless tracks.is_a?(Array) && tracks.any?
 
-      format_track(tracks.first)
+      tracks.first(limit).map { |t| format_track(t) }.compact
     rescue StandardError => e
-      Rails.logger.warn("AudioDbService.search_track error: #{e.message}")
-      nil
+      Rails.logger.warn("AudioDbService.search_tracks error: #{e.message}")
+      []
     end
 
     # Get artist by TheAudioDB ID

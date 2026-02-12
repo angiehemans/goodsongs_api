@@ -5,9 +5,20 @@ class UsersController < ApplicationController
 
   def create
     user = User.create!(user_params)
-    auth_token = AuthenticateUser.new(user.email, user.password).call
-    response = { message: Message.account_created, auth_token: auth_token }
-    json_response(response, :created)
+    auth = AuthenticateUser.new(
+      user.email,
+      user.password,
+      request: request,
+      device_name: params[:device_name]
+    ).call
+
+    json_response({
+      message: Message.account_created,
+      auth_token: auth.access_token,
+      refresh_token: auth.refresh_token,
+      expires_in: JsonWebToken::ACCESS_TOKEN_EXPIRATION.to_i,
+      user: UserSerializer.profile_data(user)
+    }, :created)
   end
 
   def show
