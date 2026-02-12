@@ -27,9 +27,9 @@ class PasswordResetService
   def validate_token!
     raise TokenInvalid if @token.blank?
 
-    @user = User.find_by(password_reset_token: @token)
+    # Rails 8's find_by_token_for handles expiration automatically
+    @user = User.find_by_token_for(:password_reset, @token)
     raise TokenInvalid unless @user
-    raise TokenExpired unless @user.password_reset_token_valid?
   end
 
   def reset_password!
@@ -40,7 +40,8 @@ class PasswordResetService
       raise InvalidPassword.new(@user.errors.full_messages)
     end
 
-    @user.clear_password_reset_token!
+    # Token is automatically invalidated when password changes
+    # (the token includes password_salt which changes with the password)
     @user.save!
   end
 end

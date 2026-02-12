@@ -19,8 +19,9 @@ class UserMailerJob < ApplicationJob
       UserMailer.confirmation_email(user).deliver_now
 
     when :password_reset
-      return unless user.password_reset_token.present?
-      return unless user.password_reset_token_valid?
+      # Check that the reset was requested recently (within expiry window)
+      return unless user.password_reset_sent_at.present?
+      return unless user.password_reset_sent_at > User::PASSWORD_RESET_EXPIRY.ago
       UserMailer.password_reset_email(user).deliver_now
 
     when :welcome

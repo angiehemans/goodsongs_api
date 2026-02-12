@@ -62,6 +62,116 @@ Authenticate and receive a JWT token.
 
 ---
 
+### POST /password/forgot
+
+Request a password reset email. Always returns success to prevent email enumeration.
+
+**Authentication:** None
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "If an account exists with this email, a password reset link has been sent"
+}
+```
+
+**Notes:**
+- Rate limited to prevent abuse
+- Disabled accounts will not receive reset emails
+- Token expires after 2 hours
+
+---
+
+### GET /password/validate-token
+
+Check if a password reset token is valid. Useful for frontend to show appropriate UI before user enters new password.
+
+**Authentication:** None
+
+**Query Parameters:**
+- `token` (required): The password reset token from the email link
+
+**Response (200 OK) - Valid Token:**
+```json
+{
+  "valid": true
+}
+```
+
+**Response (200 OK) - Invalid/Expired Token:**
+```json
+{
+  "valid": false,
+  "error": "Token is invalid or expired"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "valid": false,
+  "error": "Token is required"
+}
+```
+
+---
+
+### POST /password/reset
+
+Reset password using the token from the email.
+
+**Authentication:** None
+
+**Request Body:**
+```json
+{
+  "token": "abc123...",
+  "password": "newpassword123",
+  "password_confirmation": "newpassword123"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Password reset successfully",
+  "auth_token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+**Error Responses:**
+
+**400 Bad Request - Invalid Token:**
+```json
+{
+  "error": "Invalid reset token"
+}
+```
+
+**410 Gone - Expired Token:**
+```json
+{
+  "error": "Reset token has expired"
+}
+```
+
+**422 Unprocessable Entity - Invalid Password:**
+```json
+{
+  "error": "Invalid password",
+  "details": ["Password is too short (minimum is 6 characters)"]
+}
+```
+
+---
+
 ## Onboarding Endpoints
 
 ### GET /onboarding/status

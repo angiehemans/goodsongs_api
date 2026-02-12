@@ -17,7 +17,8 @@ class PasswordResetController < ApplicationController
     # But only send email if user exists and is not disabled
     if user && !user.disabled?
       if user.can_request_password_reset?
-        user.generate_password_reset_token!
+        # Update rate limit timestamp (token is generated on-demand by Rails 8)
+        user.update!(password_reset_sent_at: Time.current)
         UserMailerJob.perform_later(user.id, :password_reset)
       end
     end
@@ -36,9 +37,10 @@ class PasswordResetController < ApplicationController
       return json_response({ valid: false, error: 'Token is required' }, :bad_request)
     end
 
-    user = User.find_by(password_reset_token: token)
+    # Rails 8's find_by_token_for handles expiration automatically
+    user = User.find_by_token_for(:password_reset, token)
 
-    if user && user.password_reset_token_valid?
+    if user
       json_response({ valid: true })
     else
       json_response({ valid: false, error: 'Token is invalid or expired' })

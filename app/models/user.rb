@@ -37,6 +37,11 @@ class User < ApplicationRecord
   EMAIL_CONFIRMATION_EXPIRY = 24.hours
   PASSWORD_RESET_EXPIRY = 2.hours
 
+  # Override Rails 8's default 15-minute password reset token with 2 hours
+  generates_token_for :password_reset, expires_in: PASSWORD_RESET_EXPIRY do
+    password_salt&.last(10)
+  end
+
   enum :account_type, { fan: 0, band: 1 }
 
   validates :email, presence: true, uniqueness: { case_sensitive: false }
