@@ -171,27 +171,26 @@ class ScrobbleEnrichmentService
     if album
       # Backfill additional fields if missing
       backfill_album_fields(album, release, band)
-      # Backfill cover art if missing using Discogs fallback
-      if album.cover_art_url.blank?
-        cover_art_url = fetch_cover_art_with_fallback(release[:mbid], release[:title], band&.name)
-        album.update!(cover_art_url: cover_art_url) if cover_art_url.present?
-      end
+      # Queue artwork job if missing (non-blocking)
+      queue_artwork_job(album) if album.cover_art_url.blank?
       return album
     end
 
-    # Fetch cover art with Discogs fallback
-    cover_art_url = fetch_cover_art_with_fallback(release[:mbid], release[:title], band&.name)
-
-    Album.create!(
+    # Create album without artwork (will be fetched async)
+    album = Album.create!(
       name: release[:title],
       band: band,
       musicbrainz_release_id: release[:mbid],
-      cover_art_url: cover_art_url,
       release_date: parse_release_date(release[:date]),
       release_type: normalize_release_type(release[:release_type], release[:secondary_types]),
       country: release[:country],
       genres: band&.genres || []
     )
+
+    # Queue artwork fetch as separate job
+    queue_artwork_job(album)
+
+    album
   end
 
   def backfill_album_fields(album, release, band)
@@ -312,6 +311,15 @@ class ScrobbleEnrichmentService
   rescue StandardError => e
     Rails.logger.warn("Failed to fetch Discogs cover art for '#{album_name}': #{e.message}")
     nil
+  end
+
+  # Queue artwork fetch as a separate background job (non-blocking)
+  def queue_artwork_job(album)
+    return unless album&.id
+
+    ArtworkEnrichmentJob.perform_later(album.id, user_id: scrobble.user_id)
+  rescue StandardError => e
+    Rails.logger.warn("Failed to queue artwork job for album #{album.id}: #{e.message}")
   end
 
   def fetch_artist_image(artist_data)
@@ -477,23 +485,38 @@ class ScrobbleEnrichmentService
         updates = {}
         updates[:audiodb_album_id] = audiodb_album_id if audiodb_album_id.present? && album.audiodb_album_id.blank?
         updates[:musicbrainz_release_id] = musicbrainz_id if musicbrainz_id.present? && album.musicbrainz_release_id.blank?
-        updates[:cover_art_url] = extract_audiodb_album_art(album_data) if album.cover_art_url.blank? && album_data
+        # Try to set artwork from AudioDB data if available
+        if album.cover_art_url.blank?
+          audiodb_art = extract_audiodb_album_art(album_data)
+          if audiodb_art.present?
+            updates[:cover_art_url] = audiodb_art
+          else
+            # Queue async artwork fetch
+            queue_artwork_job(album)
+          end
+        end
         album.update!(updates) if updates.any?
         return album
       end
     end
 
     # 4. Create new album from TheAudioDB data
-    Album.create!(
+    cover_art = extract_audiodb_album_art(album_data)
+    album = Album.create!(
       name: album_name,
       band: band,
       audiodb_album_id: audiodb_album_id,
       musicbrainz_release_id: musicbrainz_id,
-      cover_art_url: extract_audiodb_album_art(album_data),
+      cover_art_url: cover_art,
       release_date: parse_audiodb_year(album_data&.dig(:release_year)),
       genres: album_data&.dig(:genre).present? ? [album_data[:genre]] : (band&.genres || []),
       release_type: normalize_audiodb_release_type(album_data&.dig(:format))
     )
+
+    # Queue artwork job if AudioDB didn't have artwork
+    queue_artwork_job(album) if cover_art.blank?
+
+    album
   end
 
   def find_or_create_track_from_audiodb(track_data, band, album)
@@ -668,18 +691,35 @@ class ScrobbleEnrichmentService
 
     # 1. Check by Discogs master ID
     album = Album.find_by(discogs_master_id: master_id)
-    return album if album
+    if album
+      # Queue artwork job if missing
+      queue_artwork_job(album) if album.cover_art_url.blank?
+      return album
+    end
 
     # 2. Create new album from Discogs data
-    Album.create!(
+    cover_art = extract_discogs_cover_art(master)
+    album = Album.create!(
       name: master[:title],
       band: band,
       discogs_master_id: master_id,
-      cover_art_url: master[:cover_image],
+      cover_art_url: cover_art,
       release_date: master[:year].present? ? Date.new(master[:year].to_i, 1, 1) : nil,
       genres: master[:genres]&.first(5) || band&.genres || [],
       release_type: 'album'  # Discogs masters are typically albums
     )
+
+    # Queue artwork job if Discogs didn't have good artwork
+    queue_artwork_job(album) if cover_art.blank?
+
+    album
+  end
+
+  def extract_discogs_cover_art(master)
+    cover = master[:cover_image]
+    # Skip placeholder images
+    return nil if cover.blank? || cover.include?('spacer.gif')
+    cover
   end
 
   def find_or_create_track_from_discogs(track_data, band, album, master)
