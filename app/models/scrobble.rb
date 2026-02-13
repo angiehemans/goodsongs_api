@@ -23,6 +23,7 @@ class Scrobble < ApplicationRecord
   validates :played_at, presence: true
   validates :source_app, presence: true, length: { maximum: 100 }
   validates :source_device, length: { maximum: 100 }, allow_nil: true
+  validates :preferred_artwork_url, length: { maximum: 2000 }, allow_nil: true
 
   validate :played_at_not_in_future
   validate :played_at_within_14_days
@@ -39,6 +40,16 @@ class Scrobble < ApplicationRecord
     where(user_id: user_id, track_name: track_name, artist_name: artist_name)
       .where('played_at BETWEEN ? AND ?', played_at - 30.seconds, played_at + 30.seconds)
       .exists?
+  end
+
+  # Returns the artwork URL to display: preferred if set, otherwise album cover art
+  def effective_artwork_url
+    preferred_artwork_url.presence || track&.album&.cover_art_url
+  end
+
+  # Check if user has set a preferred artwork (overriding album art)
+  def has_preferred_artwork?
+    preferred_artwork_url.present?
   end
 
   private

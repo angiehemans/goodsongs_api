@@ -44,7 +44,8 @@ module RecentlyPlayed
         loved: attrs[:loved] || false,
         scrobble_id: attrs[:scrobble_id],
         metadata_status: attrs[:metadata_status],
-        can_refresh_artwork: attrs[:can_refresh_artwork]
+        can_refresh_artwork: attrs[:can_refresh_artwork],
+        has_preferred_artwork: attrs[:has_preferred_artwork] || false
       }
     end
   end

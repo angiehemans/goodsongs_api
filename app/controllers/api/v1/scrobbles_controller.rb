@@ -117,6 +117,56 @@ module Api
         head :no_content
       end
 
+      # PATCH /api/v1/scrobbles/:id/artwork
+      # Set preferred artwork for a scrobble (overrides album artwork)
+      def update_artwork
+        scrobble = current_user.scrobbles.find(params[:id])
+        artwork_url = params[:artwork_url]
+
+        if artwork_url.blank?
+          return render json: error_response(
+            'validation_failed',
+            'artwork_url is required'
+          ), status: :unprocessable_entity
+        end
+
+        if scrobble.update(preferred_artwork_url: artwork_url)
+          # Invalidate cache so the new artwork shows up
+          ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+
+          render json: {
+            data: {
+              message: 'Preferred artwork set successfully',
+              scrobble: serialize_scrobble_with_artwork(scrobble)
+            }
+          }
+        else
+          render json: error_response(
+            'validation_failed',
+            'Could not update artwork',
+            scrobble.errors.full_messages
+          ), status: :unprocessable_entity
+        end
+      end
+
+      # DELETE /api/v1/scrobbles/:id/artwork
+      # Clear preferred artwork (revert to album artwork)
+      def clear_artwork
+        scrobble = current_user.scrobbles.find(params[:id])
+
+        scrobble.update!(preferred_artwork_url: nil)
+
+        # Invalidate cache
+        ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+
+        render json: {
+          data: {
+            message: 'Preferred artwork cleared',
+            scrobble: serialize_scrobble_with_artwork(scrobble)
+          }
+        }
+      end
+
       # POST /api/v1/scrobbles/:id/refresh_artwork
       # Manually refresh artwork for a scrobble's track
       def refresh_artwork
@@ -320,6 +370,21 @@ module Api
           "source_app=#{scrobble.source_app} " \
           "ip=#{request.remote_ip}"
         )
+      end
+
+      # Serialize scrobble with artwork details for artwork update responses
+      def serialize_scrobble_with_artwork(scrobble)
+        {
+          id: scrobble.id,
+          track_name: scrobble.track_name,
+          artist_name: scrobble.artist_name,
+          album_name: scrobble.album_name,
+          played_at: scrobble.played_at.iso8601,
+          artwork_url: scrobble.effective_artwork_url,
+          preferred_artwork_url: scrobble.preferred_artwork_url,
+          has_preferred_artwork: scrobble.has_preferred_artwork?,
+          metadata_status: scrobble.metadata_status
+        }
       end
     end
   end

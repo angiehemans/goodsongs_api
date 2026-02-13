@@ -135,6 +135,8 @@ Rails.application.routes.draw do
         end
         member do
           post :refresh_artwork
+          patch :artwork, action: :update_artwork
+          delete :artwork, action: :clear_artwork
         end
       end
       get 'users/:user_id/scrobbles', to: 'scrobbles#user_scrobbles'

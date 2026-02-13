@@ -31,18 +31,14 @@ module RecentlyPlayed
           played_at: scrobble.played_at,
           now_playing: false,
           mbid: scrobble.musicbrainz_recording_id,
-          album_art_url: extract_album_art(scrobble),
+          album_art_url: scrobble.effective_artwork_url,
           loved: false,
           scrobble_id: scrobble.id,
           metadata_status: scrobble.metadata_status,
-          can_refresh_artwork: scrobble.track.present?
+          can_refresh_artwork: scrobble.track.present?,
+          has_preferred_artwork: scrobble.has_preferred_artwork?
         )
       end
-    end
-
-    def extract_album_art(scrobble)
-      # If scrobble has been enriched and linked to a track with an album
-      scrobble.track&.album&.cover_art_url
     end
   end
 end

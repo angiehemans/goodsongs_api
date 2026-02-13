@@ -588,8 +588,11 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
   - `now_playing` - True if track is currently playing (Last.fm only)
   - `source` - Source of this track: `lastfm` or `scrobble`
   - `mbid` - MusicBrainz recording ID (may be null)
-  - `album_art_url` - Album artwork URL (may be null)
+  - `album_art_url` - Album artwork URL (may be null, uses preferred artwork if set)
   - `loved` - True if track is loved on Last.fm (Last.fm only, omitted for scrobbles)
+  - `scrobble_id` - Scrobble ID (scrobble source only, use for artwork updates)
+  - `metadata_status` - Enrichment status: `pending`, `enriched`, `not_found`, `failed` (scrobble source only)
+  - `has_preferred_artwork` - True if user has set custom artwork for this scrobble (scrobble source only)
 - `sources` - Array of source names that were queried
 
 **Notes:**
@@ -598,6 +601,8 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 - Tracks from different sources are interleaved based on `played_at` timestamp
 - Deduplication: If the same track (by name + artist, case-insensitive) appears consecutively within 5 minutes, only the most recent entry is shown
 - The `sources` array in the response shows which sources were actually queried (based on availability and filter)
+- For scrobbles with `metadata_status: pending`, artwork is still being fetched - show a loading state in the UI
+- Users can set custom artwork via `PATCH /api/v1/scrobbles/:id/artwork` using options from `GET /artwork/search`
 
 ---
 
@@ -661,10 +666,62 @@ Get all reviews (paginated, most recent first).
 
 Get a single review by ID.
 
-**Authentication:** Required
+**Authentication:** None (optional - if authenticated, `liked_by_current_user` reflects the current user's like status)
 
 **Response (200 OK):**
-Returns single review object (same format as items in GET /reviews)
+```json
+{
+  "id": 1,
+  "song_link": "https://open.spotify.com/track/...",
+  "band_name": "Artist Name",
+  "song_name": "Song Title",
+  "artwork_url": "https://...",
+  "review_text": "Great song!",
+  "liked_aspects": ["melody", "lyrics"],
+  "band": {
+    "id": 1,
+    "slug": "artist-name",
+    "name": "Artist Name",
+    "city": null,
+    "region": null,
+    "location": null,
+    "latitude": null,
+    "longitude": null,
+    "spotify_link": null,
+    "bandcamp_link": null,
+    "bandcamp_embed": null,
+    "apple_music_link": null,
+    "youtube_music_link": null,
+    "musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    "lastfm_artist_name": "Artist Name",
+    "lastfm_url": "https://www.last.fm/music/Artist+Name",
+    "about": null,
+    "profile_picture_url": null,
+    "reviews_count": 5,
+    "user_owned": false,
+    "owner": null,
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  },
+  "author": {
+    "id": 1,
+    "username": "johndoe",
+    "profile_image_url": "https://..."
+  },
+  "likes_count": 5,
+  "liked_by_current_user": false,
+  "comments_count": 3,
+  "created_at": "2024-12-01T00:00:00.000Z",
+  "updated_at": "2024-12-01T00:00:00.000Z"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "error": "Record not found"
+}
+```
 
 ---
 
@@ -2835,6 +2892,84 @@ Delete a scrobble (owner only).
 **Authentication:** Required
 
 **Response (204 No Content)**
+
+---
+
+### PATCH /api/v1/scrobbles/:id/artwork
+
+Set preferred artwork for a scrobble. This overrides the automatically fetched album artwork.
+
+**Authentication:** Required (owner only)
+
+**Request Body:**
+```json
+{
+  "artwork_url": "https://example.com/preferred-artwork.jpg"
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "message": "Preferred artwork set successfully",
+    "scrobble": {
+      "id": "uuid",
+      "track_name": "Song Title",
+      "artist_name": "Artist Name",
+      "album_name": "Album Name",
+      "played_at": "2025-01-15T20:30:00Z",
+      "artwork_url": "https://example.com/preferred-artwork.jpg",
+      "preferred_artwork_url": "https://example.com/preferred-artwork.jpg",
+      "has_preferred_artwork": true,
+      "metadata_status": "enriched"
+    }
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "artwork_url is required"
+  }
+}
+```
+
+**Notes:**
+- Use with `GET /artwork/search` to let users choose from available artwork options
+- The `artwork_url` should be a valid image URL from one of the artwork sources
+- This overrides the album's cover art for this specific scrobble only
+
+---
+
+### DELETE /api/v1/scrobbles/:id/artwork
+
+Clear the preferred artwork for a scrobble, reverting to the album's cover art.
+
+**Authentication:** Required (owner only)
+
+**Response (200 OK):**
+```json
+{
+  "data": {
+    "message": "Preferred artwork cleared",
+    "scrobble": {
+      "id": "uuid",
+      "track_name": "Song Title",
+      "artist_name": "Artist Name",
+      "album_name": "Album Name",
+      "played_at": "2025-01-15T20:30:00Z",
+      "artwork_url": "https://coverartarchive.org/...",
+      "preferred_artwork_url": null,
+      "has_preferred_artwork": false,
+      "metadata_status": "enriched"
+    }
+  }
+}
+```
 
 ---
 

@@ -3,6 +3,7 @@ class ReviewsController < ApplicationController
   include Ownership
 
   before_action :authenticate_request, except: [:show]
+  before_action :authenticate_request_optional, only: [:show]
   before_action :set_review, only: [:show, :update, :destroy]
   before_action -> { ensure_ownership(@review) }, only: [:update, :destroy]
 
