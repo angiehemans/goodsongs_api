@@ -44,29 +44,30 @@ class ArtworkEnrichmentJob < ApplicationJob
     results = Concurrent::Array.new
     threads = []
 
-    # Source 1: Cover Art Archive (if we have MusicBrainz ID)
-    if release_mbid.present?
-      threads << Thread.new do
-        begin
-          url = ScrobbleCacheService.get_cover_art_url(release_mbid, size: 500)
-          results << { source: :cover_art_archive, url: url, priority: 1 } if url.present?
-        rescue StandardError => e
-          Rails.logger.debug("ArtworkEnrichmentJob: Cover Art Archive failed: #{e.message}")
-        end
-      end
-    end
-
-    # Source 2: TheAudioDB
+    # Source 1: TheAudioDB (preferred - returns official album artwork)
     if artist_name.present?
       threads << Thread.new do
         begin
           album_data = ScrobbleCacheService.get_audiodb_album(artist_name, album_name)
           if album_data
             url = album_data[:album_thumb_hq].presence || album_data[:album_thumb].presence
-            results << { source: :audiodb, url: url, priority: 2 } if url.present?
+            results << { source: :audiodb, url: url, priority: 1 } if url.present?
           end
         rescue StandardError => e
           Rails.logger.debug("ArtworkEnrichmentJob: TheAudioDB failed: #{e.message}")
+        end
+      end
+    end
+
+    # Source 2: Cover Art Archive (if we have MusicBrainz ID)
+    # Note: May return compilations/soundtracks, so lower priority than AudioDB
+    if release_mbid.present?
+      threads << Thread.new do
+        begin
+          url = ScrobbleCacheService.get_cover_art_url(release_mbid, size: 500)
+          results << { source: :cover_art_archive, url: url, priority: 2 } if url.present?
+        rescue StandardError => e
+          Rails.logger.debug("ArtworkEnrichmentJob: Cover Art Archive failed: #{e.message}")
         end
       end
     end

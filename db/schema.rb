@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_13_183825) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -253,6 +253,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_13_183825) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.string "preferred_artwork_url"
+    t.string "album_artist"
+    t.string "genre"
+    t.integer "year"
+    t.date "release_date"
+    t.string "artwork_uri"
+    t.index ["genre"], name: "index_scrobbles_on_genre", where: "(genre IS NOT NULL)"
     t.index ["metadata_status", "created_at"], name: "index_scrobbles_on_metadata_status_and_created_at"
     t.index ["track_id"], name: "index_scrobbles_on_track_id"
     t.index ["user_id", "played_at"], name: "index_scrobbles_on_user_id_and_played_at", order: { played_at: :desc }

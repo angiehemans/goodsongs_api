@@ -2704,8 +2704,14 @@ Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seco
       "album_name": "Album Name",
       "duration_ms": 240000,
       "played_at": "2025-01-15T20:30:00Z",
-      "source_app": "goodsongs-ios",
-      "source_device": "iPhone 15"
+      "source_app": "goodsongs-android",
+      "source_device": "Pixel 8",
+      "album_artist": "Various Artists",
+      "genre": "Rock",
+      "year": 2024,
+      "release_date": "2024-03-15",
+      "artwork_uri": "https://i.scdn.co/image/abc123",
+      "album_art": "data:image/jpeg;base64,/9j/4AAQ..."
     }
   ]
 }
@@ -2719,6 +2725,18 @@ Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seco
 - `played_at` (required): ISO 8601 timestamp, must be within the last 14 days and not in the future
 - `source_app` (required): Submitting application identifier (max 100 chars)
 - `source_device` (optional): Device identifier (max 100 chars)
+- `album_artist` (optional): Album artist, useful for compilation albums (max 500 chars)
+- `genre` (optional): Track/album genre from METADATA_KEY_GENRE (max 100 chars)
+- `year` (optional): 4-digit release year (1800-2100)
+- `release_date` (optional): Full release date in YYYY-MM-DD format
+- `artwork_uri` (optional): External artwork URL (e.g., Spotify CDN URL, max 2000 chars) - highest priority for artwork display
+- `album_art` (optional): Base64-encoded album artwork image (JPEG/PNG/WebP, max 5MB). Supports both raw base64 and data URI format (`data:image/jpeg;base64,...`)
+
+**Artwork Priority (highest to lowest):**
+1. `artwork_uri` - External URL from Android (e.g., Spotify CDN)
+2. `album_art` - Base64-encoded bitmap uploaded to Active Storage
+3. `preferred_artwork_url` - User-selected override (set via PATCH endpoint)
+4. `track.album.cover_art_url` - Enrichment fallback from MusicBrainz/Cover Art Archive
 
 Maximum 50 scrobbles per request.
 
@@ -2735,7 +2753,11 @@ Maximum 50 scrobbles per request.
         "artist_name": "Artist Name",
         "album_name": "Album Name",
         "played_at": "2025-01-15T20:30:00Z",
-        "metadata_status": "pending"
+        "metadata_status": "pending",
+        "artwork_url": "https://i.scdn.co/image/abc123",
+        "genre": "Rock",
+        "year": 2024,
+        "album_artist": "Various Artists"
       }
     ]
   }
@@ -2809,6 +2831,10 @@ Get the current user's scrobbles with cursor-based pagination.
         "album_name": "Album Name",
         "played_at": "2025-01-15T20:30:00Z",
         "source_app": "goodsongs-ios",
+        "artwork_url": "https://i.scdn.co/image/abc123",
+        "genre": "Rock",
+        "year": 2024,
+        "album_artist": "Various Artists",
         "track": {
           "id": 10,
           "name": "Song Title",
@@ -2833,6 +2859,12 @@ Get the current user's scrobbles with cursor-based pagination.
   }
 }
 ```
+
+**Response Fields:**
+- `artwork_url` - Resolved artwork URL using the priority system (artwork_uri > album_art > preferred_artwork_url > track.album.cover_art_url)
+- `genre` - Genre metadata from Android client (if provided)
+- `year` - Release year metadata from Android client (if provided)
+- `album_artist` - Album artist metadata from Android client (if provided)
 
 Note: The `track` field is `null` when metadata enrichment has not yet completed.
 

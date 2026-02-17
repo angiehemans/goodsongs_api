@@ -3,6 +3,7 @@
 class Scrobble < ApplicationRecord
   belongs_to :user
   belongs_to :track, optional: true
+  has_one_attached :album_art
 
   # Metadata status enum matching PRD spec
   enum :metadata_status, {
@@ -24,6 +25,11 @@ class Scrobble < ApplicationRecord
   validates :source_app, presence: true, length: { maximum: 100 }
   validates :source_device, length: { maximum: 100 }, allow_nil: true
   validates :preferred_artwork_url, length: { maximum: 2000 }, allow_nil: true
+  validates :album_artist, length: { maximum: 500 }, allow_nil: true
+  validates :genre, length: { maximum: 100 }, allow_nil: true
+  validates :year, numericality: { only_integer: true, greater_than_or_equal_to: 1800, less_than_or_equal_to: 2100 }, allow_nil: true
+  validates :artwork_uri, length: { maximum: 2000 }, allow_nil: true
+  validate :album_art_format_and_size
 
   validate :played_at_not_in_future
   validate :played_at_within_14_days
@@ -42,9 +48,41 @@ class Scrobble < ApplicationRecord
       .exists?
   end
 
-  # Returns the artwork URL to display: preferred if set, otherwise album cover art
+  # Returns the artwork URL to display with priority:
+  # 1. artwork_uri (external URL from Android, e.g., Spotify CDN)
+  # 2. album_art (uploaded base64 bitmap via Active Storage)
+  # 3. preferred_artwork_url (user-selected override)
+  # 4. track.album.cover_art_url (enrichment fallback)
   def effective_artwork_url
-    preferred_artwork_url.presence || track&.album&.cover_art_url
+    artwork_uri.presence ||
+      album_art_url ||
+      preferred_artwork_url.presence ||
+      track&.album&.cover_art_url
+  end
+
+  # Get the URL for the attached album_art image
+  def album_art_url
+    return nil unless album_art.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_url(
+      album_art,
+      **active_storage_url_options
+    )
+  end
+
+  def active_storage_url_options
+    if ENV['API_URL'].present?
+      uri = URI.parse(ENV['API_URL'])
+      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
+      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
+    else
+      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
+    end
+  end
+
+  # Check if user has uploaded artwork (Active Storage attachment)
+  def has_uploaded_artwork?
+    album_art.attached?
   end
 
   # Check if user has set a preferred artwork (overriding album art)
@@ -68,5 +106,18 @@ class Scrobble < ApplicationRecord
     return unless played_at.present? && played_at < 14.days.ago
 
     errors.add(:played_at, 'must be within the last 14 days')
+  end
+
+  def album_art_format_and_size
+    return unless album_art.attached?
+
+    allowed_types = %w[image/jpeg image/png image/webp]
+    unless allowed_types.include?(album_art.content_type)
+      errors.add(:album_art, 'must be a JPEG, PNG, or WebP image')
+    end
+
+    if album_art.byte_size > 5.megabytes
+      errors.add(:album_art, 'must be less than 5MB')
+    end
   end
 end

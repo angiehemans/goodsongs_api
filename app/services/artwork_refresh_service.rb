@@ -46,15 +46,16 @@ class ArtworkRefreshService
     # Try each source in priority order
     artwork_url = nil
 
-    # 1. Cover Art Archive (if we have a MusicBrainz release ID)
+    # 1. TheAudioDB (preferred - returns official album artwork)
+    artwork_url = fetch_from_audiodb
+    return artwork_url if artwork_url.present?
+
+    # 2. Cover Art Archive (if we have a MusicBrainz release ID)
+    # Note: May return compilations/soundtracks, so lower priority than AudioDB
     if album&.musicbrainz_release_id.present?
       artwork_url = fetch_from_cover_art_archive(album.musicbrainz_release_id)
       return artwork_url if artwork_url.present?
     end
-
-    # 2. TheAudioDB
-    artwork_url = fetch_from_audiodb
-    return artwork_url if artwork_url.present?
 
     # 3. Discogs
     artwork_url = fetch_from_discogs

@@ -10,6 +10,7 @@ class ArtworkSearchController < ApplicationController
 
   # GET /artwork/search?track=...&artist=...&album=...
   # Returns artwork options from multiple sources for the user to choose from
+  # Results are sorted with exact matches first, then other albums by the artist
   def search
     track = params[:track]&.strip.presence
     artist = params[:artist]&.strip.presence
@@ -22,8 +23,14 @@ class ArtworkSearchController < ApplicationController
 
     artwork_options = fetch_artwork_from_all_sources(track: track, artist: artist, album: album)
 
+    # Group by match type for easier frontend handling
+    exact_matches = artwork_options.select { |opt| opt[:match_type] == 'exact' }
+    artist_catalog = artwork_options.select { |opt| opt[:match_type] == 'artist_catalog' }
+
     json_response({
       artwork_options: artwork_options,
+      exact_matches: exact_matches,
+      artist_catalog: artist_catalog,
       query: { track: track, artist: artist, album: album }
     })
   end
@@ -63,8 +70,51 @@ class ArtworkSearchController < ApplicationController
       options.concat(results) if results.present?
     end
 
-    # Deduplicate by URL and sort by source priority
-    deduplicate_artwork(options)
+    # Mark match types based on album name similarity
+    options.each do |opt|
+      opt[:match_type] = determine_match_type(opt[:album_name], album, track)
+    end
+
+    # Deduplicate by URL and sort by match type, then source priority
+    deduplicate_and_sort_artwork(options)
+  end
+
+  def determine_match_type(result_album_name, query_album, query_track)
+    return 'artist_catalog' if result_album_name.blank?
+
+    result_normalized = normalize_for_comparison(result_album_name)
+
+    # Check if it matches the requested album
+    if query_album.present?
+      query_normalized = normalize_for_comparison(query_album)
+      return 'exact' if fuzzy_match?(result_normalized, query_normalized)
+    end
+
+    # Check if the album name contains the track name (likely a single or EP)
+    if query_track.present?
+      track_normalized = normalize_for_comparison(query_track)
+      return 'exact' if fuzzy_match?(result_normalized, track_normalized)
+    end
+
+    'artist_catalog'
+  end
+
+  def normalize_for_comparison(str)
+    str.to_s
+       .downcase
+       .gsub(/[^\w\s]/, '') # Remove punctuation
+       .gsub(/\s+/, ' ')    # Normalize whitespace
+       .strip
+  end
+
+  def fuzzy_match?(str1, str2)
+    return true if str1 == str2
+    return true if str1.include?(str2) || str2.include?(str1)
+
+    # Check for high similarity (handles minor differences like "Deluxe Edition")
+    return true if str1.start_with?(str2) || str2.start_with?(str1)
+
+    false
   end
 
   def fetch_cover_art_archive(track:, artist:, album:)
@@ -290,7 +340,7 @@ class ArtworkSearchController < ApplicationController
     nil
   end
 
-  def deduplicate_artwork(options)
+  def deduplicate_and_sort_artwork(options)
     # Remove duplicates by URL
     seen_urls = Set.new
     unique_options = options.select do |opt|
@@ -299,15 +349,27 @@ class ArtworkSearchController < ApplicationController
       true
     end
 
-    # Sort by source priority: Cover Art Archive > TheAudioDB > Discogs > Last.fm
+    # Sort by:
+    # 1. Match type (exact matches first)
+    # 2. Source priority within each match type
+    match_type_priority = {
+      'exact' => 0,
+      'artist_catalog' => 1
+    }
+
     source_priority = {
-      'cover_art_archive' => 0,
-      'audiodb' => 1,
+      'audiodb' => 0,        # Best for official album artwork
+      'cover_art_archive' => 1,
       'discogs' => 2,
       'lastfm' => 3
     }
 
-    unique_options.sort_by { |opt| source_priority[opt[:source]] || 99 }
+    unique_options.sort_by do |opt|
+      [
+        match_type_priority[opt[:match_type]] || 99,
+        source_priority[opt[:source]] || 99
+      ]
+    end
   end
 
   def check_search_rate_limit

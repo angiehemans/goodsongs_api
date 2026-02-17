@@ -27,9 +27,11 @@ module Api
         rejected = []
 
         scrobbles_params.each_with_index do |scrobble_data, index|
-          scrobble = build_scrobble(scrobble_data)
+          data = permit_scrobble_params(scrobble_data)
+          scrobble = build_scrobble(data)
+          attach_album_art(scrobble, data[:album_art])
 
-          if duplicate_scrobble?(scrobble_data)
+          if duplicate_scrobble?(data)
             # Silently skip duplicates per PRD
             next
           end
@@ -212,6 +214,15 @@ module Api
 
       private
 
+      def permit_scrobble_params(scrobble_data)
+        scrobble_data.permit(
+          :track_name, :artist_name, :album_name, :duration_ms,
+          :played_at, :source_app, :source_device,
+          :album_artist, :genre, :year, :release_date,
+          :artwork_uri, :album_art
+        ).to_h.with_indifferent_access
+      end
+
       def build_scrobble(data)
         current_user.scrobbles.build(
           track_name: data[:track_name],
@@ -221,8 +232,62 @@ module Api
           played_at: parse_played_at(data[:played_at]),
           source_app: data[:source_app],
           source_device: data[:source_device],
-          metadata_status: :pending
+          metadata_status: :pending,
+          # Android metadata fields
+          album_artist: data[:album_artist],
+          genre: data[:genre],
+          year: data[:year],
+          release_date: parse_release_date(data[:release_date]),
+          artwork_uri: data[:artwork_uri]
         )
+      end
+
+      def parse_release_date(value)
+        return nil unless value.present?
+
+        Date.parse(value.to_s)
+      rescue ArgumentError
+        nil
+      end
+
+      def attach_album_art(scrobble, album_art_data)
+        return unless album_art_data.present?
+
+        begin
+          # Support both raw base64 and data URI format
+          if album_art_data.start_with?('data:')
+            # Parse data URI: data:image/jpeg;base64,/9j/4AAQ...
+            match = album_art_data.match(/\Adata:([^;]+);base64,(.+)\z/)
+            return unless match
+
+            content_type = match[1]
+            base64_data = match[2]
+          else
+            # Raw base64, assume JPEG
+            content_type = 'image/jpeg'
+            base64_data = album_art_data
+          end
+
+          decoded_data = Base64.strict_decode64(base64_data)
+
+          # Determine file extension from content type
+          extension = case content_type
+                      when 'image/jpeg' then 'jpg'
+                      when 'image/png' then 'png'
+                      when 'image/webp' then 'webp'
+                      else 'jpg'
+                      end
+
+          filename = "album_art_#{SecureRandom.hex(8)}.#{extension}"
+
+          scrobble.album_art.attach(
+            io: StringIO.new(decoded_data),
+            filename: filename,
+            content_type: content_type
+          )
+        rescue ArgumentError
+          # Invalid base64 data - silently ignore, validation will catch invalid attachments
+        end
       end
 
       def parse_played_at(value)
@@ -283,7 +348,11 @@ module Api
           artist_name: scrobble.artist_name,
           album_name: scrobble.album_name,
           played_at: scrobble.played_at.iso8601,
-          metadata_status: scrobble.metadata_status
+          metadata_status: scrobble.metadata_status,
+          artwork_url: scrobble.effective_artwork_url,
+          genre: scrobble.genre,
+          year: scrobble.year,
+          album_artist: scrobble.album_artist
         }
       end
 
@@ -295,6 +364,10 @@ module Api
           album_name: scrobble.album_name,
           played_at: scrobble.played_at.iso8601,
           source_app: scrobble.source_app,
+          artwork_url: scrobble.effective_artwork_url,
+          genre: scrobble.genre,
+          year: scrobble.year,
+          album_artist: scrobble.album_artist,
           track: nil
         }
 
