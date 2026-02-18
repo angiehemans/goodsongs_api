@@ -18,7 +18,8 @@ class ReviewsController < ApplicationController
 
   def create
     @band = find_or_create_band(review_params[:band_name])
-    @review = current_user.reviews.build(review_params.merge(band: @band))
+    @track = find_or_create_track(@band, review_params[:song_name])
+    @review = current_user.reviews.build(review_params.merge(band: @band, track: @track))
 
     if @review.save
       # Notify band owner if the band has one
@@ -97,7 +98,34 @@ class ReviewsController < ApplicationController
   def review_params
     params.require(:review).permit(:song_link, :band_name, :song_name, :artwork_url,
                                   :review_text,
-                                  liked_aspects: [])
+                                  liked_aspects: [],
+                                  genres: [])
+  end
+
+  def find_or_create_track(band, song_name)
+    return nil if band.blank? || song_name.blank?
+
+    song = song_name.strip
+
+    # 1. Exact case-insensitive match on band's tracks
+    track = band.tracks.where("LOWER(name) = LOWER(?)", song).first
+    return track if track
+
+    # 2. Fuzzy match with >0.6 similarity threshold
+    similar_track = band.tracks
+      .where("name % ?", song)
+      .where("similarity(name, ?) > 0.6", song)
+      .order(Arel.sql("similarity(name, #{Track.connection.quote(song)}) DESC"))
+      .first
+    return similar_track if similar_track
+
+    # 3. Create new user-submitted track
+    Track.create!(
+      name: song,
+      band: band,
+      source: :user_submitted,
+      submitted_by: current_user
+    )
   end
 
   def band_lastfm_artist_name

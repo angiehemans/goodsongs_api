@@ -18,7 +18,7 @@ class UserSerializer
     ])
 
     result = base_data.merge(
-      reviews_count: user.reviews.count,
+      reviews_count: user.reviews_count,       # Use counter cache
       bands_count: user.bands.count,
       lastfm_connected: user.lastfm_connected?,
       lastfm_username: user.lastfm_username,
@@ -32,8 +32,8 @@ class UserSerializer
       location: user.location,
       latitude: user.latitude,
       longitude: user.longitude,
-      followers_count: user.followers.count,
-      following_count: user.following.count,
+      followers_count: user.followers_count,   # Use counter cache
+      following_count: user.following_count,   # Use counter cache
       email_confirmed: user.email_confirmed?,
       can_resend_confirmation: user.can_resend_confirmation?
     )
@@ -53,14 +53,14 @@ class UserSerializer
       email: user.email,
       about_me: user.about_me,
       profile_image_url: profile_image_url(user),
-      reviews_count: user.reviews.count,
+      reviews_count: user.reviews_count,       # Use counter cache
       bands_count: user.bands.count,
       account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
       display_name: user.display_name,
       location: user.location,
-      followers_count: user.followers.count,
-      following_count: user.following.count
+      followers_count: user.followers_count,   # Use counter cache
+      following_count: user.following_count    # Use counter cache
     }
 
     # Include primary band for BAND accounts

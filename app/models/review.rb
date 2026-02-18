@@ -1,10 +1,17 @@
 class Review < ApplicationRecord
   belongs_to :band
-  belongs_to :user
+  belongs_to :user, counter_cache: true
+  belongs_to :track, optional: true
   has_many :review_likes, dependent: :destroy
   has_many :likers, through: :review_likes, source: :user
   has_many :review_comments, dependent: :destroy
   has_many :commenters, through: :review_comments, source: :user
+
+  GENRES = %w[
+    Rock Pop Hip-Hop Jazz Blues Country R&B Soul Funk Electronic
+    Metal Punk Indie Alternative Folk Classical Reggae Latin
+    Ambient Experimental
+  ].freeze
 
   # Scope to exclude reviews from disabled users
   scope :from_active_users, -> { joins(:user).where(users: { disabled: false }) }

@@ -4,25 +4,25 @@
 
 ### API Calls on Dashboard Load
 
-| Endpoint | Status | Time | Issue |
-|----------|--------|------|-------|
-| `profile` | 304 | 65ms | OK |
-| `unread_count` | 304 | 62ms | **Called 4+ times!** |
-| `angie` (user profile) | 200 | **1.43s** | Very slow |
-| `notifications` | 200 | 279ms | OK |
-| `discover` | 200 | 321ms | OK |
-| `settings` | 200 | 338ms | OK |
-| `admin` | 200 | 311ms | OK |
-| `following?page=1` | 304 | 296ms | OK |
-| `user` (reviews/user) | 304 | 185ms | OK |
-| `recently-played` | 200 | 196ms | OK |
-| `followers` | 304 | 315ms | OK |
-| `following` | 304 | 346ms | OK |
-| `lizzieandromeda` | 200 | **998ms** | Slow user fetch |
-| `38` (review/band?) | 200 | **1.17s** | Very slow |
-| `shyeye` | 200 | **1.17s** | Very slow |
-| `37` (review/band?) | 200 | **1.17s** | Very slow |
-| `ivri` | 200 | **1.01s** | Slow user fetch |
+| Endpoint               | Status | Time      | Issue                |
+| ---------------------- | ------ | --------- | -------------------- |
+| `profile`              | 304    | 65ms      | OK                   |
+| `unread_count`         | 304    | 62ms      | **Called 4+ times!** |
+| `angie` (user profile) | 200    | **1.43s** | Very slow            |
+| `notifications`        | 200    | 279ms     | OK                   |
+| `discover`             | 200    | 321ms     | OK                   |
+| `settings`             | 200    | 338ms     | OK                   |
+| `admin`                | 200    | 311ms     | OK                   |
+| `following?page=1`     | 304    | 296ms     | OK                   |
+| `user` (reviews/user)  | 304    | 185ms     | OK                   |
+| `recently-played`      | 200    | 196ms     | OK                   |
+| `followers`            | 304    | 315ms     | OK                   |
+| `following`            | 304    | 346ms     | OK                   |
+| `lizzieandromeda`      | 200    | **998ms** | Slow user fetch      |
+| `38` (review/band?)    | 200    | **1.17s** | Very slow            |
+| `shyeye`               | 200    | **1.17s** | Very slow            |
+| `37` (review/band?)    | 200    | **1.17s** | Very slow            |
+| `ivri`                 | 200    | **1.01s** | Slow user fetch      |
 
 **Total: 17+ API calls, ~10+ seconds cumulative**
 
@@ -31,22 +31,26 @@
 ## Identified Issues
 
 ### 1. Duplicate API Calls
+
 **Problem**: `unread_count` called 4+ times on same page load
 
 **Cause**: Multiple components independently fetching the same data
 
 **Solution**:
+
 - Frontend: Deduplicate with React Query/SWR or shared state
 - Backend: No changes needed (already fast at 62-71ms)
 
 ---
 
 ### 2. Slow User Profile Fetches (1-1.5s each)
+
 **Problem**: Individual user profiles (`angie`, `lizzieandromeda`, `shyeye`, `ivri`) taking 1+ second each
 
 **Cause**: Likely N+1 queries or expensive computations per user
 
 **Backend Investigation Needed**:
+
 ```ruby
 # Check GET /users/:username endpoint
 # Look for:
@@ -56,6 +60,7 @@
 ```
 
 **Potential Fixes**:
+
 - Add eager loading for associations
 - Cache follower/following counts on user record
 - Add database indexes on frequently queried columns
@@ -64,11 +69,13 @@
 ---
 
 ### 3. Slow Review/Band Fetches by ID (1+ second)
+
 **Problem**: Fetches for `38` and `37` (likely review or band IDs) taking 1+ second
 
 **Cause**: Similar to user profiles - likely N+1 or missing indexes
 
 **Backend Investigation Needed**:
+
 ```ruby
 # Check GET /reviews/:id and GET /bands/:slug endpoints
 # Look for expensive joins/includes
@@ -77,6 +84,7 @@
 ---
 
 ### 4. Too Many Separate API Calls
+
 **Problem**: Dashboard requires 17+ separate HTTP requests
 
 **Cause**: Fine-grained endpoints designed for flexibility, not dashboard efficiency
@@ -84,6 +92,7 @@
 **Solution Options**:
 
 #### Option A: Combined Dashboard Endpoint (Recommended)
+
 Create a single endpoint that returns all dashboard data:
 
 ```ruby
@@ -103,12 +112,14 @@ Create a single endpoint that returns all dashboard data:
 **Cons**: Less flexible, more coupling
 
 #### Option B: GraphQL
+
 Allow frontend to request exactly what it needs in one query
 
 **Pros**: Very flexible, reduces over-fetching
 **Cons**: Significant implementation effort
 
 #### Option C: Keep Separate + Optimize Individual Endpoints
+
 Focus on making each endpoint faster (<100ms target)
 
 **Pros**: Maintains current architecture
@@ -121,6 +132,7 @@ Focus on making each endpoint faster (<100ms target)
 ### Phase 1: Quick Wins (Backend - 1 day)
 
 #### 1.1 Add Database Indexes
+
 ```ruby
 # migration
 add_index :reviews, [:user_id, :created_at], order: { created_at: :desc }
@@ -130,6 +142,7 @@ add_index :notifications, [:user_id, :read, :created_at]
 ```
 
 #### 1.2 Cache Counts on User Model
+
 ```ruby
 # Add counter caches
 add_column :users, :followers_count, :integer, default: 0
@@ -142,6 +155,7 @@ belongs_to :followed, class_name: 'User', counter_cache: :followers_count
 ```
 
 #### 1.3 Eager Loading in User Profile
+
 ```ruby
 # In users_controller.rb
 def profile_by_username
@@ -155,6 +169,7 @@ end
 ### Phase 2: Combined Dashboard Endpoint (Backend - 2 days)
 
 #### 2.1 Create Dashboard Controller
+
 ```ruby
 # app/controllers/dashboard_controller.rb
 class DashboardController < ApplicationController
@@ -188,6 +203,7 @@ end
 ```
 
 #### 2.2 Add Route
+
 ```ruby
 get '/dashboard', to: 'dashboard#show'
 ```
@@ -197,16 +213,18 @@ get '/dashboard', to: 'dashboard#show'
 ### Phase 3: Frontend Deduplication (Frontend - 1 day)
 
 #### 3.1 Deduplicate unread_count
+
 ```typescript
 // Use React Query or SWR with shared key
 const { data: unreadCount } = useQuery({
-  queryKey: ['unread_count'],
+  queryKey: ["unread_count"],
   queryFn: fetchUnreadCount,
   staleTime: 30000, // 30 seconds
 });
 ```
 
 #### 3.2 Prefetch on Hover
+
 ```typescript
 // Prefetch user profiles when hovering over username
 onMouseEnter={() => {
@@ -219,6 +237,7 @@ onMouseEnter={() => {
 ### Phase 4: Advanced Caching (Backend - 2 days)
 
 #### 4.1 HTTP Caching Headers
+
 ```ruby
 # For data that rarely changes
 def profile
@@ -234,6 +253,7 @@ end
 ```
 
 #### 4.2 Redis Caching for Expensive Queries
+
 ```ruby
 def following_feed(user, page:, per_page:)
   cache_key = "feed:#{user.id}:#{page}:#{per_page}"
@@ -248,12 +268,12 @@ end
 
 ## Success Metrics
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Total API calls | 17+ | 5-7 |
-| Slowest endpoint | 1.43s | <300ms |
-| Time to interactive | ~3s | <1s |
-| Duplicate calls | 4+ | 0 |
+| Metric              | Current | Target |
+| ------------------- | ------- | ------ |
+| Total API calls     | 17+     | 5-7    |
+| Slowest endpoint    | 1.43s   | <300ms |
+| Time to interactive | ~3s     | <1s    |
+| Duplicate calls     | 4+      | 0      |
 
 ---
 

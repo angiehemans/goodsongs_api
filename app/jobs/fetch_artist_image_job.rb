@@ -37,11 +37,28 @@ class FetchArtistImageJob < ApplicationJob
     end
 
     if image_url.present?
-      band.update_column(:artist_image_url, image_url)
-      Rails.logger.info("FetchArtistImageJob: Updated band #{band.id} (#{band.name}) with image")
+      # Determine the source for caching eligibility
+      source = detect_image_source(image_url)
+      band.update_columns(artist_image_url: image_url, artist_image_source: source)
+      Rails.logger.info("FetchArtistImageJob: Updated band #{band.id} (#{band.name}) with image from #{source}")
+
+      # Queue caching job for eligible sources
+      if ImageCachingService.cacheable_source?(source)
+        CacheExternalImageJob.perform_later(
+          record_type: 'Band',
+          record_id: band.id,
+          attribute: 'artist_image',
+          url: image_url,
+          source: source
+        )
+      end
     else
       Rails.logger.info("FetchArtistImageJob: No image found for band #{band.id} (#{band.name})")
     end
+  end
+
+  def detect_image_source(url)
+    ImageCachingService.detect_source(url)
   end
 
   private

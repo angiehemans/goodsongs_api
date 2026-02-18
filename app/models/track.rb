@@ -6,6 +6,7 @@ class Track < ApplicationRecord
   belongs_to :album, optional: true
   belongs_to :submitted_by, class_name: 'User', optional: true
   has_many :scrobbles, dependent: :nullify
+  has_many :reviews, dependent: :nullify
 
   enum :source, { musicbrainz: 0, user_submitted: 1 }
 

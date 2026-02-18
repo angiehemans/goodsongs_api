@@ -392,7 +392,7 @@ module Api
         {
           id: band.id,
           name: band.name,
-          image_url: band.artist_image_url
+          image_url: band.resolved_artist_image_url
         }
       end
 
@@ -400,7 +400,7 @@ module Api
         {
           id: album.id,
           name: album.name,
-          cover_art_url: album.cover_art_url
+          cover_art_url: album.resolved_cover_art_url
         }
       end
 

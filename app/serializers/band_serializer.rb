@@ -42,9 +42,10 @@ class BandSerializer
     }
   end
 
-  # Returns uploaded profile picture if present, otherwise falls back to artist image from Last.fm
+  # Returns uploaded profile picture if present, otherwise falls back to artist image
+  # Uses cached version when available, queues caching for eligible external URLs
   def self.band_image_url(band)
-    profile_picture_url(band) || band.artist_image_url
+    profile_picture_url(band) || band.resolved_artist_image_url
   end
 
   def self.with_reviews(band)

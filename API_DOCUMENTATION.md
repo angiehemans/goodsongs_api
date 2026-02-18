@@ -21,6 +21,7 @@ Create a new user account.
 **Authentication:** None
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -30,6 +31,7 @@ Create a new user account.
 ```
 
 **Response (201 Created):**
+
 ```json
 {
   "message": "Account created successfully",
@@ -46,6 +48,7 @@ Authenticate and receive a JWT token.
 **Authentication:** None
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com",
@@ -54,6 +57,7 @@ Authenticate and receive a JWT token.
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "auth_token": "eyJhbGciOiJIUzI1NiJ9..."
@@ -69,6 +73,7 @@ Request a password reset email. Always returns success to prevent email enumerat
 **Authentication:** None
 
 **Request Body:**
+
 ```json
 {
   "email": "user@example.com"
@@ -76,6 +81,7 @@ Request a password reset email. Always returns success to prevent email enumerat
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "If an account exists with this email, a password reset link has been sent"
@@ -83,6 +89,7 @@ Request a password reset email. Always returns success to prevent email enumerat
 ```
 
 **Notes:**
+
 - Rate limited to prevent abuse
 - Disabled accounts will not receive reset emails
 - Token expires after 2 hours
@@ -96,9 +103,11 @@ Check if a password reset token is valid. Useful for frontend to show appropriat
 **Authentication:** None
 
 **Query Parameters:**
+
 - `token` (required): The password reset token from the email link
 
 **Response (200 OK) - Valid Token:**
+
 ```json
 {
   "valid": true
@@ -106,6 +115,7 @@ Check if a password reset token is valid. Useful for frontend to show appropriat
 ```
 
 **Response (200 OK) - Invalid/Expired Token:**
+
 ```json
 {
   "valid": false,
@@ -114,6 +124,7 @@ Check if a password reset token is valid. Useful for frontend to show appropriat
 ```
 
 **Error Response (400 Bad Request):**
+
 ```json
 {
   "valid": false,
@@ -130,6 +141,7 @@ Reset password using the token from the email.
 **Authentication:** None
 
 **Request Body:**
+
 ```json
 {
   "token": "abc123...",
@@ -139,6 +151,7 @@ Reset password using the token from the email.
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Password reset successfully",
@@ -149,6 +162,7 @@ Reset password using the token from the email.
 **Error Responses:**
 
 **400 Bad Request - Invalid Token:**
+
 ```json
 {
   "error": "Invalid reset token"
@@ -156,6 +170,7 @@ Reset password using the token from the email.
 ```
 
 **410 Gone - Expired Token:**
+
 ```json
 {
   "error": "Reset token has expired"
@@ -163,6 +178,7 @@ Reset password using the token from the email.
 ```
 
 **422 Unprocessable Entity - Invalid Password:**
+
 ```json
 {
   "error": "Invalid password",
@@ -181,6 +197,7 @@ Get current onboarding status for authenticated user.
 **Authentication:** Required (onboarding check skipped)
 
 **Response (200 OK):**
+
 ```json
 {
   "onboarding_completed": false,
@@ -189,6 +206,7 @@ Get current onboarding status for authenticated user.
 ```
 
 For BAND accounts with primary band:
+
 ```json
 {
   "onboarding_completed": true,
@@ -214,12 +232,15 @@ Set account type (Step 1 of onboarding).
 **Authentication:** Required (onboarding check skipped)
 
 **Request Body:**
+
 ```json
 {
   "account_type": "fan"
 }
 ```
+
 or
+
 ```json
 {
   "account_type": "band"
@@ -227,6 +248,7 @@ or
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Account type set successfully",
@@ -245,6 +267,7 @@ Complete FAN profile setup (Step 2 for FAN accounts).
 **Authentication:** Required (onboarding check skipped)
 
 **Request Body (multipart/form-data):**
+
 ```
 username: "johndoe"
 about_me: "Music lover from NYC" (optional)
@@ -254,6 +277,7 @@ region: "California" (optional)
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Fan profile completed successfully",
@@ -289,6 +313,7 @@ Complete BAND profile setup (Step 2 for BAND accounts). Creates the primary band
 **Authentication:** Required (onboarding check skipped)
 
 **Request Body (multipart/form-data):**
+
 ```
 name: "The Band Name" (required)
 about: "We make great music" (optional)
@@ -302,6 +327,7 @@ profile_picture: <file> (optional)
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Band profile completed successfully",
@@ -367,6 +393,7 @@ Get current authenticated user's profile.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "id": 1,
@@ -393,6 +420,7 @@ Get current authenticated user's profile.
 ```
 
 For BAND accounts:
+
 ```json
 {
   "id": 1,
@@ -436,6 +464,7 @@ Update current user's profile.
 **Authentication:** Required
 
 **Request Body (multipart/form-data):**
+
 ```
 about_me: "Updated bio"
 profile_image: <file>
@@ -463,10 +492,12 @@ Get public profile for a user by username with paginated reviews.
 **Authentication:** None (optional - if authenticated, includes `following` field and `liked_by_current_user` for reviews)
 
 **Query Parameters:**
+
 - `page` (optional): Page number for reviews (default: 1)
 - `per_page` (optional): Reviews per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "id": 1,
@@ -539,10 +570,12 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `limit` (optional): Number of tracks to return (default: 20)
 - `sources` (optional): Comma-separated list of sources to include. Valid values: `lastfm`, `scrobble`. If omitted, all connected sources are used.
 
 **Examples:**
+
 - `GET /recently-played` - All sources
 - `GET /recently-played?limit=50` - All sources, 50 tracks
 - `GET /recently-played?sources=lastfm` - Last.fm only
@@ -550,6 +583,7 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 - `GET /recently-played?sources=lastfm,scrobble` - Both sources explicitly
 
 **Response (200 OK):**
+
 ```json
 {
   "tracks": [
@@ -580,6 +614,7 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 ```
 
 **Response Fields:**
+
 - `tracks` - Array of recently played tracks, sorted by `played_at` descending
   - `name` - Track name
   - `artist` - Artist name
@@ -596,6 +631,7 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 - `sources` - Array of source names that were queried
 
 **Notes:**
+
 - If Last.fm is not connected, only local scrobbles are returned
 - If no scrobbles exist and Last.fm is not connected, returns empty tracks array
 - Tracks from different sources are interleaved based on `played_at` timestamp
@@ -615,6 +651,7 @@ Get all reviews (paginated, most recent first).
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -669,6 +706,7 @@ Get a single review by ID.
 **Authentication:** None (optional - if authenticated, `liked_by_current_user` reflects the current user's like status)
 
 **Response (200 OK):**
+
 ```json
 {
   "id": 1,
@@ -678,6 +716,16 @@ Get a single review by ID.
   "artwork_url": "https://...",
   "review_text": "Great song!",
   "liked_aspects": ["melody", "lyrics"],
+  "genres": ["Alternative", "Art Rock"],
+  "track": {
+    "id": "uuid-here",
+    "name": "Song Title",
+    "album": {
+      "id": "album-uuid",
+      "name": "Album Name"
+    },
+    "source": "musicbrainz"
+  },
   "band": {
     "id": 1,
     "slug": "artist-name",
@@ -717,6 +765,7 @@ Get a single review by ID.
 ```
 
 **Error Response (404 Not Found):**
+
 ```json
 {
   "error": "Record not found"
@@ -732,6 +781,7 @@ Create a new review.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "review": {
@@ -741,16 +791,34 @@ Create a new review.
     "artwork_url": "https://...",
     "review_text": "Great song!",
     "liked_aspects": ["melody", "lyrics", "production"],
+    "genres": ["Alternative", "Art Rock"],
     "band_musicbrainz_id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
     "band_lastfm_artist_name": "Artist Name"
   }
 }
 ```
 
-Note: `band_musicbrainz_id` and `band_lastfm_artist_name` are optional. When provided, they are saved to the band record and used to automatically fetch artist images from MusicBrainz/Wikidata.
+**Fields:**
+
+- `song_link` (optional): Link to the song on streaming platforms
+- `band_name` (required): Artist/band name
+- `song_name` (required): Track title
+- `artwork_url` (optional): Album artwork URL
+- `review_text` (required): Review content
+- `liked_aspects` (optional): Array of aspects the reviewer liked (e.g., "melody", "lyrics", "production")
+- `genres` (optional): Array of genre tags. Suggested values: Rock, Pop, Hip-Hop, Jazz, Blues, Country, R&B, Soul, Funk, Electronic, Metal, Punk, Indie, Alternative, Folk, Classical, Reggae, Latin, Ambient, Experimental. Custom genres are also allowed.
+- `band_musicbrainz_id` (optional): MusicBrainz artist ID for metadata enrichment
+- `band_lastfm_artist_name` (optional): Last.fm artist name for metadata enrichment
+
+**Track Linking:**
+When a review is created, the system automatically links it to an existing track or creates a new user-submitted track:
+
+1. First, attempts an exact case-insensitive match on the band's existing tracks
+2. If no exact match, uses fuzzy matching (PostgreSQL trigram similarity >0.6)
+3. If no match found, creates a new user-submitted track linked to the band
 
 **Response (201 Created):**
-Returns created review object
+Returns created review object including `genres` array and `track` object (if linked)
 
 ---
 
@@ -761,6 +829,7 @@ Update a review (owner only).
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "review": {
@@ -798,15 +867,21 @@ Returns array of reviews (same format as GET /reviews)
 
 ### GET /feed/following
 
-Get paginated feed of reviews from users you follow and reviews about bands owned by users you follow.
+Get paginated combined feed including:
+
+- Your own reviews
+- Reviews from users you follow
+- Reviews about bands owned by users you follow
 
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "reviews": [
@@ -875,6 +950,7 @@ Like a review.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Review liked successfully",
@@ -884,6 +960,7 @@ Like a review.
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": "You have already liked this review"
@@ -899,6 +976,7 @@ Unlike a review.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Review unliked successfully",
@@ -908,6 +986,7 @@ Unlike a review.
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": "You have not liked this review"
@@ -923,10 +1002,12 @@ Get paginated list of reviews the current user has liked.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "reviews": [
@@ -973,10 +1054,12 @@ Get paginated list of comments for a review.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "comments": [
@@ -1013,6 +1096,7 @@ Add a comment to a review.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "comment": {
@@ -1024,6 +1108,7 @@ Add a comment to a review.
 Note: Comment body is limited to 300 characters.
 
 **Response (201 Created):**
+
 ```json
 {
   "message": "Comment added successfully",
@@ -1044,12 +1129,15 @@ Note: Comment body is limited to 300 characters.
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "errors": ["Body can't be blank"]
 }
 ```
+
 or
+
 ```json
 {
   "errors": ["Body is too long (maximum is 300 characters)"]
@@ -1065,6 +1153,7 @@ Update a comment (owner only).
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "comment": {
@@ -1074,6 +1163,7 @@ Update a comment (owner only).
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Comment updated successfully",
@@ -1093,6 +1183,7 @@ Update a comment (owner only).
 ```
 
 **Error Response (403 Forbidden):**
+
 ```json
 {
   "error": "You are not authorized to modify this comment"
@@ -1108,6 +1199,7 @@ Delete a comment (owner or admin only).
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Comment deleted successfully",
@@ -1116,6 +1208,7 @@ Delete a comment (owner or admin only).
 ```
 
 **Error Response (403 Forbidden):**
+
 ```json
 {
   "error": "You are not authorized to modify this comment"
@@ -1133,6 +1226,7 @@ Get all bands (ordered by name).
 **Authentication:** None
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -1171,6 +1265,7 @@ Get a single band by slug (includes reviews).
 **Authentication:** None
 
 **Response (200 OK):**
+
 ```json
 {
   "id": 1,
@@ -1224,6 +1319,7 @@ Create a new band.
 **Authentication:** Required
 
 **Request Body (multipart/form-data):**
+
 ```
 band[name]: "Band Name" (required)
 band[city]: "New York"
@@ -1287,6 +1383,7 @@ Get upcoming events for a band.
 **Authentication:** None
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -1331,6 +1428,7 @@ Create a new event for a band.
 **Authentication:** Required (band owner only)
 
 **Request Body:**
+
 ```json
 {
   "event": {
@@ -1346,6 +1444,7 @@ Create a new event for a band.
 ```
 
 Or with new venue:
+
 ```json
 {
   "event": {
@@ -1366,6 +1465,7 @@ Or with new venue:
 ```
 
 For image upload, use multipart/form-data:
+
 ```
 event[name]: "Summer Tour Kickoff"
 event[event_date]: "2025-07-15T20:00:00.000Z"
@@ -1396,6 +1496,7 @@ Update an event.
 **Authentication:** Required (band owner only)
 
 **Request Body:**
+
 ```json
 {
   "event": {
@@ -1430,9 +1531,11 @@ Get all venues. Supports search by name.
 **Authentication:** None
 
 **Query Parameters:**
+
 - `search` (optional): Search venues by name
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -1469,6 +1572,7 @@ Create a new venue.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "venue": {
@@ -1496,6 +1600,7 @@ Follow a user.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Successfully followed johndoe",
@@ -1506,6 +1611,7 @@ Follow a user.
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": "You are already following this user"
@@ -1521,6 +1627,7 @@ Unfollow a user.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Successfully unfollowed johndoe",
@@ -1531,6 +1638,7 @@ Unfollow a user.
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": "You are not following this user"
@@ -1546,6 +1654,7 @@ Get list of users the current user is following.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 [
   {
@@ -1613,10 +1722,12 @@ Get paginated list of notifications for the current user.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "notifications": [
@@ -1713,6 +1824,7 @@ Get count of unread notifications.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "unread_count": 5
@@ -1728,6 +1840,7 @@ Mark a specific notification as read.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Notification marked as read",
@@ -1751,6 +1864,7 @@ Mark all notifications as read.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "All notifications marked as read"
@@ -1770,10 +1884,12 @@ Get paginated list of all bands.
 **Authentication:** None
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "bands": [
@@ -1819,10 +1935,12 @@ Get paginated list of all active fan users who have completed onboarding (exclud
 **Authentication:** None
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "users": [
@@ -1860,10 +1978,12 @@ Get paginated list of all reviews (from active users only).
 **Authentication:** None
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "reviews": [
@@ -1910,10 +2030,12 @@ Get paginated list of all users (admin only).
 **Authentication:** Required (Admin only)
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 100)
 
 **Response (200 OK):**
+
 ```json
 {
   "users": [
@@ -1967,6 +2089,7 @@ Get paginated list of all users (admin only).
 ```
 
 **Error Response (403 Forbidden):**
+
 ```json
 {
   "error": "Admin access required"
@@ -1982,6 +2105,7 @@ Get a single user's full profile with all editable fields, reviews, and bands (a
 **Authentication:** Required (Admin only)
 
 **Response (200 OK):**
+
 ```json
 {
   "user": {
@@ -2040,6 +2164,7 @@ Get a single user's full profile with all editable fields, reviews, and bands (a
 ```
 
 **Error Response (403 Forbidden):**
+
 ```json
 {
   "error": "Admin access required"
@@ -2047,6 +2172,7 @@ Get a single user's full profile with all editable fields, reviews, and bands (a
 ```
 
 **Error Response (404 Not Found):**
+
 ```json
 {
   "error": "Record not found"
@@ -2062,6 +2188,7 @@ Update any user's profile (admin only).
 **Authentication:** Required (Admin only)
 
 **Request Body:**
+
 ```json
 {
   "email": "newemail@example.com",
@@ -2080,6 +2207,7 @@ Update any user's profile (admin only).
 All fields are optional. For file upload (profile_image), use `multipart/form-data`.
 
 **Editable Fields:**
+
 - `email` - User's email address
 - `username` - Username (required for fan accounts)
 - `about_me` - Bio text (max 500 chars)
@@ -2093,6 +2221,7 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
 - `profile_image` - Profile image file (multipart/form-data)
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "User has been updated",
@@ -2125,6 +2254,7 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "errors": ["Email has already been taken"]
@@ -2132,6 +2262,7 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
 ```
 
 **Error Response (422 Unprocessable Entity) - Self admin modification:**
+
 ```json
 {
   "error": "You cannot modify your own admin status"
@@ -2147,6 +2278,7 @@ Toggle a user's disabled status (admin only). Disabled users cannot login and th
 **Authentication:** Required (Admin only)
 
 **Response (200 OK) - When disabling:**
+
 ```json
 {
   "message": "User has been disabled",
@@ -2168,6 +2300,7 @@ Toggle a user's disabled status (admin only). Disabled users cannot login and th
 ```
 
 **Response (200 OK) - When enabling:**
+
 ```json
 {
   "message": "User has been enabled",
@@ -2181,6 +2314,7 @@ Toggle a user's disabled status (admin only). Disabled users cannot login and th
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": "You cannot disable your own account"
@@ -2188,6 +2322,7 @@ Toggle a user's disabled status (admin only). Disabled users cannot login and th
 ```
 
 **Error Response (403 Forbidden):**
+
 ```json
 {
   "error": "Admin access required"
@@ -2203,6 +2338,7 @@ Delete a user and all their associated data (admin only).
 **Authentication:** Required (Admin only)
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "User has been deleted"
@@ -2210,6 +2346,7 @@ Delete a user and all their associated data (admin only).
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": "You cannot delete your own account"
@@ -2225,10 +2362,12 @@ Get paginated list of all bands including disabled ones (admin only).
 **Authentication:** Required (Admin only)
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 100)
 
 **Response (200 OK):**
+
 ```json
 {
   "bands": [
@@ -2278,6 +2417,7 @@ Get a single band's full profile with all editable fields, reviews, and events (
 **Authentication:** Required (Admin only)
 
 **Response (200 OK):**
+
 ```json
 {
   "band": {
@@ -2343,6 +2483,7 @@ Get a single band's full profile with all editable fields, reviews, and events (
 ```
 
 **Error Response (404 Not Found):**
+
 ```json
 {
   "error": "Record not found"
@@ -2358,6 +2499,7 @@ Update any band's information (admin only).
 **Authentication:** Required (Admin only)
 
 **Request Body:**
+
 ```json
 {
   "name": "New Band Name",
@@ -2380,6 +2522,7 @@ Update any band's information (admin only).
 All fields are optional. For file upload (profile_picture), use `multipart/form-data`.
 
 **Editable Fields:**
+
 - `name` - Band name
 - `slug` - URL slug
 - `about` - Band description
@@ -2397,6 +2540,7 @@ All fields are optional. For file upload (profile_picture), use `multipart/form-
 - `profile_picture` - Profile picture file (multipart/form-data)
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Band has been updated",
@@ -2436,6 +2580,7 @@ All fields are optional. For file upload (profile_picture), use `multipart/form-
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "errors": ["Name has already been taken"]
@@ -2451,6 +2596,7 @@ Toggle a band's disabled status (admin only). Disabled bands are hidden from pub
 **Authentication:** Required (Admin only)
 
 **Response (200 OK) - When disabling:**
+
 ```json
 {
   "message": "Band has been disabled",
@@ -2465,6 +2611,7 @@ Toggle a band's disabled status (admin only). Disabled bands are hidden from pub
 ```
 
 **Response (200 OK) - When enabling:**
+
 ```json
 {
   "message": "Band has been enabled",
@@ -2487,6 +2634,7 @@ Delete a band and all its reviews (admin only).
 **Authentication:** Required (Admin only)
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Band has been deleted"
@@ -2502,10 +2650,12 @@ Get paginated list of all reviews (admin only).
 **Authentication:** Required (Admin only)
 
 **Query Parameters:**
+
 - `page` (optional): Page number (default: 1)
 - `per_page` (optional): Items per page (default: 20, max: 100)
 
 **Response (200 OK):**
+
 ```json
 {
   "reviews": [
@@ -2550,6 +2700,7 @@ Delete a review (admin only).
 **Authentication:** Required (Admin only)
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Review has been deleted"
@@ -2567,6 +2718,7 @@ Connect a Last.fm account by username.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "username": "lastfm_username"
@@ -2574,6 +2726,7 @@ Connect a Last.fm account by username.
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Last.fm account connected successfully",
@@ -2589,12 +2742,15 @@ Connect a Last.fm account by username.
 ```
 
 **Error Response (400 Bad Request):**
+
 ```json
 {
   "error": "Last.fm username is required"
 }
 ```
+
 or
+
 ```json
 {
   "error": "Last.fm user not found"
@@ -2610,6 +2766,7 @@ Disconnect Last.fm account.
 **Authentication:** Required
 
 **Response (200 OK):**
+
 ```json
 {
   "message": "Last.fm account disconnected successfully"
@@ -2625,6 +2782,7 @@ Check Last.fm connection status.
 **Authentication:** Required
 
 **Response (200 OK) - When connected:**
+
 ```json
 {
   "connected": true,
@@ -2640,6 +2798,7 @@ Check Last.fm connection status.
 ```
 
 **Response (200 OK) - When not connected:**
+
 ```json
 {
   "connected": false,
@@ -2656,10 +2815,12 @@ Search for artists on Last.fm.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `query` (required): Artist name to search for
 - `limit` (optional): Number of results to return (default: 10)
 
 **Response (200 OK):**
+
 ```json
 {
   "artists": [
@@ -2674,11 +2835,118 @@ Search for artists on Last.fm.
 ```
 
 **Error Response (400 Bad Request):**
+
 ```json
 {
   "error": "Search query is required"
 }
 ```
+
+---
+
+## Dashboard Endpoints
+
+Dashboard endpoints provide combined data for efficient page loading.
+
+### GET /api/v1/fan_dashboard
+
+Get all fan dashboard data in a single optimized request. Reduces 17+ API calls to 1.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "profile": {
+    "id": 1,
+    "username": "johndoe",
+    "email": "user@example.com",
+    "about_me": "Music lover",
+    "profile_image_url": "https://...",
+    "account_type": "fan",
+    "display_name": "johndoe",
+    "location": "Los Angeles, California",
+    "followers_count": 25,
+    "following_count": 12,
+    "reviews_count": 10,
+    "lastfm_connected": true,
+    "lastfm_username": "johndoe_lastfm",
+    "email_confirmed": true,
+    "admin": false
+  },
+  "unread_notifications_count": 3,
+  "recent_reviews": [
+    {
+      "id": 1,
+      "song_name": "Song Title",
+      "band_name": "Artist Name",
+      "artwork_url": "https://...",
+      "created_at": "2024-12-01T00:00:00Z",
+      "likes_count": 5,
+      "comments_count": 2
+    }
+  ],
+  "recently_played": [
+    {
+      "name": "Song Name",
+      "artist": "Artist Name",
+      "album": "Album Name",
+      "played_at": "2024-12-01T00:00:00Z",
+      "now_playing": false,
+      "source": "lastfm",
+      "album_art_url": "https://..."
+    }
+  ],
+  "following_feed_preview": [
+    {
+      "id": 1,
+      "song_name": "Song Title",
+      "band_name": "Artist Name",
+      "artwork_url": "https://...",
+      "review_text": "Great song! This is a truncated preview...",
+      "author": {
+        "id": 2,
+        "username": "followeduser",
+        "profile_image_url": "https://..."
+      },
+      "created_at": "2024-12-01T00:00:00Z",
+      "likes_count": 3
+    }
+  ],
+  "favorite_bands": [
+    {
+      "id": 1,
+      "name": "Band Name",
+      "slug": "band-name",
+      "image_url": "https://...",
+      "position": 1
+    }
+  ],
+  "stats": {
+    "total_scrobbles": 1234,
+    "scrobbles_this_week": 45
+  }
+}
+```
+
+**Response Fields:**
+
+- `profile` - Current user profile data (uses counter caches for counts)
+- `unread_notifications_count` - Number of unread notifications
+- `recent_reviews` - User's 5 most recent reviews
+- `recently_played` - Last 10 tracks from all connected sources (Last.fm, scrobbles)
+- `following_feed_preview` - First 5 items from combined feed: user's own reviews + reviews from followed users + reviews about bands owned by followed users (review text truncated to 150 chars)
+- `favorite_bands` - User's top 5 favorite bands (if feature enabled)
+- `stats` - Scrobble statistics (total and this week)
+
+**Notes:**
+
+- This endpoint is optimized for the fan dashboard page
+- Uses counter caches instead of COUNT queries for followers/following/reviews
+- All sub-queries use eager loading to minimize database calls
+- `recently_played` returns empty array if Last.fm is not connected and no local scrobbles exist
+- `favorite_bands` returns empty array if the feature is not yet enabled
 
 ---
 
@@ -2695,6 +2963,7 @@ Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seco
 **Rate Limit:** 100 submissions per hour per user
 
 **Request Body:**
+
 ```json
 {
   "scrobbles": [
@@ -2718,6 +2987,7 @@ Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seco
 ```
 
 **Fields:**
+
 - `track_name` (required): Track name (max 500 chars)
 - `artist_name` (required): Artist name (max 500 chars)
 - `album_name` (optional): Album name (max 500 chars)
@@ -2733,6 +3003,7 @@ Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seco
 - `album_art` (optional): Base64-encoded album artwork image (JPEG/PNG/WebP, max 5MB). Supports both raw base64 and data URI format (`data:image/jpeg;base64,...`)
 
 **Artwork Priority (highest to lowest):**
+
 1. `artwork_uri` - External URL from Android (e.g., Spotify CDN)
 2. `album_art` - Base64-encoded bitmap uploaded to Active Storage
 3. `preferred_artwork_url` - User-selected override (set via PATCH endpoint)
@@ -2741,6 +3012,7 @@ Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seco
 Maximum 50 scrobbles per request.
 
 **Response (201 Created):**
+
 ```json
 {
   "data": {
@@ -2765,6 +3037,7 @@ Maximum 50 scrobbles per request.
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": {
@@ -2773,9 +3046,7 @@ Maximum 50 scrobbles per request.
     "details": [
       {
         "index": 0,
-        "errors": [
-          { "field": "track_name", "message": "can't be blank" }
-        ]
+        "errors": [{ "field": "track_name", "message": "can't be blank" }]
       }
     ]
   }
@@ -2783,6 +3054,7 @@ Maximum 50 scrobbles per request.
 ```
 
 **Error Response (422 Unprocessable Entity) - Batch too large:**
+
 ```json
 {
   "error": {
@@ -2793,6 +3065,7 @@ Maximum 50 scrobbles per request.
 ```
 
 **Error Response (429 Too Many Requests):**
+
 ```json
 {
   "error": {
@@ -2814,12 +3087,14 @@ Get the current user's scrobbles with cursor-based pagination.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `since` (optional): ISO 8601 timestamp, return scrobbles after this time
 - `until` (optional): ISO 8601 timestamp, return scrobbles before this time
 - `cursor` (optional): ISO 8601 timestamp cursor for pagination
 - `limit` (optional): Number of results (default: 20, max: 100)
 
 **Response (200 OK):**
+
 ```json
 {
   "data": {
@@ -2861,6 +3136,7 @@ Get the current user's scrobbles with cursor-based pagination.
 ```
 
 **Response Fields:**
+
 - `artwork_url` - Resolved artwork URL using the priority system (artwork_uri > album_art > preferred_artwork_url > track.album.cover_art_url)
 - `genre` - Genre metadata from Android client (if provided)
 - `year` - Release year metadata from Android client (if provided)
@@ -2877,9 +3153,11 @@ Get the current user's recent scrobbles. Cached for 60 seconds.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `limit` (optional): Number of results (default: 20, max: 50)
 
 **Response (200 OK):**
+
 ```json
 {
   "data": {
@@ -2907,6 +3185,7 @@ Get scrobbles for a specific user with cursor-based pagination.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `since` (optional): ISO 8601 timestamp, return scrobbles after this time
 - `until` (optional): ISO 8601 timestamp, return scrobbles before this time
 - `cursor` (optional): ISO 8601 timestamp cursor for pagination
@@ -2934,6 +3213,7 @@ Set preferred artwork for a scrobble. This overrides the automatically fetched a
 **Authentication:** Required (owner only)
 
 **Request Body:**
+
 ```json
 {
   "artwork_url": "https://example.com/preferred-artwork.jpg"
@@ -2941,6 +3221,7 @@ Set preferred artwork for a scrobble. This overrides the automatically fetched a
 ```
 
 **Response (200 OK):**
+
 ```json
 {
   "data": {
@@ -2961,6 +3242,7 @@ Set preferred artwork for a scrobble. This overrides the automatically fetched a
 ```
 
 **Error Response (422 Unprocessable Entity):**
+
 ```json
 {
   "error": {
@@ -2971,6 +3253,7 @@ Set preferred artwork for a scrobble. This overrides the automatically fetched a
 ```
 
 **Notes:**
+
 - Use with `GET /artwork/search` to let users choose from available artwork options
 - The `artwork_url` should be a valid image URL from one of the artwork sources
 - This overrides the album's cover art for this specific scrobble only
@@ -2984,6 +3267,7 @@ Clear the preferred artwork for a scrobble, reverting to the album's cover art.
 **Authentication:** Required (owner only)
 
 **Response (200 OK):**
+
 ```json
 {
   "data": {
@@ -3014,6 +3298,7 @@ Health check endpoint.
 **Authentication:** None
 
 **Response (200 OK):**
+
 ```
 OK
 ```
@@ -3027,6 +3312,7 @@ Alternative health check endpoint.
 **Authentication:** None
 
 **Response (200 OK):**
+
 ```
 OK
 ```
@@ -3036,6 +3322,7 @@ OK
 ## Error Responses
 
 ### 401 Unauthorized
+
 ```json
 {
   "error": "Not authorized"
@@ -3043,12 +3330,15 @@ OK
 ```
 
 ### 403 Forbidden
+
 ```json
 {
   "error": "Admin access required"
 }
 ```
+
 or
+
 ```json
 {
   "error": "You are not authorized to modify this resource"
@@ -3056,6 +3346,7 @@ or
 ```
 
 ### 404 Not Found
+
 ```json
 {
   "error": "Record not found"
@@ -3063,6 +3354,7 @@ or
 ```
 
 ### 422 Unprocessable Entity
+
 ```json
 {
   "errors": ["Username can't be blank", "Email has already been taken"]
@@ -3074,10 +3366,12 @@ or
 ## Data Types
 
 ### Account Types
+
 - `fan` - Standard user account (identified by username)
 - `band` - Band account (identified by primary band name)
 
 ### Review Liked Aspects
+
 Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumentation"`, `"energy"`, `"originality"`
 
 ---
@@ -3121,6 +3415,7 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
 7. **Follow System:**
    - Users (both fans and bands) can follow other users (including themselves)
    - Following feed (`GET /feed/following`) shows:
+     - Your own reviews
      - Reviews written by users you follow
      - Reviews written about bands owned by users you follow
    - Following feed is paginated for performance

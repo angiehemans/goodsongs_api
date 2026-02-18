@@ -11,6 +11,8 @@ class ReviewSerializer
       artwork_url: review.artwork_url,
       review_text: review.review_text,
       liked_aspects: review.liked_aspects_array,
+      genres: review.genres || [],
+      track: review.track ? track_summary(review.track) : nil,
       band: BandSerializer.full(review.band),
       author: {
         id: review.user.id,
@@ -33,6 +35,8 @@ class ReviewSerializer
       artwork_url: review.artwork_url,
       review_text: review.review_text,
       liked_aspects: review.liked_aspects_array,
+      genres: review.genres || [],
+      track: review.track ? track_summary(review.track) : nil,
       author: {
         id: review.user.id,
         username: review.user.username,
@@ -52,6 +56,15 @@ class ReviewSerializer
       song_name: review.song_name,
       band_name: review.band_name,
       created_at: review.created_at
+    }
+  end
+
+  def self.track_summary(track)
+    {
+      id: track.id,
+      name: track.name,
+      album: track.album ? { id: track.album.id, name: track.album.name } : nil,
+      source: track.source
     }
   end
 end

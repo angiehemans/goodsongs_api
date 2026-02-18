@@ -28,20 +28,29 @@ class QueryService
     band.reviews.from_active_users.includes(:user).order(created_at: :desc)
   end
 
-  # Following feed - reviews from users I follow + reviews about bands owned by users I follow
+  # Combined feed - user's own reviews + reviews from users I follow + reviews about bands owned by users I follow
   # Returns paginated results
   def self.following_feed(user, page: 1, per_page: 20)
     followed_user_ids = user.following.where(disabled: false).pluck(:id)
+    followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id) if followed_user_ids.any?
 
-    return Review.none if followed_user_ids.empty?
+    # Build conditions: own reviews OR from followed users OR about followed bands
+    conditions = ['reviews.user_id = ?']
+    values = [user.id]
 
-    # Get bands owned by followed users
-    followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id)
+    if followed_user_ids.any?
+      conditions << 'reviews.user_id IN (?)'
+      values << followed_user_ids
+    end
 
-    # Reviews written by followed users OR reviews about bands owned by followed users
+    if followed_band_ids&.any?
+      conditions << 'reviews.band_id IN (?)'
+      values << followed_band_ids
+    end
+
     Review.from_active_users
           .includes(:user, :band)
-          .where('reviews.user_id IN (?) OR reviews.band_id IN (?)', followed_user_ids, followed_band_ids)
+          .where(conditions.join(' OR '), *values)
           .order(created_at: :desc)
           .offset((page - 1) * per_page)
           .limit(per_page)
@@ -50,13 +59,24 @@ class QueryService
   # Count total reviews in following feed for pagination metadata
   def self.following_feed_count(user)
     followed_user_ids = user.following.where(disabled: false).pluck(:id)
+    followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id) if followed_user_ids.any?
 
-    return 0 if followed_user_ids.empty?
+    # Build conditions: own reviews OR from followed users OR about followed bands
+    conditions = ['reviews.user_id = ?']
+    values = [user.id]
 
-    followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id)
+    if followed_user_ids.any?
+      conditions << 'reviews.user_id IN (?)'
+      values << followed_user_ids
+    end
+
+    if followed_band_ids&.any?
+      conditions << 'reviews.band_id IN (?)'
+      values << followed_band_ids
+    end
 
     Review.from_active_users
-          .where('reviews.user_id IN (?) OR reviews.band_id IN (?)', followed_user_ids, followed_band_ids)
+          .where(conditions.join(' OR '), *values)
           .count
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_18_204811) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -64,8 +64,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
     t.boolean "verified", default: false, null: false
     t.bigint "submitted_by_id"
     t.string "audiodb_album_id"
+    t.string "cover_art_source"
+    t.datetime "cover_art_cached_at"
     t.index ["audiodb_album_id"], name: "index_albums_on_audiodb_album_id", unique: true, where: "(audiodb_album_id IS NOT NULL)"
     t.index ["band_id"], name: "index_albums_on_band_id"
+    t.index ["cover_art_source"], name: "index_albums_on_cover_art_source", where: "(cover_art_source IS NOT NULL)"
     t.index ["discogs_master_id"], name: "index_albums_on_discogs_master_id", unique: true
     t.index ["musicbrainz_release_id"], name: "index_albums_on_musicbrainz_release_id", unique: true
     t.index ["name"], name: "index_albums_on_name"
@@ -114,6 +117,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
     t.boolean "verified", default: false, null: false
     t.bigint "submitted_by_id"
     t.string "audiodb_artist_id"
+    t.string "artist_image_source"
+    t.datetime "artist_image_cached_at"
+    t.index ["artist_image_source"], name: "index_bands_on_artist_image_source", where: "(artist_image_source IS NOT NULL)"
     t.index ["audiodb_artist_id"], name: "index_bands_on_audiodb_artist_id", unique: true, where: "(audiodb_artist_id IS NOT NULL)"
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
@@ -161,7 +167,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
     t.bigint "followed_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["followed_id", "created_at"], name: "index_follows_on_followed_id_and_created_at_desc", order: { created_at: :desc }
     t.index ["followed_id"], name: "index_follows_on_followed_id"
+    t.index ["follower_id", "created_at"], name: "index_follows_on_follower_id_and_created_at_desc", order: { created_at: :desc }
     t.index ["follower_id", "followed_id"], name: "index_follows_on_follower_id_and_followed_id", unique: true
     t.index ["follower_id"], name: "index_follows_on_follower_id"
   end
@@ -231,9 +239,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
     t.text "liked_aspects"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "genres", default: []
+    t.uuid "track_id"
     t.index ["band_id", "created_at"], name: "index_reviews_on_band_id_and_created_at"
     t.index ["band_id"], name: "index_reviews_on_band_id"
     t.index ["created_at"], name: "index_reviews_on_created_at"
+    t.index ["track_id"], name: "index_reviews_on_track_id"
     t.index ["user_id", "created_at"], name: "index_reviews_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_reviews_on_user_id"
   end
@@ -317,6 +328,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
     t.datetime "email_confirmation_sent_at"
     t.string "password_reset_token"
     t.datetime "password_reset_sent_at"
+    t.integer "followers_count", default: 0, null: false
+    t.integer "following_count", default: 0, null: false
+    t.integer "reviews_count", default: 0, null: false
     t.index ["account_type"], name: "index_users_on_account_type"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
@@ -362,6 +376,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_17_191543) do
   add_foreign_key "review_likes", "reviews"
   add_foreign_key "review_likes", "users"
   add_foreign_key "reviews", "bands"
+  add_foreign_key "reviews", "tracks"
   add_foreign_key "reviews", "users"
   add_foreign_key "scrobbles", "tracks"
   add_foreign_key "scrobbles", "users"

@@ -129,6 +129,9 @@ Rails.application.routes.draw do
   # API v1 namespace for scrobbling
   namespace :api do
     namespace :v1 do
+      # Fan dashboard - combined endpoint for all dashboard data
+      get 'fan_dashboard', to: 'fan_dashboard#show'
+
       resources :scrobbles, only: [:index, :create, :destroy] do
         collection do
           get :recent

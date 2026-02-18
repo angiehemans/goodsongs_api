@@ -7,6 +7,7 @@ class Band < ApplicationRecord
   has_many :events, dependent: :destroy
   has_many :band_aliases, dependent: :destroy
   has_one_attached :profile_picture
+  has_one_attached :cached_artist_image
 
   enum :source, { musicbrainz: 0, user_submitted: 1 }
 
@@ -17,6 +18,9 @@ class Band < ApplicationRecord
   # Fetch artist image when band is created or musicbrainz_id/lastfm_artist_name changes
   after_commit :fetch_artist_image_on_create, on: :create, if: :should_fetch_image_on_create?
   after_commit :fetch_artist_image, on: :update, if: :should_fetch_image_on_update?
+
+  # Auto-detect image source when artist_image_url changes
+  before_save :detect_artist_image_source, if: :artist_image_url_changed?
 
   validates :name, presence: true
   validates :name, uniqueness: { case_sensitive: false, scope: :user_id }, if: :user_submitted?
@@ -74,7 +78,69 @@ class Band < ApplicationRecord
     "https://www.last.fm/music/#{ERB::Util.url_encode(lastfm_artist_name)}"
   end
 
+  # Resolved artist image URL - prefers cached version, falls back to external
+  def resolved_artist_image_url
+    # User-uploaded profile picture takes priority
+    return profile_picture_url if profile_picture.attached?
+
+    # Use cached image if available
+    if cached_artist_image.attached?
+      return cached_artist_image_url
+    end
+
+    # Queue caching if we have an external URL from a cacheable source
+    if artist_image_url.present?
+      source = artist_image_source.presence || ImageCachingService.detect_source(artist_image_url)
+      if ImageCachingService.cacheable_source?(source)
+        ImageCachingService.cache_image(
+          record: self,
+          attribute: :artist_image,
+          url: artist_image_url,
+          source: source
+        )
+      end
+    end
+
+    # Return external URL for now
+    artist_image_url
+  end
+
+  def cached_artist_image_url
+    return nil unless cached_artist_image.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_url(
+      cached_artist_image,
+      **active_storage_url_options
+    )
+  end
+
+  def profile_picture_url
+    return nil unless profile_picture.attached?
+
+    Rails.application.routes.url_helpers.rails_blob_url(
+      profile_picture,
+      **active_storage_url_options
+    )
+  end
+
   private
+
+  def active_storage_url_options
+    if ENV['API_URL'].present?
+      uri = URI.parse(ENV['API_URL'])
+      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
+      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
+    else
+      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
+    end
+  end
+
+  def detect_artist_image_source
+    return if artist_image_url.blank?
+    return if artist_image_source.present? # Don't override if explicitly set
+
+    self.artist_image_source = ImageCachingService.detect_source(artist_image_url)
+  end
 
   # Normalize links to ensure consistent format
   def normalize_links

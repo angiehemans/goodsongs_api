@@ -52,12 +52,12 @@ class Scrobble < ApplicationRecord
   # 1. artwork_uri (external URL from Android, e.g., Spotify CDN)
   # 2. album_art (uploaded base64 bitmap via Active Storage)
   # 3. preferred_artwork_url (user-selected override)
-  # 4. track.album.cover_art_url (enrichment fallback)
+  # 4. track.album.resolved_cover_art_url (cached or external, triggers caching)
   def effective_artwork_url
     artwork_uri.presence ||
       album_art_url ||
       preferred_artwork_url.presence ||
-      track&.album&.cover_art_url
+      track&.album&.resolved_cover_art_url
   end
 
   # Get the URL for the attached album_art image
