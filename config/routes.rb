@@ -135,6 +135,7 @@ Rails.application.routes.draw do
       resources :scrobbles, only: [:index, :create, :destroy] do
         collection do
           get :recent
+          post :from_lastfm
         end
         member do
           post :refresh_artwork

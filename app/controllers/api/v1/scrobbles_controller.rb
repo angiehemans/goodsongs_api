@@ -169,6 +169,102 @@ module Api
         }
       end
 
+      # POST /api/v1/scrobbles/from_lastfm
+      # Convert a Last.fm track to a scrobble with preferred artwork
+      def from_lastfm
+        data = params.require(:scrobble).permit(
+          :track_name, :artist_name, :album_name, :played_at,
+          :preferred_artwork_url, :lastfm_url, :lastfm_loved,
+          :musicbrainz_recording_id, :artist_mbid, :album_mbid,
+          :artwork_uri
+        )
+
+        # Validate required fields
+        if data[:track_name].blank? || data[:artist_name].blank?
+          return render json: error_response(
+            'validation_failed',
+            'track_name and artist_name are required'
+          ), status: :unprocessable_entity
+        end
+
+        played_at = parse_played_at(data[:played_at])
+        if played_at.blank?
+          return render json: error_response(
+            'validation_failed',
+            'played_at is required'
+          ), status: :unprocessable_entity
+        end
+
+        # Check for duplicate (existing scrobble with same track at same time)
+        if Scrobble.duplicate?(
+          user_id: current_user.id,
+          track_name: data[:track_name],
+          artist_name: data[:artist_name],
+          played_at: played_at
+        )
+          # Find and return the existing scrobble
+          existing = current_user.scrobbles
+            .where(track_name: data[:track_name], artist_name: data[:artist_name])
+            .where('played_at BETWEEN ? AND ?', played_at - 30.seconds, played_at + 30.seconds)
+            .first
+
+          if existing
+            # Update preferred artwork if provided
+            if data[:preferred_artwork_url].present?
+              existing.update!(preferred_artwork_url: data[:preferred_artwork_url])
+              ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+            end
+
+            return render json: {
+              data: {
+                message: 'Scrobble already exists, updated artwork',
+                scrobble: serialize_scrobble_with_artwork(existing)
+              }
+            }
+          end
+        end
+
+        # Create the scrobble from Last.fm data
+        scrobble = current_user.scrobbles.build(
+          track_name: data[:track_name],
+          artist_name: data[:artist_name],
+          album_name: data[:album_name],
+          played_at: played_at,
+          source_app: 'lastfm',
+          duration_ms: nil, # Last.fm doesn't provide duration
+          metadata_status: :pending,
+          # Preferred artwork from user selection
+          preferred_artwork_url: data[:preferred_artwork_url],
+          # Last.fm original artwork as fallback
+          artwork_uri: data[:artwork_uri],
+          # Last.fm specific metadata
+          lastfm_url: data[:lastfm_url],
+          lastfm_loved: data[:lastfm_loved] || false,
+          # MusicBrainz IDs from Last.fm
+          musicbrainz_recording_id: data[:musicbrainz_recording_id],
+          artist_mbid: data[:artist_mbid],
+          album_mbid: data[:album_mbid]
+        )
+
+        if scrobble.save
+          # Invalidate cache
+          ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+
+          render json: {
+            data: {
+              message: 'Last.fm track converted to scrobble',
+              scrobble: serialize_scrobble_with_artwork(scrobble)
+            }
+          }, status: :created
+        else
+          render json: error_response(
+            'validation_failed',
+            'Could not create scrobble',
+            scrobble.errors.full_messages
+          ), status: :unprocessable_entity
+        end
+      end
+
       # POST /api/v1/scrobbles/:id/refresh_artwork
       # Manually refresh artwork for a scrobble's track
       def refresh_artwork

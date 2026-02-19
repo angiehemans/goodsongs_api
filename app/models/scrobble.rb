@@ -20,7 +20,8 @@ class Scrobble < ApplicationRecord
   validates :track_name, presence: true, length: { maximum: 500 }
   validates :artist_name, presence: true, length: { maximum: 500 }
   validates :album_name, length: { maximum: 500 }, allow_nil: true
-  validates :duration_ms, presence: true, numericality: { greater_than_or_equal_to: 30_000 }
+  # Duration not required for Last.fm tracks (they don't provide it)
+  validates :duration_ms, presence: true, numericality: { greater_than_or_equal_to: 30_000 }, unless: :from_lastfm?
   validates :played_at, presence: true
   validates :source_app, presence: true, length: { maximum: 100 }
   validates :source_device, length: { maximum: 100 }, allow_nil: true
@@ -29,10 +30,12 @@ class Scrobble < ApplicationRecord
   validates :genre, length: { maximum: 100 }, allow_nil: true
   validates :year, numericality: { only_integer: true, greater_than_or_equal_to: 1800, less_than_or_equal_to: 2100 }, allow_nil: true
   validates :artwork_uri, length: { maximum: 2000 }, allow_nil: true
+  validates :lastfm_url, length: { maximum: 2000 }, allow_nil: true
   validate :album_art_format_and_size
 
   validate :played_at_not_in_future
-  validate :played_at_within_14_days
+  # Last.fm tracks may be older than 14 days
+  validate :played_at_within_14_days, unless: :from_lastfm?
 
   # Scopes for querying
   scope :recent, -> { order(played_at: :desc) }
@@ -40,6 +43,12 @@ class Scrobble < ApplicationRecord
   scope :pending_enrichment, -> { where(metadata_status: :pending) }
   scope :since, ->(time) { where('played_at > ?', time) }
   scope :until_time, ->(time) { where('played_at < ?', time) }
+  scope :from_lastfm, -> { where(source_app: 'lastfm') }
+
+  # Check if this scrobble was converted from Last.fm
+  def from_lastfm?
+    source_app == 'lastfm'
+  end
 
   # Check for duplicate scrobble (same track/artist/played_at within 30 seconds)
   def self.duplicate?(user_id:, track_name:, artist_name:, played_at:)

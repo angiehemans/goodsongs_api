@@ -3080,6 +3080,102 @@ Maximum 50 scrobbles per request.
 
 ---
 
+### POST /api/v1/scrobbles/from_lastfm
+
+Convert a Last.fm track to a scrobble with preferred artwork. Use this when a user selects alternative artwork for a Last.fm track in their recently played feed.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "scrobble": {
+    "track_name": "Karma Police",
+    "artist_name": "Radiohead",
+    "album_name": "OK Computer",
+    "played_at": "2026-02-19T10:30:00Z",
+    "preferred_artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+    "artwork_uri": "https://lastfm.freetls.fastly.net/i/u/300x300/abc123.png",
+    "lastfm_url": "https://www.last.fm/music/Radiohead/_/Karma+Police",
+    "lastfm_loved": true,
+    "musicbrainz_recording_id": "uuid-here",
+    "artist_mbid": "artist-uuid",
+    "album_mbid": "album-uuid"
+  }
+}
+```
+
+**Fields:**
+
+- `track_name` (required): Track name from Last.fm
+- `artist_name` (required): Artist name from Last.fm
+- `album_name` (optional): Album name from Last.fm
+- `played_at` (required): ISO 8601 timestamp when the track was played
+- `preferred_artwork_url` (optional): User-selected artwork URL (from artwork search)
+- `artwork_uri` (optional): Original Last.fm artwork URL (as fallback)
+- `lastfm_url` (optional): Last.fm track URL
+- `lastfm_loved` (optional): Whether the track is loved on Last.fm
+- `musicbrainz_recording_id` (optional): MusicBrainz recording ID from Last.fm
+- `artist_mbid` (optional): MusicBrainz artist ID from Last.fm
+- `album_mbid` (optional): MusicBrainz album ID from Last.fm
+
+**Notes:**
+
+- `duration_ms` is not required (Last.fm doesn't provide it)
+- `played_at` can be older than 14 days (unlike regular scrobbles)
+- If a duplicate scrobble exists (same track/artist within 30 seconds), the existing scrobble is updated with the new preferred artwork
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "message": "Last.fm track converted to scrobble",
+    "scrobble": {
+      "id": "uuid-here",
+      "track_name": "Karma Police",
+      "artist_name": "Radiohead",
+      "album_name": "OK Computer",
+      "played_at": "2026-02-19T10:30:00Z",
+      "artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+      "preferred_artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+      "has_preferred_artwork": true,
+      "metadata_status": "pending"
+    }
+  }
+}
+```
+
+**Response (200 OK) - Duplicate updated:**
+
+```json
+{
+  "data": {
+    "message": "Scrobble already exists, updated artwork",
+    "scrobble": {
+      "id": "existing-uuid",
+      "track_name": "Karma Police",
+      "artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+      "has_preferred_artwork": true
+    }
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "track_name and artist_name are required"
+  }
+}
+```
+
+---
+
 ### GET /api/v1/scrobbles
 
 Get the current user's scrobbles with cursor-based pagination.

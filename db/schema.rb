@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_18_204811) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_19_164929) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -255,7 +255,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_18_204811) do
     t.string "track_name", null: false
     t.string "artist_name", null: false
     t.string "album_name"
-    t.integer "duration_ms", null: false
+    t.integer "duration_ms"
     t.datetime "played_at", null: false
     t.string "source_app", null: false
     t.string "source_device"
@@ -269,8 +269,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_18_204811) do
     t.integer "year"
     t.date "release_date"
     t.string "artwork_uri"
+    t.string "lastfm_url"
+    t.boolean "lastfm_loved", default: false
+    t.string "artist_mbid"
+    t.string "album_mbid"
     t.index ["genre"], name: "index_scrobbles_on_genre", where: "(genre IS NOT NULL)"
     t.index ["metadata_status", "created_at"], name: "index_scrobbles_on_metadata_status_and_created_at"
+    t.index ["source_app"], name: "index_scrobbles_on_source_app", where: "((source_app)::text = 'lastfm'::text)"
     t.index ["track_id"], name: "index_scrobbles_on_track_id"
     t.index ["user_id", "played_at"], name: "index_scrobbles_on_user_id_and_played_at", order: { played_at: :desc }
     t.index ["user_id", "track_name", "artist_name", "played_at"], name: "index_scrobbles_duplicate_check"
