@@ -42,7 +42,9 @@ env:
     - MAILGUN_SMTP_USERNAME
     - MAILGUN_SMTP_PASSWORD
     - DISCOGS_CONSUMER_KEY
-    - DISCOGS_CONSUMER_SECRET   
+    - DISCOGS_CONSUMER_SECRET
+    - FIREBASE_PROJECT_ID
+    - FIREBASE_SERVICE_ACCOUNT_JSON
   clear:
     MAILGUN_DOMAIN: mg.goodsongs.app
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
@@ -125,4 +127,3 @@ accessories:
     port: "127.0.0.1:6379:6379"
     directories:
       - data:/data
-
