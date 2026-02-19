@@ -34,3 +34,6 @@
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 .kamal/secrets
+
+# Firebase service account (contains private keys)
+/config/firebase-service-account.json

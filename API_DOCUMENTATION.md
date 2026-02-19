@@ -1873,6 +1873,144 @@ Mark all notifications as read.
 
 ---
 
+## Device Token Endpoints (Push Notifications)
+
+These endpoints manage device tokens for Firebase Cloud Messaging (FCM) push notifications.
+
+### POST /device_tokens
+
+Register a device token for push notifications. Call this after the user logs in and grants notification permissions.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "device_token": {
+    "token": "fcm_device_token_here",
+    "platform": "android"
+  }
+}
+```
+
+**Fields:**
+
+- `token` (required): The FCM device token from the mobile app
+- `platform` (required): Either "ios" or "android"
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Device registered successfully"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "Token can't be blank, Platform is not included in the list"
+}
+```
+
+**Notes:**
+
+- If the token already exists for this user, it will be updated (platform and last_used_at)
+- If the token exists for a different user, it will be moved to the current user
+- Tokens are automatically cleaned up when FCM reports them as invalid
+
+---
+
+### DELETE /device_tokens
+
+Unregister a device token (e.g., when user logs out or disables notifications).
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "token": "fcm_device_token_here"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Device unregistered successfully"
+}
+```
+
+**Notes:**
+
+- Returns success even if the token doesn't exist (idempotent)
+- Call this when the user logs out to stop receiving notifications on that device
+
+---
+
+## Push Notification Types
+
+When in-app notifications are created, push notifications are automatically sent to all registered devices. The push notification payload includes:
+
+**new_follower:**
+```json
+{
+  "title": "New Follower",
+  "body": "username started following you",
+  "data": {
+    "type": "new_follower",
+    "notification_id": "123",
+    "actor_id": "456"
+  }
+}
+```
+
+**new_review:**
+```json
+{
+  "title": "New Review",
+  "body": "username reviewed Song Name",
+  "data": {
+    "type": "new_review",
+    "notification_id": "123",
+    "review_id": "789"
+  }
+}
+```
+
+**review_like:**
+```json
+{
+  "title": "New Like",
+  "body": "username liked your review of Song Name",
+  "data": {
+    "type": "review_like",
+    "notification_id": "123",
+    "review_id": "789"
+  }
+}
+```
+
+**review_comment:**
+```json
+{
+  "title": "New Comment",
+  "body": "username: \"Comment preview...\"",
+  "data": {
+    "type": "review_comment",
+    "notification_id": "123",
+    "review_id": "789",
+    "comment_id": "101"
+  }
+}
+```
+
+---
+
 ## Discover Endpoints
 
 Public endpoints for discovering content on the platform. No authentication required.

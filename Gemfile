@@ -20,6 +20,7 @@ gem 'omniauth-spotify'    # Spotify OAuth strategy
 gem 'omniauth-rails_csrf_protection'  # CSRF protection for OAuth
 gem 'dotenv-rails'        # Load environment variables from .env file
 gem 'geocoder'            # For geocoding user locations
+gem 'fcm'                 # Firebase Cloud Messaging for push notifications
 
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem

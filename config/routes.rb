@@ -85,7 +85,11 @@ Rails.application.routes.draw do
   get '/notifications/unread_count', to: 'notifications#unread_count'
   patch '/notifications/:id/read', to: 'notifications#mark_read'
   patch '/notifications/read_all', to: 'notifications#mark_all_read'
-  
+
+  # Device tokens for push notifications
+  post '/device_tokens', to: 'device_tokens#create'
+  delete '/device_tokens', to: 'device_tokens#destroy'
+
   # Band routes - consolidated user bands endpoint
   get '/bands/user', to: 'bands#user_bands'
   resources :bands, except: [:new, :edit], param: :slug do

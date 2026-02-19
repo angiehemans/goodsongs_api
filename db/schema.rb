@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_19_164929) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_19_194148) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -129,6 +129,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_19_164929) do
     t.index ["slug"], name: "index_bands_on_slug", unique: true
     t.index ["submitted_by_id"], name: "index_bands_on_submitted_by_id"
     t.index ["user_id"], name: "index_bands_on_user_id"
+  end
+
+  create_table "device_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token", null: false
+    t.string "platform", null: false
+    t.datetime "last_used_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_device_tokens_on_token", unique: true
+    t.index ["user_id", "platform"], name: "index_device_tokens_on_user_id_and_platform"
+    t.index ["user_id"], name: "index_device_tokens_on_user_id"
   end
 
   create_table "events", force: :cascade do |t|
@@ -367,6 +379,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_19_164929) do
   add_foreign_key "band_aliases", "bands", on_delete: :cascade
   add_foreign_key "bands", "users"
   add_foreign_key "bands", "users", column: "submitted_by_id"
+  add_foreign_key "device_tokens", "users"
   add_foreign_key "events", "bands"
   add_foreign_key "events", "venues"
   add_foreign_key "favorite_bands", "bands"
