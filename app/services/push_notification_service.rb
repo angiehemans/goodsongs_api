@@ -111,8 +111,14 @@ class PushNotificationService
 
     def handle_error_response(response, token)
       status_code = response[:status_code]
-      error_code = response.dig(:body, 'error', 'code')
-      error_status = response.dig(:body, 'error', 'status')
+      body = response[:body]
+
+      # Parse body if it's a string
+      body = JSON.parse(body) if body.is_a?(String) && body.present?
+      body = {} unless body.is_a?(Hash)
+
+      error_code = body.dig('error', 'code')
+      error_status = body.dig('error', 'status')
 
       # Token is invalid or unregistered
       invalid_token = status_code == 404 ||
@@ -123,10 +129,13 @@ class PushNotificationService
       if invalid_token
         Rails.logger.info("PushNotificationService: Removing invalid token #{token[0..10]}...")
       else
-        Rails.logger.warn("PushNotificationService: Failed to send to #{token[0..10]}... - #{response[:body]}")
+        Rails.logger.warn("PushNotificationService: Failed to send to #{token[0..10]}... - #{body}")
       end
 
       { success: false, invalid_token: invalid_token }
+    rescue JSON::ParserError
+      Rails.logger.warn("PushNotificationService: Failed to send to #{token[0..10]}... - #{response[:body]}")
+      { success: false, invalid_token: false }
     end
   end
 end
