@@ -45,8 +45,12 @@ class PushNotificationService
       project_id = ENV['FIREBASE_PROJECT_ID']
       return nil unless project_id.present?
 
-      credentials = if ENV['FIREBASE_SERVICE_ACCOUNT_JSON'].present?
-                      # Parse JSON from environment variable (for production)
+      credentials = if ENV['FIREBASE_SERVICE_ACCOUNT_JSON_BASE64'].present?
+                      # Base64-encoded JSON (most reliable for production)
+                      decoded = Base64.decode64(ENV['FIREBASE_SERVICE_ACCOUNT_JSON_BASE64'])
+                      StringIO.new(decoded)
+                    elsif ENV['FIREBASE_SERVICE_ACCOUNT_JSON'].present?
+                      # Raw JSON from environment variable
                       StringIO.new(ENV['FIREBASE_SERVICE_ACCOUNT_JSON'])
                     else
                       # Use file path (for development)
