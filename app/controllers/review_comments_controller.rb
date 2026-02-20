@@ -29,6 +29,13 @@ class ReviewCommentsController < ApplicationController
 
   # POST /reviews/:review_id/comments
   def create
+    # Validate mentions before creating
+    mention_service = MentionService.new(comment_params[:body], mentioner: current_user)
+    validation = mention_service.validate
+    unless validation[:valid]
+      return json_response({ error: validation[:error] }, :unprocessable_entity)
+    end
+
     @comment = @review.review_comments.build(comment_params.merge(user: current_user))
 
     if @comment.save
@@ -47,6 +54,13 @@ class ReviewCommentsController < ApplicationController
 
   # PATCH /reviews/:review_id/comments/:id
   def update
+    # Validate mentions before updating
+    mention_service = MentionService.new(comment_params[:body], mentioner: current_user)
+    validation = mention_service.validate
+    unless validation[:valid]
+      return json_response({ error: validation[:error] }, :unprocessable_entity)
+    end
+
     if @comment.update(comment_params)
       json_response({
         message: "Comment updated successfully",
@@ -87,15 +101,26 @@ class ReviewCommentsController < ApplicationController
   end
 
   def serialize_comment(comment)
+    mentions = comment.mentions.includes(:user)
     {
       id: comment.id,
       body: comment.body,
+      formatted_body: MentionService.format_content(comment.body, mentions),
+      mentions: mentions.map do |mention|
+        {
+          user_id: mention.user_id,
+          username: mention.user.username,
+          display_name: mention.user.display_name
+        }
+      end,
       author: {
         id: comment.user.id,
         username: comment.user.username,
         display_name: comment.user.display_name,
         profile_image_url: UserSerializer.profile_image_url(comment.user)
       },
+      likes_count: comment.likes_count,
+      liked_by_current_user: comment.liked_by?(current_user),
       created_at: comment.created_at,
       updated_at: comment.updated_at
     }

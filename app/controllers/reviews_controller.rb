@@ -17,6 +17,15 @@ class ReviewsController < ApplicationController
   end
 
   def create
+    # Validate mentions before creating
+    if review_params[:review_text].present?
+      mention_service = MentionService.new(review_params[:review_text], mentioner: current_user)
+      validation = mention_service.validate
+      unless validation[:valid]
+        return json_response({ error: validation[:error] }, :unprocessable_entity)
+      end
+    end
+
     @band = find_or_create_band(review_params[:band_name])
     @track = find_or_create_track(@band, review_params[:song_name])
     @review = current_user.reviews.build(review_params.merge(band: @band, track: @track))
@@ -34,6 +43,15 @@ class ReviewsController < ApplicationController
   end
 
   def update
+    # Validate mentions before updating
+    if review_params[:review_text].present?
+      mention_service = MentionService.new(review_params[:review_text], mentioner: current_user)
+      validation = mention_service.validate
+      unless validation[:valid]
+        return json_response({ error: validation[:error] }, :unprocessable_entity)
+      end
+    end
+
     @band = find_or_create_band(review_params[:band_name]) if review_params[:band_name]
     update_params = review_params
     update_params[:band] = @band if @band

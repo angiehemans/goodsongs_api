@@ -3,6 +3,7 @@ class ReviewSerializer
   extend ImageUrlHelper
 
   def self.full(review, current_user: nil)
+    mentions = review.mentions.includes(:user)
     {
       id: review.id,
       song_link: review.song_link,
@@ -10,6 +11,8 @@ class ReviewSerializer
       song_name: review.song_name,
       artwork_url: review.artwork_url,
       review_text: review.review_text,
+      formatted_review_text: MentionService.format_content(review.review_text, mentions),
+      mentions: serialize_mentions(mentions),
       liked_aspects: review.liked_aspects_array,
       genres: review.genres || [],
       track: review.track ? track_summary(review.track) : nil,
@@ -28,12 +31,15 @@ class ReviewSerializer
   end
 
   def self.with_author(review, current_user: nil)
+    mentions = review.mentions.includes(:user)
     {
       id: review.id,
       song_link: review.song_link,
       song_name: review.song_name,
       artwork_url: review.artwork_url,
       review_text: review.review_text,
+      formatted_review_text: MentionService.format_content(review.review_text, mentions),
+      mentions: serialize_mentions(mentions),
       liked_aspects: review.liked_aspects_array,
       genres: review.genres || [],
       track: review.track ? track_summary(review.track) : nil,
@@ -66,5 +72,15 @@ class ReviewSerializer
       album: track.album ? { id: track.album.id, name: track.album.name } : nil,
       source: track.source
     }
+  end
+
+  def self.serialize_mentions(mentions)
+    mentions.map do |mention|
+      {
+        user_id: mention.user_id,
+        username: mention.user.username,
+        display_name: mention.user.display_name
+      }
+    end
   end
 end

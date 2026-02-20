@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_19_194148) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -21,7 +21,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_19_194148) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
-    t.bigint "record_id", null: false
+    t.string "record_id", null: false
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
@@ -186,6 +186,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_19_194148) do
     t.index ["follower_id"], name: "index_follows_on_follower_id"
   end
 
+  create_table "mentions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "mentioner_id", null: false
+    t.string "mentionable_type", null: false
+    t.bigint "mentionable_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["mentionable_type", "mentionable_id", "user_id"], name: "index_mentions_uniqueness", unique: true
+    t.index ["mentionable_type", "mentionable_id"], name: "index_mentions_on_mentionable"
+    t.index ["mentioner_id"], name: "index_mentions_on_mentioner_id"
+    t.index ["user_id"], name: "index_mentions_on_user_id"
+  end
+
   create_table "notifications", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "notification_type", null: false
@@ -217,6 +230,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_19_194148) do
     t.index ["token_digest"], name: "index_refresh_tokens_on_token_digest", unique: true
     t.index ["user_id", "revoked_at"], name: "index_refresh_tokens_on_user_id_and_revoked_at"
     t.index ["user_id"], name: "index_refresh_tokens_on_user_id"
+  end
+
+  create_table "review_comment_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "review_comment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["review_comment_id"], name: "index_review_comment_likes_on_review_comment_id"
+    t.index ["user_id", "review_comment_id"], name: "index_review_comment_likes_on_user_id_and_review_comment_id", unique: true
+    t.index ["user_id"], name: "index_review_comment_likes_on_user_id"
   end
 
   create_table "review_comments", force: :cascade do |t|
@@ -386,9 +409,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_19_194148) do
   add_foreign_key "favorite_bands", "users"
   add_foreign_key "follows", "users", column: "followed_id"
   add_foreign_key "follows", "users", column: "follower_id"
+  add_foreign_key "mentions", "users"
+  add_foreign_key "mentions", "users", column: "mentioner_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "refresh_tokens", "users"
+  add_foreign_key "review_comment_likes", "review_comments"
+  add_foreign_key "review_comment_likes", "users"
   add_foreign_key "review_comments", "reviews"
   add_foreign_key "review_comments", "users"
   add_foreign_key "review_likes", "reviews"

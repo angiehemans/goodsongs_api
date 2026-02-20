@@ -86,7 +86,18 @@ class NotificationsController < ApplicationController
       if notification.notifiable.is_a?(ReviewComment)
         comment = notification.notifiable
         review = comment.review
-        data[:message] = "#{notification.actor&.display_name || 'Someone'} commented on your review of #{review.song_name}"
+        actor_name = notification.actor&.display_name || 'Someone'
+
+        # Check if user was also mentioned in this comment
+        was_mentioned = comment.mentions.exists?(user_id: notification.user_id)
+        data[:mentioned] = was_mentioned
+
+        if was_mentioned
+          data[:message] = "#{actor_name} mentioned you in a comment on your review of #{review.song_name}"
+        else
+          data[:message] = "#{actor_name} commented on your review of #{review.song_name}"
+        end
+
         data[:review] = {
           id: review.id,
           song_name: review.song_name,
@@ -95,6 +106,45 @@ class NotificationsController < ApplicationController
         data[:comment] = {
           id: comment.id,
           body: comment.body.truncate(100)
+        }
+      end
+    when 'comment_like'
+      if notification.notifiable.is_a?(ReviewComment)
+        comment = notification.notifiable
+        review = comment.review
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} liked your comment"
+        data[:review] = {
+          id: review.id,
+          song_name: review.song_name,
+          band_name: review.band_name
+        }
+        data[:comment] = {
+          id: comment.id,
+          body: comment.body.truncate(50)
+        }
+      end
+    when 'mention'
+      case notification.notifiable
+      when Review
+        review = notification.notifiable
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} mentioned you in a review"
+        data[:review] = {
+          id: review.id,
+          song_name: review.song_name,
+          band_name: review.band_name
+        }
+      when ReviewComment
+        comment = notification.notifiable
+        review = comment.review
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} mentioned you in a comment"
+        data[:review] = {
+          id: review.id,
+          song_name: review.song_name,
+          band_name: review.band_name
+        }
+        data[:comment] = {
+          id: comment.id,
+          body: comment.body.truncate(50)
         }
       end
     end

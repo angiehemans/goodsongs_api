@@ -26,6 +26,16 @@ class User < ApplicationRecord
   # Review comments
   has_many :review_comments, dependent: :destroy
 
+  # Comment likes
+  has_many :review_comment_likes, dependent: :destroy
+  has_many :liked_comments, through: :review_comment_likes, source: :review_comment
+
+  # Mentions (where this user was mentioned)
+  has_many :mentions, dependent: :destroy
+
+  # Mentions made by this user
+  has_many :made_mentions, class_name: 'Mention', foreign_key: :mentioner_id, dependent: :destroy
+
   # Refresh tokens for authentication
   has_many :refresh_tokens, dependent: :destroy
 
@@ -136,6 +146,21 @@ class User < ApplicationRecord
   # Check if user likes a review
   def likes_review?(review)
     liked_reviews.include?(review)
+  end
+
+  # Like a comment
+  def like_comment(comment)
+    liked_comments << comment unless likes_comment?(comment)
+  end
+
+  # Unlike a comment
+  def unlike_comment(comment)
+    liked_comments.delete(comment)
+  end
+
+  # Check if user likes a comment
+  def likes_comment?(comment)
+    liked_comments.include?(comment)
   end
 
   # Check if Last.fm account is connected

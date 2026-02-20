@@ -32,6 +32,7 @@ Rails.application.routes.draw do
   get '/profile', to: 'users#show'
   patch '/profile', to: 'users#update'
   post '/update-profile', to: 'users#update'  # Keep for frontend compatibility
+  get '/users/search', to: 'user_search#index'
   get '/users/:username', to: 'users#profile_by_username'
   get '/recently-played', to: 'users#recently_played'
   
@@ -79,6 +80,10 @@ Rails.application.routes.draw do
   get '/followers', to: 'follows#followers'
   get '/users/:user_id/following', to: 'follows#user_following'
   get '/users/:user_id/followers', to: 'follows#user_followers'
+
+  # Comment likes
+  post '/comments/:comment_id/like', to: 'review_comment_likes#create'
+  delete '/comments/:comment_id/like', to: 'review_comment_likes#destroy'
 
   # Notification routes
   get '/notifications', to: 'notifications#index'

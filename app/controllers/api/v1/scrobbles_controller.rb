@@ -28,6 +28,14 @@ module Api
 
         scrobbles_params.each_with_index do |scrobble_data, index|
           data = permit_scrobble_params(scrobble_data)
+
+          # DEBUG: Log album_art submission status
+          if data[:album_art].present?
+            Rails.logger.info("[ScrobbleDebug] album_art RECEIVED for '#{data[:track_name]}' - length: #{data[:album_art].to_s.length} chars, starts_with: #{data[:album_art].to_s[0..30]}...")
+          else
+            Rails.logger.info("[ScrobbleDebug] album_art NOT SENT for '#{data[:track_name]}' - artwork_uri: #{data[:artwork_uri].present? ? 'present' : 'nil'}")
+          end
+
           scrobble = build_scrobble(data)
           attach_album_art(scrobble, data[:album_art])
 

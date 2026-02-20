@@ -820,6 +820,62 @@ When a review is created, the system automatically links it to an existing track
 **Response (201 Created):**
 Returns created review object including `genres` array and `track` object (if linked)
 
+**Example with User Mention:**
+
+Request:
+```json
+{
+  "review": {
+    "band_name": "Radiohead",
+    "song_name": "Karma Police",
+    "review_text": "Amazing track! @johndoe you need to hear this",
+    "genres": ["Alternative", "Art Rock"]
+  }
+}
+```
+
+Response:
+```json
+{
+  "id": 123,
+  "song_link": null,
+  "band_name": "Radiohead",
+  "song_name": "Karma Police",
+  "artwork_url": null,
+  "review_text": "Amazing track! @johndoe you need to hear this",
+  "formatted_review_text": "Amazing track! [@johndoe](user:456) you need to hear this",
+  "mentions": [
+    {
+      "user_id": 456,
+      "username": "johndoe",
+      "display_name": "John Doe"
+    }
+  ],
+  "liked_aspects": [],
+  "genres": ["Alternative", "Art Rock"],
+  "track": {
+    "id": "uuid-here",
+    "name": "Karma Police",
+    "album": null,
+    "source": "user_submitted"
+  },
+  "band": { ... },
+  "author": { ... },
+  "likes_count": 0,
+  "liked_by_current_user": false,
+  "comments_count": 0,
+  "created_at": "2024-12-01T00:00:00.000Z",
+  "updated_at": "2024-12-01T00:00:00.000Z"
+}
+```
+
+**Error Response (422 - Invalid Mention):**
+```json
+{
+  "error": "Looks like you tagged a user that doesn't exist: @fakeuser"
+}
+```
+
 ---
 
 ### PATCH /reviews/:id
@@ -1072,6 +1128,8 @@ Get paginated list of comments for a review.
         "display_name": "musicfan",
         "profile_image_url": "https://..."
       },
+      "likes_count": 3,
+      "liked_by_current_user": false,
       "created_at": "2024-12-01T00:00:00.000Z",
       "updated_at": "2024-12-01T00:00:00.000Z"
     }
@@ -1115,16 +1173,61 @@ Note: Comment body is limited to 300 characters.
   "comment": {
     "id": 1,
     "body": "Great review! I totally agree.",
+    "formatted_body": "Great review! I totally agree.",
+    "mentions": [],
     "author": {
       "id": 2,
       "username": "musicfan",
       "display_name": "musicfan",
       "profile_image_url": "https://..."
     },
+    "likes_count": 0,
+    "liked_by_current_user": false,
     "created_at": "2024-12-01T00:00:00.000Z",
     "updated_at": "2024-12-01T00:00:00.000Z"
   },
   "comments_count": 5
+}
+```
+
+**Example with User Mention:**
+
+Request:
+```json
+{
+  "comment": {
+    "body": "Hey @johndoe you should check this out!"
+  }
+}
+```
+
+Response:
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 2,
+    "body": "Hey @johndoe you should check this out!",
+    "formatted_body": "Hey [@johndoe](user:123) you should check this out!",
+    "mentions": [
+      {
+        "user_id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe"
+      }
+    ],
+    "author": {
+      "id": 2,
+      "username": "musicfan",
+      "display_name": "musicfan",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2024-12-01T00:00:00.000Z",
+    "updated_at": "2024-12-01T00:00:00.000Z"
+  },
+  "comments_count": 6
 }
 ```
 
@@ -1141,6 +1244,14 @@ or
 ```json
 {
   "errors": ["Body is too long (maximum is 300 characters)"]
+}
+```
+
+or (invalid mention):
+
+```json
+{
+  "error": "Looks like you tagged a user that doesn't exist: @fakeuser"
 }
 ```
 
@@ -1176,6 +1287,8 @@ Update a comment (owner only).
       "display_name": "musicfan",
       "profile_image_url": "https://..."
     },
+    "likes_count": 3,
+    "liked_by_current_user": true,
     "created_at": "2024-12-01T00:00:00.000Z",
     "updated_at": "2024-12-01T00:00:00.000Z"
   }
@@ -1212,6 +1325,58 @@ Delete a comment (owner or admin only).
 ```json
 {
   "error": "You are not authorized to modify this comment"
+}
+```
+
+---
+
+### POST /comments/:comment_id/like
+
+Like a comment.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment liked successfully",
+  "liked": true,
+  "likes_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this comment"
+}
+```
+
+---
+
+### DELETE /comments/:comment_id/like
+
+Unlike a comment.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment unliked successfully",
+  "liked": false,
+  "likes_count": 4
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this comment"
 }
 ```
 
@@ -3698,3 +3863,58 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - Consecutive duplicate tracks (same name + artist within 5 minutes) are deduplicated
     - Use the `sources` query parameter to filter to specific sources
     - Designed to be extensible for future sources (e.g., Apple Music)
+
+13. **User Mentions (@tagging):**
+    - Users can mention other users in reviews and comments using `@username` syntax
+    - Mentioned users receive notifications when tagged
+    - Maximum 10 mentions per post/comment
+    - Self-mentions are silently ignored (no notification sent)
+    - Invalid usernames return an error: "Looks like you tagged a user that doesn't exist: @username"
+    - Disabled users cannot be mentioned
+    - Reviews and comments include both raw text and formatted text with mention links:
+      - `review_text` / `body`: Original text with `@username`
+      - `formatted_review_text` / `formatted_body`: Text with `[@username](user:123)` format
+      - `mentions`: Array of mentioned user details (user_id, username, display_name)
+    - Frontend can parse the `[@text](user:id)` format with regex: `/\[@(\w+)\]\(user:(\d+)\)/g`
+    - **Combined notifications**: If someone comments on your review AND mentions you in that comment, you receive a single combined notification (not two separate ones). The notification will have `mentioned: true` and the message will say "mentioned you in a comment on your review"
+
+---
+
+## User Search Endpoint
+
+### GET /users/search
+
+Search for users by username prefix (for mention autocomplete).
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `q` (required): Username prefix to search (minimum 2 characters)
+
+**Response (200 OK):**
+
+```json
+{
+  "users": [
+    {
+      "id": 123,
+      "username": "johndoe",
+      "display_name": "John Doe",
+      "profile_image_url": "https://..."
+    },
+    {
+      "id": 456,
+      "username": "johnsmith",
+      "display_name": "John Smith",
+      "profile_image_url": null
+    }
+  ]
+}
+```
+
+**Notes:**
+- Returns up to 10 matching users
+- Excludes the current user from results
+- Excludes disabled accounts
+- Case-insensitive prefix matching

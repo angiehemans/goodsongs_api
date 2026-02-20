@@ -6,6 +6,7 @@ class Review < ApplicationRecord
   has_many :likers, through: :review_likes, source: :user
   has_many :review_comments, dependent: :destroy
   has_many :commenters, through: :review_comments, source: :user
+  has_many :mentions, as: :mentionable, dependent: :destroy
 
   GENRES = %w[
     Rock Pop Hip-Hop Jazz Blues Country R&B Soul Funk Electronic
@@ -75,5 +76,14 @@ class Review < ApplicationRecord
     else
       self.liked_aspects = aspects.to_s
     end
+  end
+
+  # Process mentions after saving
+  after_save :process_mentions, if: :saved_change_to_review_text?
+
+  private
+
+  def process_mentions
+    MentionService.new(review_text, mentioner: user, mentionable: self).sync_mentions
   end
 end

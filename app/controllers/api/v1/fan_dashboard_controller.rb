@@ -79,6 +79,13 @@ module Api
       def following_feed_preview
         reviews = combined_feed_query(limit: 5)
 
+        # Get IDs of reviews the current user has liked (single query)
+        review_ids = reviews.map(&:id)
+        liked_review_ids = current_user.review_likes
+                                       .where(review_id: review_ids)
+                                       .pluck(:review_id)
+                                       .to_set
+
         reviews.map do |review|
           {
             id: review.id,
@@ -92,7 +99,9 @@ module Api
               profile_image_url: profile_image_url(review.user)
             },
             created_at: review.created_at.iso8601,
-            likes_count: review.likes_count
+            likes_count: review.likes_count,
+            comments_count: review.comments_count,
+            liked_by_current_user: liked_review_ids.include?(review.id)
           }
         end
       end

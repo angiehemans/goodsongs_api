@@ -314,8 +314,16 @@ class ScrobbleEnrichmentService
   end
 
   # Queue artwork fetch as a separate background job (non-blocking)
+  # Skip if the scrobble already has uploaded artwork (from frontend)
   def queue_artwork_job(album)
     return unless album&.id
+
+    # Skip artwork enrichment if the scrobble already has artwork attached
+    # The user provided artwork takes priority, no need to fetch more
+    if scrobble.has_uploaded_artwork?
+      Rails.logger.info("Skipping artwork enrichment for album #{album.id} - scrobble #{scrobble.id} has uploaded artwork")
+      return
+    end
 
     ArtworkEnrichmentJob.perform_later(album.id, user_id: scrobble.user_id)
   rescue StandardError => e
