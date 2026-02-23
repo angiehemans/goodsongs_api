@@ -86,7 +86,7 @@ class FollowsController < ApplicationController
       id: user.id,
       username: user.username,
       display_name: user.display_name,
-      account_type: user.account_type,
+      role: user.role,
       profile_image_url: self.class.profile_image_url(user),
       location: user.location,
       following: current_user.following?(user)

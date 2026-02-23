@@ -201,7 +201,7 @@ Get current onboarding status for authenticated user.
 ```json
 {
   "onboarding_completed": false,
-  "account_type": null
+  "role": null
 }
 ```
 
@@ -210,7 +210,7 @@ For BAND accounts with primary band:
 ```json
 {
   "onboarding_completed": true,
-  "account_type": "band",
+  "role": "band",
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -235,7 +235,7 @@ Set account type (Step 1 of onboarding).
 
 ```json
 {
-  "account_type": "fan"
+  "role": "fan"
 }
 ```
 
@@ -243,7 +243,7 @@ or
 
 ```json
 {
-  "account_type": "band"
+  "role": "band"
 }
 ```
 
@@ -252,7 +252,7 @@ or
 ```json
 {
   "message": "Account type set successfully",
-  "account_type": "fan",
+  "role": "fan",
   "onboarding_completed": false,
   "next_step": "complete_fan_profile"
 }
@@ -291,7 +291,7 @@ region: "California" (optional)
     "lastfm_connected": false,
     "lastfm_username": null,
     "profile_image_url": "https://...",
-    "account_type": "fan",
+    "role": "fan",
     "onboarding_completed": true,
     "display_name": "johndoe",
     "admin": false,
@@ -341,7 +341,7 @@ profile_picture: <file> (optional)
     "lastfm_connected": false,
     "lastfm_username": null,
     "profile_image_url": null,
-    "account_type": "band",
+    "role": "band",
     "onboarding_completed": true,
     "display_name": "The Band Name",
     "admin": false,
@@ -405,7 +405,7 @@ Get current authenticated user's profile.
   "lastfm_connected": true,
   "lastfm_username": "johndoe_lastfm",
   "profile_image_url": "https://...",
-  "account_type": "fan",
+  "role": "fan",
   "onboarding_completed": true,
   "display_name": "johndoe",
   "admin": false,
@@ -415,7 +415,13 @@ Get current authenticated user's profile.
   "latitude": 34.0522,
   "longitude": -118.2437,
   "followers_count": 25,
-  "following_count": 12
+  "following_count": 12,
+  "role": "fan",
+  "plan": {
+    "key": "fan_free",
+    "name": "Fan Free"
+  },
+  "abilities": ["create_recommendation", "follow_users", "create_comments", "scrobble_lastfm"]
 }
 ```
 
@@ -432,7 +438,7 @@ For BAND accounts:
   "lastfm_connected": false,
   "lastfm_username": null,
   "profile_image_url": null,
-  "account_type": "band",
+  "role": "band",
   "onboarding_completed": true,
   "display_name": "The Band Name",
   "admin": false,
@@ -443,6 +449,12 @@ For BAND accounts:
   "longitude": null,
   "followers_count": 100,
   "following_count": 5,
+  "role": "band",
+  "plan": {
+    "key": "band_starter",
+    "name": "Band Starter"
+  },
+  "abilities": ["create_recommendation", "manage_storefront", "follow_users", "create_comments", "send_newsletter", "view_analytics", "manage_band_profile", "upload_music", "manage_events", "custom_design"],
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -507,7 +519,7 @@ Get public profile for a user by username with paginated reviews.
   "profile_image_url": "https://...",
   "reviews_count": 10,
   "bands_count": 2,
-  "account_type": "fan",
+  "role": "fan",
   "display_name": "johndoe",
   "location": "Los Angeles, California",
   "followers_count": 25,
@@ -1826,7 +1838,7 @@ Get list of users the current user is following.
     "id": 2,
     "username": "janedoe",
     "display_name": "janedoe",
-    "account_type": "fan",
+    "role": "fan",
     "profile_image_url": "https://...",
     "location": "Los Angeles, California",
     "following": true
@@ -1835,7 +1847,7 @@ Get list of users the current user is following.
     "id": 3,
     "username": null,
     "display_name": "The Band Name",
-    "account_type": "band",
+    "role": "band",
     "profile_image_url": "https://...",
     "location": "New York, New York",
     "following": true
@@ -2251,7 +2263,7 @@ Get paginated list of all active fan users who have completed onboarding (exclud
       "id": 1,
       "username": "johndoe",
       "display_name": "johndoe",
-      "account_type": "fan",
+      "role": "fan",
       "about_me": "Music lover",
       "profile_image_url": "https://...",
       "location": "Los Angeles, California",
@@ -2350,7 +2362,7 @@ Get paginated list of all users (admin only).
       "profile_image_url": "https://...",
       "reviews_count": 10,
       "bands_count": 2,
-      "account_type": "fan",
+      "role": "fan",
       "onboarding_completed": true,
       "display_name": "johndoe",
       "admin": false,
@@ -2364,7 +2376,7 @@ Get paginated list of all users (admin only).
       "profile_image_url": null,
       "reviews_count": 0,
       "bands_count": 1,
-      "account_type": "band",
+      "role": "band",
       "onboarding_completed": true,
       "display_name": "The Band Name",
       "admin": false,
@@ -2421,7 +2433,7 @@ Get a single user's full profile with all editable fields, reviews, and bands (a
     "location": "Los Angeles, California",
     "latitude": 34.0522,
     "longitude": -118.2437,
-    "account_type": "fan",
+    "role": "fan",
     "onboarding_completed": true,
     "admin": false,
     "disabled": false,
@@ -2501,7 +2513,7 @@ Update any user's profile (admin only).
   "region": "New York",
   "admin": true,
   "disabled": false,
-  "account_type": "fan",
+  "role": "fan",
   "lastfm_username": "lastfm_user",
   "onboarding_completed": true
 }
@@ -2518,7 +2530,7 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
 - `region` - Region/state/country (max 100 chars)
 - `admin` - Admin status (cannot modify your own admin status)
 - `disabled` - Account disabled status
-- `account_type` - "fan" or "band"
+- `role` - "fan", "band", or "blogger"
 - `lastfm_username` - Connected Last.fm username
 - `onboarding_completed` - Onboarding status
 - `profile_image` - Profile image file (multipart/form-data)
@@ -2538,7 +2550,7 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
     "location": "New York, New York",
     "latitude": 40.7128,
     "longitude": -74.006,
-    "account_type": "fan",
+    "role": "fan",
     "onboarding_completed": true,
     "admin": true,
     "disabled": false,
@@ -2593,7 +2605,7 @@ Toggle a user's disabled status (admin only). Disabled users cannot login and th
     "profile_image_url": "https://...",
     "reviews_count": 10,
     "bands_count": 2,
-    "account_type": "fan",
+    "role": "fan",
     "onboarding_completed": true,
     "display_name": "johndoe",
     "admin": false,
@@ -3012,6 +3024,429 @@ Delete a review (admin only).
 
 ---
 
+### GET /admin/plans
+
+Get all plans with summary information (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "plans": [
+    {
+      "id": 1,
+      "key": "fan_free",
+      "name": "Fan Free",
+      "role": "fan",
+      "price_cents_monthly": 0,
+      "price_cents_annual": 0,
+      "active": true,
+      "abilities_count": 4,
+      "created_at": "2026-02-23T00:00:00.000Z",
+      "updated_at": "2026-02-23T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "key": "band_free",
+      "name": "Band Free",
+      "role": "band",
+      "price_cents_monthly": 0,
+      "price_cents_annual": 0,
+      "active": true,
+      "abilities_count": 5,
+      "created_at": "2026-02-23T00:00:00.000Z",
+      "updated_at": "2026-02-23T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET /admin/plans/:id
+
+Get a single plan with its abilities (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "plan": {
+    "id": 1,
+    "key": "blogger_pro",
+    "name": "Blogger Pro",
+    "role": "blogger",
+    "price_cents_monthly": 1800,
+    "price_cents_annual": 18000,
+    "active": true,
+    "abilities_count": 23,
+    "created_at": "2026-02-23T00:00:00.000Z",
+    "updated_at": "2026-02-23T00:00:00.000Z",
+    "abilities": [
+      {
+        "key": "create_blog_post",
+        "name": "Create Blog Post",
+        "category": "content"
+      },
+      {
+        "key": "schedule_post",
+        "name": "Schedule Posts",
+        "category": "content"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### PATCH /admin/plans/:id
+
+Update a plan's details (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Request Body:**
+
+```json
+{
+  "name": "Blogger Pro Plus",
+  "price_cents_monthly": 2000,
+  "price_cents_annual": 20000,
+  "active": true
+}
+```
+
+All fields are optional.
+
+**Editable Fields:**
+
+- `name` - Display name of the plan
+- `price_cents_monthly` - Monthly price in cents
+- `price_cents_annual` - Annual price in cents
+- `active` - Whether plan is available for new signups
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Plan updated successfully",
+  "plan": { ... }
+}
+```
+
+---
+
+### GET /admin/plans/compare
+
+Side-by-side comparison matrix of all plans and abilities (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "plans": [
+    { "key": "fan_free", "name": "Fan Free", "role": "fan" },
+    { "key": "band_free", "name": "Band Free", "role": "band" },
+    { "key": "band_starter", "name": "Band Starter", "role": "band" },
+    { "key": "blogger_pro", "name": "Blogger Pro", "role": "blogger" }
+  ],
+  "abilities": [
+    {
+      "ability": { "key": "create_recommendation", "name": "Create Recommendation", "category": "content" },
+      "fan_free": true,
+      "band_free": true,
+      "band_starter": true,
+      "blogger_pro": true
+    },
+    {
+      "ability": { "key": "schedule_post", "name": "Schedule Posts", "category": "content" },
+      "fan_free": false,
+      "band_free": false,
+      "band_starter": false,
+      "blogger_pro": true
+    }
+  ]
+}
+```
+
+---
+
+### POST /admin/plans/:id/abilities/:ability_id
+
+Add an ability to a plan (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Ability 'Schedule Posts' added to plan 'Blogger Pro'",
+  "plan": { ... }
+}
+```
+
+**Notes:**
+
+- Changes take effect immediately for all users on this plan
+- User ability caches are automatically cleared
+
+---
+
+### DELETE /admin/plans/:id/abilities/:ability_id
+
+Remove an ability from a plan (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Ability 'Schedule Posts' removed from plan 'Blogger Pro'",
+  "plan": { ... }
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "error": "Ability not found on this plan"
+}
+```
+
+---
+
+### GET /admin/abilities
+
+Get all abilities, optionally grouped by category (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Query Parameters:**
+
+- `grouped` (optional): Set to "true" to group abilities by category
+
+**Response (200 OK) - Default:**
+
+```json
+{
+  "abilities": [
+    {
+      "id": 1,
+      "key": "create_recommendation",
+      "name": "Create Recommendation",
+      "description": "Recommend songs to followers",
+      "category": "content",
+      "plans": [
+        { "key": "fan_free", "name": "Fan Free" },
+        { "key": "band_free", "name": "Band Free" }
+      ],
+      "created_at": "2026-02-23T00:00:00.000Z",
+      "updated_at": "2026-02-23T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Response (200 OK) - Grouped (grouped=true):**
+
+```json
+{
+  "abilities": {
+    "content": [
+      {
+        "id": 1,
+        "key": "create_recommendation",
+        "name": "Create Recommendation",
+        "description": "Recommend songs to followers",
+        "category": "content",
+        "plans": [...]
+      }
+    ],
+    "monetization": [...],
+    "audience": [...],
+    "social": [...],
+    "analytics": [...],
+    "band": [...]
+  }
+}
+```
+
+---
+
+### GET /admin/abilities/categories
+
+Get list of valid ability categories (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "categories": ["content", "monetization", "audience", "social", "analytics", "band"]
+}
+```
+
+---
+
+### GET /admin/abilities/:id
+
+Get a single ability with its plans (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "ability": {
+    "id": 1,
+    "key": "create_recommendation",
+    "name": "Create Recommendation",
+    "description": "Recommend songs to followers",
+    "category": "content",
+    "plans": [
+      { "key": "fan_free", "name": "Fan Free" },
+      { "key": "band_free", "name": "Band Free" }
+    ],
+    "created_at": "2026-02-23T00:00:00.000Z",
+    "updated_at": "2026-02-23T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### POST /admin/abilities
+
+Create a new ability (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Request Body:**
+
+```json
+{
+  "key": "new_feature",
+  "name": "New Feature",
+  "description": "Description of the new feature",
+  "category": "content"
+}
+```
+
+**Required Fields:**
+
+- `key` - Unique identifier (snake_case, e.g., `schedule_post`)
+- `name` - Human-readable name
+- `category` - Must be one of: `content`, `monetization`, `audience`, `social`, `analytics`, `band`
+
+**Optional Fields:**
+
+- `description` - Detailed description of what this ability enables
+
+**Response (201 Created):**
+
+```json
+{
+  "message": "Ability 'New Feature' created successfully",
+  "ability": {
+    "id": 27,
+    "key": "new_feature",
+    "name": "New Feature",
+    "description": "Description of the new feature",
+    "category": "content",
+    "plans": [],
+    "created_at": "2026-02-23T00:00:00.000Z",
+    "updated_at": "2026-02-23T00:00:00.000Z"
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "errors": ["Key has already been taken"]
+}
+```
+
+---
+
+### PATCH /admin/abilities/:id
+
+Update an ability (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Request Body:**
+
+```json
+{
+  "name": "Updated Feature Name",
+  "description": "Updated description",
+  "category": "monetization"
+}
+```
+
+All fields are optional. The `key` can be updated but must remain unique.
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Ability 'Updated Feature Name' updated successfully",
+  "ability": { ... }
+}
+```
+
+---
+
+### DELETE /admin/abilities/:id
+
+Delete an ability (admin only).
+
+**Authentication:** Required (Admin only)
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Ability 'Feature Name' deleted successfully"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+If the ability is used by any plans, it cannot be deleted:
+
+```json
+{
+  "error": "Cannot delete ability 'Create Recommendation' because it is used by: Fan Free, Band Free, Band Starter",
+  "plans": [
+    { "key": "fan_free", "name": "Fan Free" },
+    { "key": "band_free", "name": "Band Free" },
+    { "key": "band_starter", "name": "Band Starter" }
+  ]
+}
+```
+
+**Notes:**
+
+- You must remove the ability from all plans before deleting it
+- Use `DELETE /admin/plans/:id/abilities/:ability_id` to remove an ability from a plan
+
+---
+
 ## Last.fm Integration Endpoints
 
 ### POST /lastfm/connect
@@ -3167,7 +3602,7 @@ Get all fan dashboard data in a single optimized request. Reduces 17+ API calls 
     "email": "user@example.com",
     "about_me": "Music lover",
     "profile_image_url": "https://...",
-    "account_type": "fan",
+    "role": "fan",
     "display_name": "johndoe",
     "location": "Los Angeles, California",
     "followers_count": 25,
@@ -3744,6 +4179,17 @@ or
 }
 ```
 
+or (for ability-gated endpoints):
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "schedule_post",
+  "upgrade_plan": "blogger_pro"
+}
+```
+
 ### 404 Not Found
 
 ```json
@@ -3768,6 +4214,33 @@ or
 
 - `fan` - Standard user account (identified by username)
 - `band` - Band account (identified by primary band name)
+- `music_blogger` - Music blogger account (publishing and audience tools)
+
+### Roles
+
+User identity type that determines the overall UI experience:
+- `fan` - Discovers and recommends music
+- `band` - Artist/band with business tools
+- `blogger` - Music blogger with publishing tools
+
+### Plans
+
+Subscription tiers that grant abilities:
+- `fan_free` - Free fan plan
+- `band_free` - Free band plan
+- `band_starter` - $15/month band plan with analytics, storefront, newsletter
+- `band_pro` - $40/month band plan (all band features)
+- `blogger` - $9/month blogger plan (basic publishing)
+- `blogger_pro` - $18/month blogger plan (full features)
+
+### Ability Categories
+
+- `content` - Content creation (recommendations, blog posts, scheduling)
+- `monetization` - Revenue features (storefront, donations, subscriptions)
+- `audience` - Community features (following, comments, newsletters)
+- `social` - Social integrations (Instagram, Threads, playlists)
+- `analytics` - Analytics and insights
+- `band` - Band-specific features (profile, music, events)
 
 ### Review Liked Aspects
 
@@ -3778,7 +4251,7 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
 ## Notes
 
 1. **Onboarding Flow:**
-   - New users start with `account_type: null` and `onboarding_completed: false`
+   - New users start with `role: null` and `onboarding_completed: false`
    - Step 1: POST `/onboarding/account-type` to choose FAN or BAND
    - Step 2: POST `/onboarding/complete-fan-profile` (for FAN) or `/onboarding/complete-band-profile` (for BAND)
    - After onboarding, users can access all authenticated endpoints
@@ -3863,6 +4336,17 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - Consecutive duplicate tracks (same name + artist within 5 minutes) are deduplicated
     - Use the `sources` query parameter to filter to specific sources
     - Designed to be extensible for future sources (e.g., Apple Music)
+
+14. **Roles, Plans & Abilities (RBAC):**
+    - Every user has a `role` (fan, band, blogger) that determines their identity
+    - Every user has a `plan` that determines their subscription tier
+    - Plans grant `abilities` (atomic permissions like `schedule_post`, `manage_storefront`)
+    - User profile responses include `role`, `plan`, and `abilities` array
+    - API endpoints can require specific abilities using `require_ability!`
+    - When a user lacks a required ability, the API returns 403 with `error: "upgrade_required"`
+    - The response includes `required_ability` and `upgrade_plan` for contextual upgrade prompts
+    - Admins can manage plan-ability mappings via `/admin/plans` and `/admin/abilities` endpoints
+    - See `docs/RBAC_SYSTEM.md` for full architecture documentation
 
 13. **User Mentions (@tagging):**
     - Users can mention other users in reviews and comments using `@username` syntax

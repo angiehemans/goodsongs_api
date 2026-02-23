@@ -63,7 +63,7 @@ class DiscoverController < ApplicationController
     query = params[:q]&.strip.presence
 
     # Only show active fan users who have completed onboarding (not band accounts)
-    base_scope = User.where(disabled: false, onboarding_completed: true, account_type: :fan)
+    base_scope = User.where(disabled: false, onboarding_completed: true, role: "fan")
 
     if query.present?
       # Search by username using trigram similarity
@@ -183,7 +183,7 @@ class DiscoverController < ApplicationController
                           .map { |band| BandSerializer.full(band) }
 
     # Search users
-    results[:users] = User.where(disabled: false, onboarding_completed: true, account_type: :fan)
+    results[:users] = User.where(disabled: false, onboarding_completed: true, role: "fan")
                           .where("username % ?", query)
                           .order(Arel.sql("similarity(username, #{User.connection.quote(query)}) DESC"))
                           .limit(limit)
@@ -237,7 +237,7 @@ class DiscoverController < ApplicationController
       id: user.id,
       username: user.username,
       display_name: user.display_name,
-      account_type: user.account_type,
+      role: user.role,
       about_me: user.about_me,
       profile_image_url: self.class.profile_image_url(user),
       location: user.location,

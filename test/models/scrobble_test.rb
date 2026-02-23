@@ -8,7 +8,7 @@ class ScrobbleTest < ActiveSupport::TestCase
       email: "test@example.com",
       password: "password123",
       username: "testuser",
-      account_type: :fan,
+      role: "fan",
       onboarding_completed: true
     )
   end

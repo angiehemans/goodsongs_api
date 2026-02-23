@@ -10,13 +10,24 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_23_163136) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_trgm"
   enable_extension "pgcrypto"
+
+  create_table "abilities", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.string "category", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["category"], name: "index_abilities_on_category"
+    t.index ["key"], name: "index_abilities_on_key", unique: true
+  end
 
   create_table "active_storage_attachments", force: :cascade do |t|
     t.string "name", null: false
@@ -215,6 +226,29 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
+  create_table "plan_abilities", force: :cascade do |t|
+    t.bigint "plan_id", null: false
+    t.bigint "ability_id", null: false
+    t.datetime "created_at", null: false
+    t.index ["ability_id"], name: "index_plan_abilities_on_ability_id"
+    t.index ["plan_id", "ability_id"], name: "index_plan_abilities_on_plan_id_and_ability_id", unique: true
+    t.index ["plan_id"], name: "index_plan_abilities_on_plan_id"
+  end
+
+  create_table "plans", force: :cascade do |t|
+    t.string "key", null: false
+    t.string "name", null: false
+    t.string "role", null: false
+    t.integer "price_cents_monthly", default: 0, null: false
+    t.integer "price_cents_annual", default: 0, null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_plans_on_active"
+    t.index ["key"], name: "index_plans_on_key", unique: true
+    t.index ["role"], name: "index_plans_on_role"
+  end
+
   create_table "refresh_tokens", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "token_digest", null: false
@@ -353,7 +387,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
     t.text "spotify_refresh_token"
     t.datetime "spotify_expires_at"
     t.text "about_me"
-    t.integer "account_type"
     t.boolean "onboarding_completed", default: false, null: false
     t.bigint "primary_band_id"
     t.boolean "admin", default: false, null: false
@@ -371,13 +404,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
     t.integer "followers_count", default: 0, null: false
     t.integer "following_count", default: 0, null: false
     t.integer "reviews_count", default: 0, null: false
-    t.index ["account_type"], name: "index_users_on_account_type"
+    t.boolean "dark_mode", default: false, null: false
+    t.string "role"
+    t.bigint "plan_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
     t.index ["lastfm_username"], name: "index_users_on_lastfm_username"
     t.index ["latitude", "longitude"], name: "index_users_on_latitude_and_longitude"
     t.index ["password_reset_token"], name: "index_users_on_password_reset_token", unique: true
+    t.index ["plan_id"], name: "index_users_on_plan_id"
     t.index ["primary_band_id"], name: "index_users_on_primary_band_id"
+    t.index ["role"], name: "index_users_on_role"
     t.index ["spotify_expires_at"], name: "index_users_on_spotify_expires_at"
     t.index ["username"], name: "index_users_on_username", unique: true
   end
@@ -413,6 +450,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
   add_foreign_key "mentions", "users", column: "mentioner_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
+  add_foreign_key "plan_abilities", "abilities"
+  add_foreign_key "plan_abilities", "plans"
   add_foreign_key "refresh_tokens", "users"
   add_foreign_key "review_comment_likes", "review_comments"
   add_foreign_key "review_comment_likes", "users"
@@ -429,4 +468,5 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_20_211828) do
   add_foreign_key "tracks", "bands"
   add_foreign_key "tracks", "users", column: "submitted_by_id"
   add_foreign_key "users", "bands", column: "primary_band_id"
+  add_foreign_key "users", "plans"
 end

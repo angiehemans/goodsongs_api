@@ -5,7 +5,7 @@ class OnboardingController < ApplicationController
   def status
     response_data = {
       onboarding_completed: current_user.onboarding_completed,
-      account_type: current_user.account_type
+      role: current_user.role
     }
 
     # Include primary band info for BAND accounts
@@ -16,21 +16,27 @@ class OnboardingController < ApplicationController
     json_response(response_data)
   end
 
-  # Step 1: Choose account type (FAN or BAND)
+  # Step 1: Choose role (FAN, BAND, or BLOGGER)
   def set_account_type
-    account_type = params[:account_type]&.downcase
+    role = params[:account_type]&.downcase
 
-    unless %w[fan band].include?(account_type)
-      return json_response({ error: 'Invalid account type. Must be "fan" or "band"' }, :unprocessable_entity)
+    # Map legacy account_type values to roles
+    role = "blogger" if role == "music_blogger"
+
+    unless User::ROLES.include?(role)
+      return json_response({ error: 'Invalid role. Must be "fan", "band", or "blogger"' }, :unprocessable_entity)
     end
 
     # Don't mark onboarding complete yet - profile setup still needed
-    if current_user.update(account_type: account_type)
+    # Also assign the default plan for the role
+    default_plan = Plan.default_for_role(role)
+    if current_user.update(role: role, plan: default_plan)
       json_response({
-        message: 'Account type set successfully',
-        account_type: current_user.account_type,
+        message: 'Role set successfully',
+        role: current_user.role,
+        plan: current_user.plan ? { key: current_user.plan.key, name: current_user.plan.name } : nil,
         onboarding_completed: false,
-        next_step: account_type == 'fan' ? 'complete_fan_profile' : 'complete_band_profile'
+        next_step: role == 'fan' ? 'complete_fan_profile' : 'complete_band_profile'
       })
     else
       json_response({ errors: current_user.errors.full_messages }, :unprocessable_entity)

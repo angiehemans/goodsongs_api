@@ -124,6 +124,24 @@ Rails.application.routes.draw do
   post '/admin/reviews/:id/enrich', to: 'admin#enrich_review'
   delete '/admin/reviews/:id', to: 'admin#destroy_review'
 
+  # Admin RBAC routes
+  namespace :admin do
+    resources :plans, only: [:index, :show, :update] do
+      collection do
+        get :compare
+      end
+      member do
+        post 'abilities/:ability_id', action: :add_ability
+        delete 'abilities/:ability_id', action: :remove_ability
+      end
+    end
+    resources :abilities, only: [:index, :show, :create, :update, :destroy] do
+      collection do
+        get :categories
+      end
+    end
+  end
+
   # Discover routes (public, no auth required)
   get '/discover/search', to: 'discover#search'
   get '/discover/bands', to: 'discover#bands'

@@ -8,7 +8,7 @@ class Api::V1::ScrobblesControllerTest < ActionDispatch::IntegrationTest
       email: "test@example.com",
       password: "password123",
       username: "testuser",
-      account_type: :fan,
+      role: "fan",
       onboarding_completed: true
     )
     @auth_token = generate_jwt(@user)

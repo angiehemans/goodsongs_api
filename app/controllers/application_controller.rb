@@ -4,6 +4,7 @@ class ApplicationController < ActionController::API
   include ExceptionHandler
   include Onboardable
   include Adminable
+  include AbilityCheck
 
   private
 

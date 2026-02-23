@@ -23,7 +23,6 @@ class UserSerializer
       lastfm_connected: user.lastfm_connected?,
       lastfm_username: user.lastfm_username,
       profile_image_url: profile_image_url(user),
-      account_type: user.account_type,
       onboarding_completed: user.onboarding_completed,
       display_name: user.display_name,
       admin: user.admin?,
@@ -35,7 +34,10 @@ class UserSerializer
       followers_count: user.followers_count,   # Use counter cache
       following_count: user.following_count,   # Use counter cache
       email_confirmed: user.email_confirmed?,
-      can_resend_confirmation: user.can_resend_confirmation?
+      can_resend_confirmation: user.can_resend_confirmation?,
+      role: user.role,
+      plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
+      abilities: user.abilities
     )
 
     # Include primary band for BAND accounts
@@ -55,7 +57,7 @@ class UserSerializer
       profile_image_url: profile_image_url(user),
       reviews_count: user.reviews_count,       # Use counter cache
       bands_count: user.bands.count,
-      account_type: user.account_type,
+      role: user.role,
       onboarding_completed: user.onboarding_completed,
       display_name: user.display_name,
       location: user.location,

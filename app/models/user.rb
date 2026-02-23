@@ -9,6 +9,7 @@ class User < ApplicationRecord
   has_many :submitted_tracks, class_name: 'Track', foreign_key: :submitted_by_id, dependent: :nullify
   has_one_attached :profile_image
   belongs_to :primary_band, class_name: 'Band', optional: true
+  belongs_to :plan, optional: true
 
   # Follow associations
   has_many :active_follows, class_name: 'Follow', foreign_key: 'follower_id', dependent: :destroy
@@ -55,8 +56,9 @@ class User < ApplicationRecord
     password_salt&.last(10)
   end
 
-  enum :account_type, { fan: 0, band: 1 }
+  ROLES = %w[fan band blogger].freeze
 
+  validates :role, inclusion: { in: ROLES }, allow_nil: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, length: { minimum: 6 }, if: -> { new_record? || !password.nil? }
@@ -69,11 +71,24 @@ class User < ApplicationRecord
   validates :username, uniqueness: { case_sensitive: false }, allow_blank: true
   validates :username, format: { with: /\A[a-zA-Z0-9_]+\z/, message: "only allows letters, numbers, and underscores" }, allow_blank: true
 
-  # Account type required once onboarding is complete
-  validates :account_type, presence: true, if: :onboarding_completed?
+  # Role required once onboarding is complete
+  validates :role, presence: true, if: :onboarding_completed?
 
   # BAND accounts must have a primary band after onboarding
   validates :primary_band, presence: true, if: :primary_band_required?
+
+  # Role helper methods (replaces account_type enum)
+  def fan?
+    role == "fan"
+  end
+
+  def band?
+    role == "band"
+  end
+
+  def blogger?
+    role == "blogger"
+  end
 
   before_save :downcase_email, :downcase_username
   after_create :send_confirmation_email
@@ -232,6 +247,34 @@ class User < ApplicationRecord
   def can_request_password_reset?
     return true if password_reset_sent_at.nil?
     password_reset_sent_at < 1.minute.ago
+  end
+
+  # RBAC: Get ability keys for current plan
+  def abilities
+    return [] unless plan
+    @abilities_cache ||= plan.abilities.pluck(:key)
+  end
+
+  def clear_abilities_cache!
+    @abilities_cache = nil
+  end
+
+  def can?(ability_key)
+    abilities.include?(ability_key.to_s)
+  end
+
+  def cannot?(ability_key)
+    !can?(ability_key)
+  end
+
+  def upgrade_plan_for(ability_key)
+    return nil if can?(ability_key)
+    Plan.where(role: role, active: true)
+        .joins(:abilities)
+        .where(abilities: { key: ability_key })
+        .where.not(id: plan_id)
+        .order(:price_cents_monthly)
+        .first
   end
 
   private
