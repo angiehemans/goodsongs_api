@@ -127,7 +127,10 @@ class ReviewsController < ApplicationController
 
     # 1. Exact case-insensitive match on band's tracks
     track = band.tracks.where("LOWER(name) = LOWER(?)", song).first
-    return track if track
+    if track
+      queue_streaming_links_if_needed(track)
+      return track
+    end
 
     # 2. Fuzzy match with >0.6 similarity threshold
     similar_track = band.tracks
@@ -135,15 +138,30 @@ class ReviewsController < ApplicationController
       .where("similarity(name, ?) > 0.6", song)
       .order(Arel.sql("similarity(name, #{Track.connection.quote(song)}) DESC"))
       .first
-    return similar_track if similar_track
+    if similar_track
+      queue_streaming_links_if_needed(similar_track)
+      return similar_track
+    end
 
     # 3. Create new user-submitted track
-    Track.create!(
+    track = Track.create!(
       name: song,
       band: band,
       source: :user_submitted,
       submitted_by: current_user
     )
+
+    # Queue background job to enrich track with MusicBrainz data (ISRC, etc.)
+    TrackEnrichmentJob.perform_later(track.id)
+
+    track
+  end
+
+  def queue_streaming_links_if_needed(track)
+    return unless track.isrc.present? && track.streaming_links_fetched_at.nil?
+    StreamingLinksEnrichmentJob.perform_later(track.id)
+  rescue StandardError => e
+    Rails.logger.warn("Failed to queue streaming links for track #{track.id}: #{e.message}")
   end
 
   def band_lastfm_artist_name
@@ -182,10 +200,10 @@ class ReviewsController < ApplicationController
 
     # 5. Create new band
     band = Band.new(name: name)
-    backfill_band(band)
+    backfill_band(band, new_band: true)
   end
 
-  def backfill_band(band)
+  def backfill_band(band, new_band: false)
     if band_lastfm_artist_name.present? && band.lastfm_artist_name.blank?
       band.lastfm_artist_name = band_lastfm_artist_name
     end
@@ -195,7 +213,22 @@ class ReviewsController < ApplicationController
     end
 
     band.save! if band.new_record? || band.changed?
+
+    # Queue enrichment for new bands or existing bands missing streaming links
+    queue_band_enrichment_if_needed(band, new_band: new_band)
+
     band
+  end
+
+  def queue_band_enrichment_if_needed(band, new_band: false)
+    # Always enrich new bands
+    # For existing bands, only enrich if missing streaming links
+    needs_enrichment = new_band || (band.spotify_link.blank? && band.apple_music_link.blank?)
+    return unless needs_enrichment
+
+    BandEnrichmentJob.perform_later(band.id)
+  rescue StandardError => e
+    Rails.logger.warn("Failed to queue band enrichment for band #{band.id}: #{e.message}")
   end
 
 end

@@ -465,7 +465,7 @@ class AdminController < ApplicationController
   end
 
   def admin_band_data(band)
-    BandSerializer.full(band).merge(
+    BandSerializer.full(band, current_user: current_user).merge(
       disabled: band.disabled?
     )
   end

@@ -46,7 +46,7 @@ class DiscoverController < ApplicationController
                          .compact
 
     json_response({
-      bands: paginated_bands.map { |band| BandSerializer.full(band) },
+      bands: paginated_bands.map { |band| BandSerializer.full(band, current_user: authenticated_user) },
       pagination: pagination_meta(page, per_page, total_count),
       query: query
     })
@@ -180,7 +180,7 @@ class DiscoverController < ApplicationController
                           .index_by(&:id)
                           .values_at(*band_ids)
                           .compact
-                          .map { |band| BandSerializer.full(band) }
+                          .map { |band| BandSerializer.full(band, current_user: authenticated_user) }
 
     # Search users
     results[:users] = User.where(disabled: false, onboarding_completed: true, role: "fan")

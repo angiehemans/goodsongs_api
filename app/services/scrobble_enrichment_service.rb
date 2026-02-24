@@ -121,7 +121,8 @@ class ScrobbleEnrichmentService
       spotify_link: extract_streaming_url(full_artist, 'spotify'),
       apple_music_link: extract_streaming_url(full_artist, 'apple_music'),
       bandcamp_link: extract_streaming_url(full_artist, 'bandcamp'),
-      youtube_music_link: extract_streaming_url(full_artist, 'youtube')
+      youtube_music_link: extract_streaming_url(full_artist, 'youtube'),
+      soundcloud_link: extract_streaming_url(full_artist, 'soundcloud')
     )
   end
 
@@ -141,6 +142,7 @@ class ScrobbleEnrichmentService
     updates[:apple_music_link] = extract_streaming_url(full_artist, 'apple_music') if band.apple_music_link.blank?
     updates[:bandcamp_link] = extract_streaming_url(full_artist, 'bandcamp') if band.bandcamp_link.blank?
     updates[:youtube_music_link] = extract_streaming_url(full_artist, 'youtube') if band.youtube_music_link.blank?
+    updates[:soundcloud_link] = extract_streaming_url(full_artist, 'soundcloud') if band.soundcloud_link.blank?
 
     band.update!(updates) if updates.any?
   rescue StandardError => e
@@ -226,14 +228,20 @@ class ScrobbleEnrichmentService
   def find_or_create_track(recording, band, album)
     track = Track.find_by(musicbrainz_recording_id: recording[:mbid])
     if track
-      # Backfill genres if missing
-      if track.genres.blank? && (album&.genres.present? || band&.genres.present?)
-        track.update(genres: album&.genres.presence || band&.genres || [])
-      end
+      # Backfill missing fields
+      updates = {}
+      updates[:genres] = album&.genres.presence || band&.genres || [] if track.genres.blank?
+      updates[:isrc] = recording[:isrcs]&.first if track.isrc.blank? && recording[:isrcs].present?
+      updates[:duration_ms] = recording[:length] if track.duration_ms.blank? && recording[:length].present?
+      track.update!(updates) if updates.any?
+
+      # Queue streaming links enrichment if we have ISRC but no links yet
+      queue_streaming_links_enrichment(track)
+
       return track
     end
 
-    Track.create!(
+    track = Track.create!(
       name: recording[:title],
       band: band,
       album: album,
@@ -242,6 +250,11 @@ class ScrobbleEnrichmentService
       isrc: recording[:isrcs]&.first,
       genres: album&.genres.presence || band&.genres || []
     )
+
+    # Queue streaming links enrichment for new tracks with ISRC
+    queue_streaming_links_enrichment(track)
+
+    track
   end
 
   # Select the best release (album) from available releases
@@ -534,17 +547,30 @@ class ScrobbleEnrichmentService
     # 1. Check by MusicBrainz recording ID if available
     if musicbrainz_id.present?
       track = Track.find_by(musicbrainz_recording_id: musicbrainz_id)
-      return track if track
+      if track
+        # Backfill missing ISRC from MusicBrainz if we have the MBID
+        backfill_track_isrc(track, musicbrainz_id) if track.isrc.blank?
+        queue_streaming_links_enrichment(track)
+        return track
+      end
     end
 
     # 2. Check by TheAudioDB track ID
     if audiodb_track_id.present?
       track = Track.find_by(audiodb_track_id: audiodb_track_id)
-      return track if track
+      if track
+        # Backfill missing ISRC from MusicBrainz if we have the MBID
+        backfill_track_isrc(track, musicbrainz_id) if track.isrc.blank? && musicbrainz_id.present?
+        queue_streaming_links_enrichment(track)
+        return track
+      end
     end
 
     # 3. Create new track from TheAudioDB data
-    Track.create!(
+    # Fetch ISRC from MusicBrainz if we have an MBID (AudioDB doesn't include ISRC)
+    isrc = fetch_isrc_from_musicbrainz(musicbrainz_id) if musicbrainz_id.present?
+
+    track = Track.create!(
       name: track_data[:name],
       band: band,
       album: album,
@@ -552,8 +578,31 @@ class ScrobbleEnrichmentService
       musicbrainz_recording_id: musicbrainz_id,
       duration_ms: track_data[:duration_ms],
       track_number: track_data[:track_number],
+      isrc: isrc,
       genres: album&.genres.presence || band&.genres || []
     )
+
+    queue_streaming_links_enrichment(track)
+    track
+  end
+
+  def backfill_track_isrc(track, musicbrainz_id)
+    return if track.isrc.present? || musicbrainz_id.blank?
+
+    isrc = fetch_isrc_from_musicbrainz(musicbrainz_id)
+    track.update!(isrc: isrc) if isrc.present?
+  rescue StandardError => e
+    Rails.logger.warn("Failed to backfill ISRC for track #{track.id}: #{e.message}")
+  end
+
+  def fetch_isrc_from_musicbrainz(musicbrainz_id)
+    return nil if musicbrainz_id.blank?
+
+    recording = MusicbrainzService.get_recording(musicbrainz_id)
+    recording&.dig(:isrcs)&.first
+  rescue StandardError => e
+    Rails.logger.warn("Failed to fetch ISRC from MusicBrainz for #{musicbrainz_id}: #{e.message}")
+    nil
   end
 
   def extract_audiodb_genres(artist_data)
@@ -736,10 +785,16 @@ class ScrobbleEnrichmentService
 
     # 1. Check by Discogs track ID
     track = Track.find_by(discogs_track_id: discogs_track_id)
-    return track if track
+    if track
+      # Queue enrichment job if missing ISRC (Discogs doesn't provide ISRC)
+      queue_track_enrichment(track) if track.isrc.blank?
+      # Queue streaming links if we have ISRC
+      queue_streaming_links_enrichment(track)
+      return track
+    end
 
     # 2. Create new track from Discogs data
-    Track.create!(
+    track = Track.create!(
       name: track_data[:title],
       band: band,
       album: album,
@@ -748,6 +803,32 @@ class ScrobbleEnrichmentService
       track_number: parse_track_position(track_data[:position]),
       genres: album&.genres.presence || band&.genres || []
     )
+
+    # Queue background job to fetch ISRC from MusicBrainz
+    # (This will in turn queue streaming links once ISRC is fetched)
+    queue_track_enrichment(track)
+
+    track
+  end
+
+  def queue_track_enrichment(track)
+    return unless track&.id
+    return if track.isrc.present? && track.musicbrainz_recording_id.present?
+
+    TrackEnrichmentJob.perform_later(track.id)
+  rescue StandardError => e
+    Rails.logger.warn("Failed to queue track enrichment for track #{track.id}: #{e.message}")
+  end
+
+  # Queue streaming links enrichment if track has ISRC but no links yet
+  def queue_streaming_links_enrichment(track)
+    return unless track&.id
+    return if track.isrc.blank?
+    return if track.streaming_links_fetched_at.present?
+
+    StreamingLinksEnrichmentJob.perform_later(track.id)
+  rescue StandardError => e
+    Rails.logger.warn("Failed to queue streaming links enrichment for track #{track.id}: #{e.message}")
   end
 
   def parse_discogs_duration(duration_string)

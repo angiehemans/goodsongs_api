@@ -37,7 +37,8 @@ class UserSerializer
       can_resend_confirmation: user.can_resend_confirmation?,
       role: user.role,
       plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
-      abilities: user.abilities
+      abilities: user.abilities,
+      preferred_streaming_platform: user.preferred_streaming_platform
     )
 
     # Include primary band for BAND accounts

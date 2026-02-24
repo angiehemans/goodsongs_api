@@ -5,6 +5,7 @@ class ScrobbleCacheService
   MUSICBRAINZ_CACHE_TTL = 24.hours
   COVER_ART_CACHE_TTL = 24.hours
   DISCOGS_CACHE_TTL = 24.hours
+  ODESLI_CACHE_TTL = 7.days
 
   class << self
     # Cache key for user's recent scrobbles
@@ -231,6 +232,38 @@ class ScrobbleCacheService
 
       Rails.cache.fetch(cache_key, expires_in: AUDIODB_CACHE_TTL) do
         AudioDbService.get_artist_by_mbid(mbid)
+      end
+    end
+
+    # ============================================
+    # Odesli (song.link) Caching
+    # ============================================
+
+    # Cache key for Odesli ISRC lookup
+    def odesli_isrc_key(isrc)
+      "odesli:isrc:#{isrc}"
+    end
+
+    # Get cached Odesli links by ISRC or fetch from API
+    def get_odesli_links_by_isrc(isrc, country: 'US')
+      cache_key = odesli_isrc_key(isrc)
+
+      Rails.cache.fetch(cache_key, expires_in: ODESLI_CACHE_TTL) do
+        OdesliService.get_links_by_isrc(isrc, country: country)
+      end
+    end
+
+    # Cache key for Odesli URL lookup
+    def odesli_url_key(url)
+      "odesli:url:#{Digest::SHA256.hexdigest(url)}"
+    end
+
+    # Get cached Odesli links by URL or fetch from API
+    def get_odesli_links_by_url(url, country: 'US')
+      cache_key = odesli_url_key(url)
+
+      Rails.cache.fetch(cache_key, expires_in: ODESLI_CACHE_TTL) do
+        OdesliService.get_links_by_url(url, country: country)
       end
     end
   end

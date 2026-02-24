@@ -15,8 +15,8 @@ class ReviewSerializer
       mentions: serialize_mentions(mentions),
       liked_aspects: review.liked_aspects_array,
       genres: review.genres || [],
-      track: review.track ? track_summary(review.track) : nil,
-      band: BandSerializer.full(review.band),
+      track: review.track ? track_summary(review.track, current_user: current_user) : nil,
+      band: BandSerializer.full(review.band, current_user: current_user),
       author: {
         id: review.user.id,
         username: review.user.username,
@@ -42,7 +42,7 @@ class ReviewSerializer
       mentions: serialize_mentions(mentions),
       liked_aspects: review.liked_aspects_array,
       genres: review.genres || [],
-      track: review.track ? track_summary(review.track) : nil,
+      track: review.track ? track_summary(review.track, current_user: current_user) : nil,
       author: {
         id: review.user.id,
         username: review.user.username,
@@ -65,13 +65,24 @@ class ReviewSerializer
     }
   end
 
-  def self.track_summary(track)
+  def self.track_summary(track, current_user: nil)
     {
       id: track.id,
       name: track.name,
       album: track.album ? { id: track.album.id, name: track.album.name } : nil,
-      source: track.source
+      source: track.source,
+      streaming_links: track.streaming_links || {},
+      preferred_track_link: preferred_track_link_for(track, current_user),
+      songlink_url: track.songlink_url,
+      songlink_search_url: track.songlink_search_url
     }
+  end
+
+  def self.preferred_track_link_for(track, user)
+    return nil unless user&.preferred_streaming_platform.present?
+
+    links = track.streaming_links || {}
+    links[user.preferred_streaming_platform]
   end
 
   def self.serialize_mentions(mentions)

@@ -39,7 +39,8 @@ module Api
           lastfm_connected: current_user.lastfm_connected?,
           lastfm_username: current_user.lastfm_username,
           email_confirmed: current_user.email_confirmed?,
-          admin: current_user.admin?
+          admin: current_user.admin?,
+          preferred_streaming_platform: current_user.preferred_streaming_platform
         }
       end
 
@@ -51,7 +52,7 @@ module Api
       # User's recent reviews with eager loading
       def recent_reviews
         reviews = current_user.reviews
-                              .includes(:band)
+                              .includes(:band, :track)
                               .order(created_at: :desc)
                               .limit(5)
 
@@ -63,7 +64,9 @@ module Api
             artwork_url: review.artwork_url,
             created_at: review.created_at.iso8601,
             likes_count: review.likes_count,
-            comments_count: review.comments_count
+            comments_count: review.comments_count,
+            track: review.track ? track_with_links(review.track) : nil,
+            band: band_with_links(review.band)
           }
         end
       end
@@ -103,7 +106,9 @@ module Api
             created_at: review.created_at.iso8601,
             likes_count: review.likes_count,
             comments_count: review.comments_count,
-            liked_by_current_user: liked_review_ids.include?(review.id)
+            liked_by_current_user: liked_review_ids.include?(review.id),
+            track: review.track ? track_with_links(review.track) : nil,
+            band: band_with_links(review.band)
           }
         end
       end
@@ -128,7 +133,7 @@ module Api
         end
 
         Review.from_active_users
-              .includes(:user, :band)
+              .includes(:user, :band, :track)
               .where(conditions.join(' OR '), *values)
               .order(created_at: :desc)
               .limit(limit)
@@ -181,6 +186,54 @@ module Api
           { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
         else
           Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
+        end
+      end
+
+      def track_with_links(track)
+        links = track.streaming_links || {}
+        {
+          id: track.id,
+          name: track.name,
+          streaming_links: links,
+          preferred_track_link: preferred_track_link(links),
+          songlink_url: track.songlink_url,
+          songlink_search_url: track.songlink_search_url
+        }
+      end
+
+      def band_with_links(band)
+        return nil unless band
+
+        {
+          id: band.id,
+          name: band.name,
+          slug: band.slug,
+          spotify_link: band.spotify_link,
+          apple_music_link: band.apple_music_link,
+          bandcamp_link: band.bandcamp_link,
+          youtube_music_link: band.youtube_music_link,
+          soundcloud_link: band.soundcloud_link,
+          preferred_band_link: preferred_band_link(band)
+        }
+      end
+
+      def preferred_track_link(links)
+        pref = current_user.preferred_streaming_platform
+        return nil unless pref.present?
+
+        links[pref]
+      end
+
+      def preferred_band_link(band)
+        pref = current_user.preferred_streaming_platform
+        return nil unless pref.present?
+
+        case pref
+        when 'spotify' then band.spotify_link
+        when 'appleMusic' then band.apple_music_link
+        when 'bandcamp' then band.bandcamp_link
+        when 'youtubeMusic' then band.youtube_music_link
+        when 'soundcloud' then band.soundcloud_link
         end
       end
     end

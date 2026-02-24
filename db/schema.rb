@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_23_163136) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -130,6 +130,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_163136) do
     t.string "audiodb_artist_id"
     t.string "artist_image_source"
     t.datetime "artist_image_cached_at"
+    t.string "soundcloud_link"
     t.index ["artist_image_source"], name: "index_bands_on_artist_image_source", where: "(artist_image_source IS NOT NULL)"
     t.index ["audiodb_artist_id"], name: "index_bands_on_audiodb_artist_id", unique: true, where: "(audiodb_artist_id IS NOT NULL)"
     t.index ["created_at"], name: "index_bands_on_created_at"
@@ -368,12 +369,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_163136) do
     t.boolean "verified", default: false, null: false
     t.bigint "submitted_by_id"
     t.string "audiodb_track_id"
+    t.jsonb "streaming_links", default: {}
+    t.string "songlink_url"
+    t.datetime "streaming_links_fetched_at"
     t.index ["album_id"], name: "index_tracks_on_album_id"
     t.index ["audiodb_track_id"], name: "index_tracks_on_audiodb_track_id", unique: true, where: "(audiodb_track_id IS NOT NULL)"
     t.index ["band_id"], name: "index_tracks_on_band_id"
     t.index ["musicbrainz_recording_id"], name: "index_tracks_on_musicbrainz_recording_id", unique: true
     t.index ["name"], name: "index_tracks_on_name"
     t.index ["name"], name: "index_tracks_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
+    t.index ["streaming_links"], name: "index_tracks_on_streaming_links", using: :gin
+    t.index ["streaming_links_fetched_at"], name: "index_tracks_needing_streaming_links", where: "((isrc IS NOT NULL) AND (streaming_links_fetched_at IS NULL))"
     t.index ["submitted_by_id"], name: "index_tracks_on_submitted_by_id"
   end
 
@@ -407,6 +413,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_23_163136) do
     t.boolean "dark_mode", default: false, null: false
     t.string "role"
     t.bigint "plan_id"
+    t.string "preferred_streaming_platform"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
     t.index ["lastfm_username"], name: "index_users_on_lastfm_username"

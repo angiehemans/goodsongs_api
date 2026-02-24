@@ -92,7 +92,7 @@ class OnboardingController < ApplicationController
       json_response({
         message: 'Band profile completed successfully',
         user: UserSerializer.profile_data(current_user),
-        band: BandSerializer.full(band)
+        band: BandSerializer.full(band, current_user: current_user)
       })
     end
   end

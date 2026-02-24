@@ -8,7 +8,7 @@ class BandsController < ApplicationController
 
   def index
     bands = QueryService.bands_ordered_by_name
-    json_response(bands.map { |band| BandSerializer.full(band) })
+    json_response(bands.map { |band| BandSerializer.full(band, current_user: authenticated_user) })
   end
 
   def show
@@ -16,14 +16,14 @@ class BandsController < ApplicationController
     if @band.disabled?
       return render json: { error: 'Band not found' }, status: :not_found
     end
-    json_response(BandSerializer.with_reviews(@band))
+    json_response(BandSerializer.with_reviews(@band, current_user: authenticated_user))
   end
 
   def create
     @band = current_user.bands.build(band_params)
 
     if @band.save
-      json_response(BandSerializer.full(@band), :created)
+      json_response(BandSerializer.full(@band, current_user: current_user), :created)
     else
       render_errors(@band)
     end
@@ -31,7 +31,7 @@ class BandsController < ApplicationController
 
   def update
     if @band.update(band_params)
-      json_response(BandSerializer.full(@band))
+      json_response(BandSerializer.full(@band, current_user: current_user))
     else
       render_errors(@band)
     end
@@ -44,12 +44,12 @@ class BandsController < ApplicationController
 
   def my_bands
     bands = QueryService.user_bands_with_reviews(current_user)
-    json_response(bands.map { |band| BandSerializer.full(band) })
+    json_response(bands.map { |band| BandSerializer.full(band, current_user: current_user) })
   end
 
   def user_bands
     bands = QueryService.user_bands_with_reviews(current_user)
-    json_response(bands.map { |band| BandSerializer.full(band) })
+    json_response(bands.map { |band| BandSerializer.full(band, current_user: current_user) })
   end
 
   private

@@ -421,7 +421,8 @@ Get current authenticated user's profile.
     "key": "fan_free",
     "name": "Fan Free"
   },
-  "abilities": ["create_recommendation", "follow_users", "create_comments", "scrobble_lastfm"]
+  "abilities": ["create_recommendation", "follow_users", "create_comments", "scrobble_lastfm"],
+  "preferred_streaming_platform": "spotify"
 }
 ```
 
@@ -455,6 +456,7 @@ For BAND accounts:
     "name": "Band Starter"
   },
   "abilities": ["create_recommendation", "manage_storefront", "follow_users", "create_comments", "send_newsletter", "view_analytics", "manage_band_profile", "upload_music", "manage_events", "custom_design"],
+  "preferred_streaming_platform": null,
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -482,7 +484,15 @@ about_me: "Updated bio"
 profile_image: <file>
 city: "Los Angeles"
 region: "California"
+preferred_streaming_platform: "spotify"
 ```
+
+**Fields:**
+- `about_me` (optional): User bio (max 500 characters)
+- `profile_image` (optional): Profile image file
+- `city` (optional): City name (max 100 characters)
+- `region` (optional): State/province/country (max 100 characters)
+- `preferred_streaming_platform` (optional): User's preferred streaming service. Valid values: `spotify`, `appleMusic`, `youtubeMusic`, `tidal`, `amazonMusic`, `deezer`, `soundcloud`, `bandcamp`. Set to `null` to clear preference.
 
 Note: When city/region are provided, latitude and longitude are automatically calculated via geocoding. The `region` field can be used for US states (e.g., "California"), countries (e.g., "United Kingdom"), or provinces (e.g., "Ontario, Canada").
 
@@ -829,6 +839,9 @@ When a review is created, the system automatically links it to an existing track
 2. If no exact match, uses fuzzy matching (PostgreSQL trigram similarity >0.6)
 3. If no match found, creates a new user-submitted track linked to the band
 
+**Streaming Links:**
+The `track` object includes `streaming_links` and `songlink_url` fields that provide links to listen to the track on various streaming platforms. Supported platforms: spotify, appleMusic, youtubeMusic, tidal, amazonMusic, deezer, soundcloud, bandcamp. Links are fetched asynchronously using the Odesli (song.link) API based on the track's ISRC code.
+
 **Response (201 Created):**
 Returns created review object including `genres` array and `track` object (if linked)
 
@@ -869,7 +882,14 @@ Response:
     "id": "uuid-here",
     "name": "Karma Police",
     "album": null,
-    "source": "user_submitted"
+    "source": "user_submitted",
+    "streaming_links": {
+      "spotify": "https://open.spotify.com/track/...",
+      "appleMusic": "https://music.apple.com/us/album/...",
+      "youtubeMusic": "https://music.youtube.com/watch?v=...",
+      "tidal": "https://tidal.com/track/..."
+    },
+    "songlink_url": "https://song.link/..."
   },
   "band": { ... },
   "author": { ... },
@@ -3957,7 +3977,18 @@ Get the current user's scrobbles with cursor-based pagination.
             "id": 3,
             "name": "Album Name",
             "cover_art_url": "https://..."
-          }
+          },
+          "streaming_links": {
+            "spotify": "https://open.spotify.com/track/...",
+            "appleMusic": "https://music.apple.com/us/album/...",
+            "youtubeMusic": "https://music.youtube.com/watch?v=...",
+            "tidal": "https://tidal.com/track/...",
+            "amazonMusic": "https://music.amazon.com/albums/...",
+            "deezer": "https://www.deezer.com/track/...",
+            "soundcloud": "https://soundcloud.com/...",
+            "bandcamp": "https://artist.bandcamp.com/track/..."
+          },
+          "songlink_url": "https://song.link/..."
         }
       }
     ],
@@ -3975,8 +4006,10 @@ Get the current user's scrobbles with cursor-based pagination.
 - `genre` - Genre metadata from Android client (if provided)
 - `year` - Release year metadata from Android client (if provided)
 - `album_artist` - Album artist metadata from Android client (if provided)
+- `track.streaming_links` - Object containing streaming platform URLs (spotify, appleMusic, youtubeMusic, tidal, amazonMusic, deezer, soundcloud, bandcamp). Only platforms where the track is available are included. Empty object `{}` if not yet fetched or track not found on any platform.
+- `track.songlink_url` - Universal song.link URL that redirects users to their preferred streaming platform
 
-Note: The `track` field is `null` when metadata enrichment has not yet completed.
+Note: The `track` field is `null` when metadata enrichment has not yet completed. Streaming links are fetched asynchronously after the track's ISRC code is obtained.
 
 ---
 

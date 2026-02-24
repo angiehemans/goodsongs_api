@@ -57,8 +57,10 @@ class User < ApplicationRecord
   end
 
   ROLES = %w[fan band blogger].freeze
+  STREAMING_PLATFORMS = %w[spotify appleMusic youtubeMusic tidal amazonMusic deezer soundcloud bandcamp].freeze
 
   validates :role, inclusion: { in: ROLES }, allow_nil: true
+  validates :preferred_streaming_platform, inclusion: { in: STREAMING_PLATFORMS }, allow_nil: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }
   validates :password, length: { minimum: 6 }, if: -> { new_record? || !password.nil? }
@@ -90,6 +92,7 @@ class User < ApplicationRecord
     role == "blogger"
   end
 
+  before_validation :normalize_preferred_streaming_platform
   before_save :downcase_email, :downcase_username
   after_create :send_confirmation_email
 
@@ -290,6 +293,11 @@ class User < ApplicationRecord
 
   def primary_band_required?
     band? && onboarding_completed?
+  end
+
+  def normalize_preferred_streaming_platform
+    # Convert empty string to nil so validation passes
+    self.preferred_streaming_platform = nil if preferred_streaming_platform.blank?
   end
 
   def downcase_email

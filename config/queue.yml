@@ -7,6 +7,11 @@ default: &default
       threads: 3
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
       polling_interval: 0.1
+    # Odesli queue: single-threaded with 6-second polling to respect rate limit (10 req/min)
+    - queues: [odesli]
+      threads: 1
+      processes: 1
+      polling_interval: 6
 
 development:
   <<: *default
