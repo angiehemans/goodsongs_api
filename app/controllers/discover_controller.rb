@@ -74,7 +74,8 @@ class DiscoverController < ApplicationController
       total_count = users.count
       paginated_users = users.offset((page - 1) * per_page).limit(per_page)
     else
-      users = base_scope.order(created_at: :desc)
+      # Order by most reviews first, then by newest for users without reviews
+      users = base_scope.order(reviews_count: :desc, created_at: :desc)
       total_count = users.count
       paginated_users = users.offset((page - 1) * per_page).limit(per_page)
     end
