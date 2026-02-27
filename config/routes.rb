@@ -142,6 +142,34 @@ Rails.application.routes.draw do
     end
   end
 
+  # Public blog routes (by username)
+  # /blogs/:username is an alias for /users/:username (returns full profile with reviews + posts)
+  get 'blogs/:username', to: 'users#profile_by_username', as: :user_blog
+  get 'blogs/:username/:slug', to: 'posts#show', as: :blog_post
+
+  # Authenticated post management
+  get '/posts/liked', to: 'post_likes#index'
+  resources :posts, except: [:new, :edit, :index, :show] do
+    collection do
+      get :my, to: 'posts#my_posts'
+    end
+    member do
+      post 'like', to: 'post_likes#create'
+      delete 'like', to: 'post_likes#destroy'
+    end
+    resources :comments, controller: 'post_comments', only: [:index, :create, :update, :destroy]
+  end
+  # GET /posts/:id for owner to fetch their post for editing
+  get '/posts/:id', to: 'posts#show_by_id', as: :post_by_id
+
+  # Post comment actions (standalone endpoints)
+  post '/post_comments/claim', to: 'post_comments#claim'
+  post '/post_comments/:comment_id/like', to: 'post_comment_likes#create'
+  delete '/post_comments/:comment_id/like', to: 'post_comment_likes#destroy'
+
+  # Blog image uploads for post content
+  resources :blog_images, only: [:create]
+
   # Discover routes (public, no auth required)
   get '/discover/search', to: 'discover#search'
   get '/discover/bands', to: 'discover#bands'
@@ -158,6 +186,9 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Fan dashboard - combined endpoint for all dashboard data
       get 'fan_dashboard', to: 'fan_dashboard#show'
+
+      # Blogger dashboard - combined endpoint for blogger dashboard data
+      get 'blogger_dashboard', to: 'blogger_dashboard#show'
 
       resources :scrobbles, only: [:index, :create, :destroy] do
         collection do

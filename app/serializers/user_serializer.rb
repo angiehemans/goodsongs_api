@@ -38,7 +38,8 @@ class UserSerializer
       role: user.role,
       plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
       abilities: user.abilities,
-      preferred_streaming_platform: user.preferred_streaming_platform
+      preferred_streaming_platform: user.preferred_streaming_platform,
+      allow_anonymous_comments: user.allow_anonymous_comments
     )
 
     # Include primary band for BAND accounts
@@ -63,7 +64,8 @@ class UserSerializer
       display_name: user.display_name,
       location: user.location,
       followers_count: user.followers_count,   # Use counter cache
-      following_count: user.following_count    # Use counter cache
+      following_count: user.following_count,   # Use counter cache
+      allow_anonymous_comments: user.allow_anonymous_comments
     }
 
     # Include primary band for BAND accounts

@@ -422,7 +422,8 @@ Get current authenticated user's profile.
     "name": "Fan Free"
   },
   "abilities": ["create_recommendation", "follow_users", "create_comments", "scrobble_lastfm"],
-  "preferred_streaming_platform": "spotify"
+  "preferred_streaming_platform": "spotify",
+  "allow_anonymous_comments": false
 }
 ```
 
@@ -457,6 +458,7 @@ For BAND accounts:
   },
   "abilities": ["create_recommendation", "manage_storefront", "follow_users", "create_comments", "send_newsletter", "view_analytics", "manage_band_profile", "upload_music", "manage_events", "custom_design"],
   "preferred_streaming_platform": null,
+  "allow_anonymous_comments": false,
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -485,6 +487,7 @@ profile_image: <file>
 city: "Los Angeles"
 region: "California"
 preferred_streaming_platform: "spotify"
+allow_anonymous_comments: true
 ```
 
 **Fields:**
@@ -493,6 +496,7 @@ preferred_streaming_platform: "spotify"
 - `city` (optional): City name (max 100 characters)
 - `region` (optional): State/province/country (max 100 characters)
 - `preferred_streaming_platform` (optional): User's preferred streaming service. Valid values: `spotify`, `appleMusic`, `youtubeMusic`, `tidal`, `amazonMusic`, `deezer`, `soundcloud`, `bandcamp`. Set to `null` to clear preference.
+- `allow_anonymous_comments` (optional): Whether to allow anonymous comments on the user's blog posts (default: false). Useful for bloggers who want guest engagement.
 
 Note: When city/region are provided, latitude and longitude are automatically calculated via geocoding. The `region` field can be used for US states (e.g., "California"), countries (e.g., "United Kingdom"), or provinces (e.g., "Ontario, Canada").
 
@@ -509,7 +513,7 @@ Alias for PATCH /profile (for frontend compatibility).
 
 ### GET /users/:username
 
-Get public profile for a user by username with paginated reviews.
+Get public profile for a user by username with paginated reviews. For blogger users, also includes paginated blog posts.
 
 **Authentication:** None (optional - if authenticated, includes `following` field and `liked_by_current_user` for reviews)
 
@@ -517,6 +521,10 @@ Get public profile for a user by username with paginated reviews.
 
 - `page` (optional): Page number for reviews (default: 1)
 - `per_page` (optional): Reviews per page (default: 20, max: 50)
+- `posts_page` (optional): Page number for posts - blogger users only (default: 1)
+- `posts_per_page` (optional): Posts per page - blogger users only (default: 10, max: 50)
+- `tag` (optional): Filter posts by tag - blogger users only
+- `category` (optional): Filter posts by category - blogger users only
 
 **Response (200 OK):**
 
@@ -534,6 +542,7 @@ Get public profile for a user by username with paginated reviews.
   "location": "Los Angeles, California",
   "followers_count": 25,
   "following_count": 12,
+  "allow_anonymous_comments": false,
   "following": true,
   "reviews": [
     {
@@ -575,11 +584,40 @@ Get public profile for a user by username with paginated reviews.
       "reviews_count": 5,
       "user_owned": true
     }
-  ]
+  ],
+  "posts": [
+    {
+      "id": 1,
+      "slug": "my-first-post",
+      "title": "My First Post",
+      "excerpt": "A short preview...",
+      "featured_image_url": "https://...",
+      "featured": false,
+      "tags": ["music", "reviews"],
+      "categories": ["opinion"],
+      "authors": [
+        { "name": "John Doe", "url": "https://example.com" }
+      ],
+      "publish_date": "2024-12-01T00:00:00.000Z",
+      "created_at": "2024-12-01T00:00:00.000Z"
+    }
+  ],
+  "posts_pagination": {
+    "current_page": 1,
+    "per_page": 10,
+    "total_count": 5,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
 }
 ```
 
-Note: The `following` field is only included if the request includes a valid authentication token. The `liked_by_current_user` field on reviews reflects whether the authenticated user has liked each review.
+**Notes:**
+- The `following` field is only included if the request includes a valid authentication token
+- The `liked_by_current_user` field on reviews reflects whether the authenticated user has liked each review
+- The `posts` and `posts_pagination` fields are only included for blogger users
+- Posts are ordered with featured posts first, then by publish date (newest first)
 
 ---
 
@@ -2534,6 +2572,7 @@ Update any user's profile (admin only).
   "admin": true,
   "disabled": false,
   "role": "fan",
+  "plan_id": 3,
   "lastfm_username": "lastfm_user",
   "onboarding_completed": true
 }
@@ -2551,6 +2590,7 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
 - `admin` - Admin status (cannot modify your own admin status)
 - `disabled` - Account disabled status
 - `role` - "fan", "band", or "blogger"
+- `plan_id` - Assign a subscription plan by ID (use GET /admin/plans to list available plans)
 - `lastfm_username` - Connected Last.fm username
 - `onboarding_completed` - Onboarding status
 - `profile_image` - Profile image file (multipart/form-data)
@@ -2571,6 +2611,12 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
     "latitude": 40.7128,
     "longitude": -74.006,
     "role": "fan",
+    "plan": {
+      "id": 3,
+      "key": "band_starter",
+      "name": "Band Starter"
+    },
+    "abilities": ["create_recommendation", "follow_users", "create_comments", "manage_band_profile", "upload_music", "view_analytics", "manage_storefront", "send_newsletter", "manage_events", "custom_design", "create_blog_post", "attach_images", "attach_songs", "draft_posts", "manage_tags", "rss_feed"],
     "onboarding_completed": true,
     "admin": true,
     "disabled": false,
@@ -3708,6 +3754,123 @@ Get all fan dashboard data in a single optimized request. Reduces 17+ API calls 
 
 ---
 
+### GET /api/v1/blogger_dashboard
+
+Get all blogger dashboard data in a single optimized request.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "profile": {
+    "id": 1,
+    "username": "musicblogger",
+    "email": "blogger@example.com",
+    "about_me": "Music writer and critic",
+    "profile_image_url": "https://...",
+    "role": "blogger",
+    "plan": {
+      "key": "blogger",
+      "name": "Blogger"
+    },
+    "abilities": ["create_blog_post", "attach_images", "draft_posts", "manage_tags", "..."],
+    "display_name": "musicblogger",
+    "location": "New York, NY",
+    "followers_count": 150,
+    "following_count": 45,
+    "reviews_count": 25,
+    "posts_count": 12,
+    "lastfm_connected": false,
+    "lastfm_username": null,
+    "email_confirmed": true,
+    "admin": false,
+    "preferred_streaming_platform": "spotify"
+  },
+  "unread_notifications_count": 5,
+  "recent_reviews": [
+    {
+      "id": 1,
+      "song_name": "Song Title",
+      "band_name": "Artist Name",
+      "artwork_url": "https://...",
+      "created_at": "2026-02-25T00:00:00Z",
+      "likes_count": 8,
+      "comments_count": 3
+    }
+  ],
+  "recently_played": [],
+  "following_feed_preview": [
+    {
+      "id": 1,
+      "song_name": "Song Title",
+      "band_name": "Artist Name",
+      "artwork_url": "https://...",
+      "review_text": "Great song! This is a truncated preview...",
+      "author": {
+        "id": 2,
+        "username": "followeduser",
+        "profile_image_url": "https://..."
+      },
+      "created_at": "2026-02-25T00:00:00Z",
+      "likes_count": 3,
+      "comments_count": 1,
+      "liked_by_current_user": false
+    }
+  ],
+  "recent_posts": [
+    {
+      "id": 1,
+      "title": "My Latest Album Review",
+      "slug": "my-latest-album-review",
+      "excerpt": "A deep dive into the new release...",
+      "status": "published",
+      "featured": true,
+      "publish_date": "2026-02-25T10:00:00Z",
+      "created_at": "2026-02-24T15:00:00Z",
+      "updated_at": "2026-02-25T09:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "Draft: Upcoming Concert Preview",
+      "slug": "draft-upcoming-concert-preview",
+      "excerpt": null,
+      "status": "draft",
+      "featured": false,
+      "publish_date": null,
+      "created_at": "2026-02-25T08:00:00Z",
+      "updated_at": "2026-02-25T08:00:00Z"
+    }
+  ],
+  "posts_stats": {
+    "total_posts": 12,
+    "published_posts": 8,
+    "draft_posts": 3,
+    "scheduled_posts": 1
+  }
+}
+```
+
+**Response Fields:**
+
+- `profile` - Current user profile data including `posts_count`
+- `unread_notifications_count` - Number of unread notifications
+- `recent_reviews` - User's 5 most recent song reviews
+- `recently_played` - Always empty array for bloggers (they don't use scrobbling)
+- `following_feed_preview` - First 5 items from combined feed (user's own + followed users' reviews)
+- `recent_posts` - User's 5 most recent blog posts (all statuses)
+- `posts_stats` - Post counts by status (total, published, draft, scheduled)
+
+**Notes:**
+
+- This endpoint is optimized for the blogger dashboard page
+- Returns the same base format as fan_dashboard for frontend compatibility
+- `recently_played` is always empty (bloggers focus on posts, not scrobbling)
+- `recent_posts` includes drafts and scheduled posts (only visible to the owner)
+
+---
+
 ## Scrobble Endpoints
 
 All scrobble endpoints are namespaced under `/api/v1`. Scrobbles represent track listening history.
@@ -4394,6 +4557,955 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
       - `mentions`: Array of mentioned user details (user_id, username, display_name)
     - Frontend can parse the `[@text](user:id)` format with regex: `/\[@(\w+)\]\(user:(\d+)\)/g`
     - **Combined notifications**: If someone comments on your review AND mentions you in that comment, you receive a single combined notification (not two separate ones). The notification will have `mentioned: true` and the message will say "mentioned you in a comment on your review"
+
+---
+
+## Blog/Posts Endpoints
+
+Blog posts allow bands (starter+ plans) and bloggers to publish long-form content.
+
+### GET /blogs/:username
+
+Alias for `GET /users/:username`. Returns the full user profile with reviews and posts (for blogger users).
+
+This endpoint exists so frontend routes like `/blog/:username` can call `/blogs/:username` on the backend with matching semantics.
+
+**See:** [GET /users/:username](#get-usersusername) for full documentation.
+
+**Authentication:** Optional (if authenticated, includes `following` field and `liked_by_current_user` for reviews)
+
+**Query Parameters:**
+
+- `page` (optional): Page number for reviews (default: 1)
+- `per_page` (optional): Reviews per page (default: 20, max: 50)
+- `posts_page` (optional): Page number for posts (default: 1)
+- `posts_per_page` (optional): Posts per page (default: 10, max: 50)
+- `tag` (optional): Filter posts by tag
+- `category` (optional): Filter posts by category
+
+---
+
+### GET /blogs/:username/:slug
+
+Get a single blog post by slug.
+
+**Authentication:** Optional (owner can view drafts/scheduled posts)
+
+**URL Parameters:**
+
+- `username` (required): The username of the blog owner
+- `slug` (required): The post slug
+
+**Response (200 OK):**
+
+```json
+{
+  "id": 1,
+  "title": "My First Post",
+  "slug": "my-first-post",
+  "excerpt": "A brief introduction...",
+  "body": "<p>Full HTML content from Tiptap editor...</p>",
+  "featured": false,
+  "status": "published",
+  "publish_date": "2026-02-25T10:00:00Z",
+  "featured_image_url": "https://...",
+  "tags": ["music", "reviews"],
+  "categories": ["tutorials"],
+  "authors": [
+    { "name": "John Doe", "url": null }
+  ],
+  "author": {
+    "id": 123,
+    "username": "johndoe",
+    "display_name": "John Doe",
+    "profile_image_url": "https://...",
+    "allow_anonymous_comments": true
+  },
+  "song": {
+    "song_name": "Bohemian Rhapsody",
+    "band_name": "Queen",
+    "album_name": "A Night at the Opera",
+    "artwork_url": "https://...",
+    "song_link": "https://song.link/...",
+    "streaming_links": {
+      "spotify": "https://open.spotify.com/track/...",
+      "appleMusic": "https://music.apple.com/...",
+      "youtubeMusic": "https://music.youtube.com/...",
+      "tidal": "https://tidal.com/...",
+      "amazonMusic": "https://music.amazon.com/...",
+      "deezer": "https://deezer.com/...",
+      "soundcloud": "https://soundcloud.com/...",
+      "bandcamp": "https://....bandcamp.com/..."
+    },
+    "preferred_link": "https://open.spotify.com/track/...",
+    "songlink_url": "https://song.link/...",
+    "songlink_search_url": "https://www.google.com/search?q=Queen%20Bohemian%20Rhapsody%20spotify%20OR%20apple%20music",
+    "band_links": {
+      "spotify": "https://open.spotify.com/artist/...",
+      "apple_music": "https://music.apple.com/artist/...",
+      "youtube_music": "https://music.youtube.com/channel/...",
+      "bandcamp": "https://queen.bandcamp.com",
+      "soundcloud": null,
+      "preferred_link": "https://open.spotify.com/artist/..."
+    }
+  },
+  "likes_count": 42,
+  "liked_by_current_user": false,
+  "comments_count": 5,
+  "can_edit": false,
+  "created_at": "2026-02-25T09:00:00Z",
+  "updated_at": "2026-02-25T10:00:00Z"
+}
+```
+
+**Notes:**
+
+- Non-published posts return 404 unless viewed by the owner
+- `can_edit` is true only when the authenticated user is the post owner
+- `song` is `null` if no song is attached to the post
+- `song.streaming_links` contains platform-specific URLs fetched via Track enrichment
+- `song.preferred_link` returns the streaming link matching the user's `preferred_streaming_platform` setting
+- `song.songlink_search_url` is a fallback Google search URL when streaming links aren't available yet
+- `song.band_links` contains the artist's streaming platform profile URLs
+- `likes_count` shows the total number of likes on the post
+- `liked_by_current_user` indicates whether the authenticated user has liked this post
+- `comments_count` shows the total number of comments on the post
+
+---
+
+### GET /posts/:id
+
+Get a post by ID (owner only). Used for editing posts.
+
+**Authentication:** Required (owner only)
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (200 OK):**
+
+Returns the full post object (same as GET /blogs/:username/:slug).
+
+**Response (401 Unauthorized):**
+
+```json
+{
+  "error": "You can only modify resources you own"
+}
+```
+
+**Notes:**
+
+- Only the post owner can access this endpoint
+- Returns full post data including body for editing
+- Use this endpoint when you have the post ID (e.g., from the management list)
+
+---
+
+### POST /posts
+
+Create a new blog post.
+
+**Authentication:** Required
+
+**Required Ability:** `create_blog_post`
+
+**Request Body:**
+
+```json
+{
+  "post": {
+    "title": "My New Post",
+    "slug": "my-new-post",
+    "excerpt": "Optional excerpt for previews",
+    "body": "<p>HTML content</p>",
+    "status": "draft",
+    "featured": false,
+    "publish_date": "2026-03-01T12:00:00Z",
+    "tags": ["music", "news"],
+    "categories": ["announcements"],
+    "authors": [
+      { "name": "Guest Author", "url": "https://guest.com" }
+    ],
+    "song_name": "Bohemian Rhapsody",
+    "band_name": "Queen",
+    "album_name": "A Night at the Opera",
+    "artwork_url": "https://example.com/artwork.jpg",
+    "song_link": "https://song.link/example"
+  }
+}
+```
+
+**Response (201 Created):**
+
+Returns the full post object (same as GET /blogs/:username/:slug).
+
+**Field Notes:**
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `title` | Yes | Post title |
+| `slug` | No | Auto-generated from title if not provided |
+| `body` | Yes (if published) | HTML content from Tiptap |
+| `status` | No | `draft` (default), `published`, or `scheduled` |
+| `featured` | No | Default false |
+| `publish_date` | Yes (if scheduled) | Must be in the future for scheduled posts |
+| `tags` | No | Array of strings |
+| `categories` | No | Array of strings |
+| `authors` | No | Array of {name, url} objects; defaults to owner |
+| `featured_image` | No | File upload for featured image |
+| `song_name` | No | Name of the attached song |
+| `band_name` | No | Artist/band name for the song |
+| `album_name` | No | Album name (optional) |
+| `artwork_url` | No | URL to album/song artwork (also accepts `song_artwork_url`) |
+| `song_link` | No | Generic song link (e.g., song.link URL) |
+
+**Song Attachment Notes:**
+
+- When `song_name` and `band_name` are provided, the system automatically finds or creates a Track record
+- Streaming links (Spotify, Apple Music, etc.) are enriched asynchronously via background jobs
+- Use `GET /api/v1/scrobbles/recent` to fetch recently played songs for a song picker UI
+- Use `GET /api/v1/search` to search for songs by name
+
+**Required Abilities by Feature:**
+
+| Feature | Required Ability |
+|---------|------------------|
+| Create post | `create_blog_post` |
+| Save as draft | `draft_posts` |
+| Schedule post | `schedule_post` |
+| Attach featured image | `attach_images` |
+| Add tags/categories | `manage_tags` |
+
+**Response (403 Forbidden) - Upgrade Required:**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "create_blog_post",
+  "upgrade_plan": "band_starter"
+}
+```
+
+---
+
+### PATCH /posts/:id
+
+Update an existing post.
+
+**Authentication:** Required (owner only)
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Request Body:**
+
+Same fields as POST /posts (all optional).
+
+**Response (200 OK):**
+
+Returns the updated full post object.
+
+**Notes:**
+
+- Only the post owner can update
+- Same ability checks as create for specific features
+- Song attachment can be added, updated, or removed (set fields to `null` to remove)
+
+---
+
+### DELETE /posts/:id
+
+Delete a post.
+
+**Authentication:** Required (owner only)
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (204 No Content):**
+
+Empty response body.
+
+---
+
+### GET /posts/my
+
+Get the current user's posts for management (all statuses including drafts). Paginated with a lightweight response format.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `status` (optional): Filter by status (`draft`, `published`, `scheduled`)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 100)
+
+**Response (200 OK):**
+
+```json
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "My Draft Post",
+      "slug": "my-draft-post",
+      "status": "draft",
+      "featured": false,
+      "authors": [{ "name": "johndoe", "url": null }],
+      "publish_date": null,
+      "created_at": "2026-02-25T09:00:00Z",
+      "updated_at": "2026-02-25T09:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "Published Article",
+      "slug": "published-article",
+      "status": "published",
+      "featured": true,
+      "authors": [{ "name": "johndoe", "url": null }],
+      "publish_date": "2026-02-24T10:00:00Z",
+      "created_at": "2026-02-24T08:00:00Z",
+      "updated_at": "2026-02-24T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 45,
+    "total_pages": 3,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
+
+**Notes:**
+
+- Returns all posts for the current user, including drafts and scheduled
+- Ordered by creation date (newest first)
+- Lightweight response format optimized for management lists (no body, excerpt, tags, categories, or images)
+- Use GET /blogs/:username/:slug to fetch full post details for editing
+
+---
+
+### POST /blog_images
+
+Upload an image for use in blog post content.
+
+**Authentication:** Required
+
+**Required Ability:** `attach_images`
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+
+- `image` (required): Image file (JPEG, PNG, WebP, or GIF)
+
+**Constraints:**
+
+- Maximum file size: 5MB
+- Allowed formats: JPEG, PNG, WebP, GIF
+
+**Response (201 Created):**
+
+```json
+{
+  "id": 123,
+  "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../image.jpg",
+  "filename": "my-image.jpg",
+  "content_type": "image/jpeg",
+  "byte_size": 245000
+}
+```
+
+**Response (422 Unprocessable Entity) - Invalid file type:**
+
+```json
+{
+  "error": "Invalid file type. Allowed: JPEG, PNG, WebP, GIF"
+}
+```
+
+**Response (422 Unprocessable Entity) - File too large:**
+
+```json
+{
+  "error": "File too large. Maximum size: 5MB"
+}
+```
+
+**Response (403 Forbidden) - Upgrade required:**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "attach_images",
+  "upgrade_plan": "band_starter"
+}
+```
+
+**Notes:**
+
+- Use the returned `url` in your Tiptap editor to embed the image in post content
+- Images are stored permanently and associated with the uploading user
+- The URL can be used directly in `<img>` tags within the post body HTML
+
+---
+
+### Plan Access Matrix for Blog Posts
+
+| Plan | Create Posts | Draft | Schedule | Attach Images | Manage Tags |
+|------|-------------|-------|----------|---------------|-------------|
+| fan_free | No | No | No | No | No |
+| band_free | No | No | No | No | No |
+| band_starter | **Yes** | **Yes** | No | **Yes** | **Yes** |
+| band_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+| blogger | **Yes** | **Yes** | No | **Yes** | **Yes** |
+| blogger_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+
+---
+
+## Post Likes Endpoints
+
+### POST /posts/:id/like
+
+Like a blog post.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Post liked successfully",
+  "liked": true,
+  "likes_count": 43
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this post"
+}
+```
+
+---
+
+### DELETE /posts/:id/like
+
+Unlike a blog post.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Post unliked successfully",
+  "liked": false,
+  "likes_count": 42
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this post"
+}
+```
+
+---
+
+### GET /posts/liked
+
+Get paginated list of blog posts the current user has liked.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "My First Post",
+      "slug": "my-first-post",
+      "excerpt": "A brief introduction...",
+      "featured": false,
+      "status": "published",
+      "publish_date": "2026-02-25T10:00:00Z",
+      "featured_image_url": "https://...",
+      "tags": ["music", "reviews"],
+      "categories": ["tutorials"],
+      "authors": [
+        { "name": "John Doe", "url": null }
+      ],
+      "author": {
+        "id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe",
+        "profile_image_url": "https://...",
+        "allow_anonymous_comments": true
+      },
+      "song": null,
+      "likes_count": 42,
+      "liked_by_current_user": true,
+      "comments_count": 5,
+      "created_at": "2026-02-25T09:00:00Z",
+      "updated_at": "2026-02-25T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 15,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+## Post Comments Endpoints
+
+Post comments support both authenticated and anonymous commenting. Anonymous comments require the post author to have `allow_anonymous_comments: true` in their profile settings.
+
+### GET /posts/:post_id/comments
+
+Get paginated list of comments for a post.
+
+**Authentication:** Optional (affects `liked_by_current_user` field)
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "body": "Great post!",
+      "formatted_body": "Great post!",
+      "mentions": [],
+      "anonymous": false,
+      "author": {
+        "id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe",
+        "profile_image_url": "https://..."
+      },
+      "likes_count": 5,
+      "liked_by_current_user": false,
+      "created_at": "2026-02-26T10:00:00Z",
+      "updated_at": "2026-02-26T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "body": "Thanks for sharing!",
+      "anonymous": true,
+      "guest_name": "Anonymous Reader",
+      "likes_count": 2,
+      "liked_by_current_user": false,
+      "created_at": "2026-02-26T11:00:00Z",
+      "updated_at": "2026-02-26T11:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 2,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+**Notes:**
+
+- Anonymous comments show `guest_name` but never expose `guest_email`
+- Anonymous comments don't have `formatted_body`, `mentions`, or `author` fields
+- Authenticated comments support @mentions with `formatted_body` containing clickable links
+
+---
+
+### POST /posts/:post_id/comments
+
+Create a new comment on a post. Supports both authenticated and anonymous comments.
+
+**Authentication:** Optional (anonymous requires post author's `allow_anonymous_comments: true`)
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+
+**Request Body (Authenticated):**
+
+```json
+{
+  "comment": {
+    "body": "Great post! @johndoe what do you think?"
+  }
+}
+```
+
+**Request Body (Anonymous):**
+
+```json
+{
+  "comment": {
+    "body": "Thanks for sharing!",
+    "guest_name": "Anonymous Reader",
+    "guest_email": "reader@example.com"
+  }
+}
+```
+
+**Response (201 Created) - Authenticated:**
+
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 1,
+    "body": "Great post! @johndoe what do you think?",
+    "formatted_body": "Great post! <a href=\"/users/johndoe\">@johndoe</a> what do you think?",
+    "mentions": [
+      {
+        "user_id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe"
+      }
+    ],
+    "anonymous": false,
+    "author": {
+      "id": 456,
+      "username": "commenter",
+      "display_name": "Commenter Name",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T10:00:00Z",
+    "updated_at": "2026-02-26T10:00:00Z"
+  },
+  "comments_count": 5
+}
+```
+
+**Response (201 Created) - Anonymous:**
+
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 2,
+    "body": "Thanks for sharing!",
+    "anonymous": true,
+    "guest_name": "Anonymous Reader",
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T11:00:00Z",
+    "updated_at": "2026-02-26T11:00:00Z"
+  },
+  "claim_token": "abc123xyz...",
+  "comments_count": 6
+}
+```
+
+**Error Response (403 Forbidden) - Anonymous not allowed:**
+
+```json
+{
+  "error": "Anonymous comments are not allowed on this post"
+}
+```
+
+**Notes:**
+
+- Anonymous comments return a `claim_token` that can be used to link the comment to a user account after signup
+- Anonymous comments do not support @mentions
+- Store the `claim_token` in localStorage and call `/post_comments/claim` after user signup
+
+---
+
+### PATCH /posts/:post_id/comments/:id
+
+Update an existing comment (owner only).
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+- `id` (required): The comment ID
+
+**Request Body:**
+
+```json
+{
+  "comment": {
+    "body": "Updated comment text"
+  }
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment updated successfully",
+  "comment": {
+    "id": 1,
+    "body": "Updated comment text",
+    "formatted_body": "Updated comment text",
+    "mentions": [],
+    "anonymous": false,
+    "author": {
+      "id": 456,
+      "username": "commenter",
+      "display_name": "Commenter Name",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 5,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T10:00:00Z",
+    "updated_at": "2026-02-26T12:00:00Z"
+  }
+}
+```
+
+**Error Response (403 Forbidden) - Not owner:**
+
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+**Error Response (403 Forbidden) - Anonymous comment:**
+
+```json
+{
+  "error": "Anonymous comments cannot be edited"
+}
+```
+
+**Notes:**
+
+- Only the comment owner or admin can update comments
+- Anonymous comments cannot be edited (they must be claimed first)
+
+---
+
+### DELETE /posts/:post_id/comments/:id
+
+Delete a comment (owner or admin only).
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+- `id` (required): The comment ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment deleted successfully",
+  "comments_count": 4
+}
+```
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+**Notes:**
+
+- Comment owner or admin can delete comments
+- For anonymous comments, only admin can delete
+
+---
+
+### POST /post_comments/claim
+
+Claim an anonymous comment by linking it to the authenticated user's account.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "claim_token": "abc123xyz..."
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment claimed successfully",
+  "comment": {
+    "id": 2,
+    "body": "Thanks for sharing!",
+    "formatted_body": "Thanks for sharing!",
+    "mentions": [],
+    "anonymous": false,
+    "author": {
+      "id": 789,
+      "username": "newuser",
+      "display_name": "New User",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 2,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T11:00:00Z",
+    "updated_at": "2026-02-26T14:00:00Z"
+  }
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "Claim token is required"
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "error": "Invalid or expired claim token"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "Comment has already been claimed"
+}
+```
+
+**Notes:**
+
+- Claim tokens are single-use and cleared after claiming
+- After claiming, the comment becomes a regular authenticated comment
+- The `guest_name` and `guest_email` fields are cleared upon claiming
+
+---
+
+### POST /post_comments/:comment_id/like
+
+Like a post comment.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `comment_id` (required): The comment ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment liked successfully",
+  "liked": true,
+  "likes_count": 6
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this comment"
+}
+```
+
+---
+
+### DELETE /post_comments/:comment_id/like
+
+Unlike a post comment.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `comment_id` (required): The comment ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment unliked successfully",
+  "liked": false,
+  "likes_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this comment"
+}
+```
+
+---
+
+### Anonymous Comments Flow
+
+1. **Guest posts comment** with `guest_name` and `guest_email` (if `allow_anonymous_comments` is enabled)
+2. **Server returns `claim_token`** in the response
+3. **Frontend stores `claim_token`** in localStorage
+4. **Frontend shows "Create account?" prompt** to encourage signup
+5. **After signup**, frontend calls `POST /post_comments/claim` with the stored token
+6. **Comment is linked** to the new user account, guest fields cleared
 
 ---
 

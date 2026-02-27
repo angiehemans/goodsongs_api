@@ -78,6 +78,30 @@ class UsersController < ApplicationController
       bands: bands.map { |band| BandSerializer.summary(band) }
     )
 
+    # Include posts for blogger users
+    if user.blogger?
+      posts_page = (params[:posts_page] || 1).to_i
+      posts_per_page = (params[:posts_per_page] || 10).to_i
+      posts_per_page = [posts_per_page, 50].min
+
+      posts = user.posts.visible.newest_featured_first
+      posts = posts.with_tag(params[:tag]) if params[:tag].present?
+      posts = posts.with_category(params[:category]) if params[:category].present?
+
+      total_posts = posts.count
+      paginated_posts = posts.offset((posts_page - 1) * posts_per_page).limit(posts_per_page)
+
+      user_data[:posts] = paginated_posts.map { |post| PostSerializer.summary(post) }
+      user_data[:posts_pagination] = {
+        current_page: posts_page,
+        per_page: posts_per_page,
+        total_count: total_posts,
+        total_pages: (total_posts.to_f / posts_per_page).ceil,
+        has_next_page: posts_page < (total_posts.to_f / posts_per_page).ceil,
+        has_previous_page: posts_page > 1
+      }
+    end
+
     # Include follow status if authenticated
     if authenticated_user
       user_data[:following] = authenticated_user.following?(user)
@@ -94,7 +118,7 @@ class UsersController < ApplicationController
   end
 
   def profile_params
-    params.permit(:about_me, :profile_image, :city, :region, :preferred_streaming_platform)
+    params.permit(:about_me, :profile_image, :city, :region, :preferred_streaming_platform, :allow_anonymous_comments)
   end
 
 end

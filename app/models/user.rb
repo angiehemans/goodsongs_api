@@ -4,6 +4,8 @@ class User < ApplicationRecord
   has_many :reviews, dependent: :destroy
   has_many :bands, dependent: :destroy
   has_many :scrobbles, dependent: :destroy
+  has_many :posts, dependent: :destroy
+  has_many :blog_images, dependent: :destroy
   has_many :submitted_bands, class_name: 'Band', foreign_key: :submitted_by_id, dependent: :nullify
   has_many :submitted_albums, class_name: 'Album', foreign_key: :submitted_by_id, dependent: :nullify
   has_many :submitted_tracks, class_name: 'Track', foreign_key: :submitted_by_id, dependent: :nullify
@@ -30,6 +32,15 @@ class User < ApplicationRecord
   # Comment likes
   has_many :review_comment_likes, dependent: :destroy
   has_many :liked_comments, through: :review_comment_likes, source: :review_comment
+
+  # Post likes
+  has_many :post_likes, dependent: :destroy
+  has_many :liked_posts, through: :post_likes, source: :post
+
+  # Post comments
+  has_many :post_comments, dependent: :destroy
+  has_many :post_comment_likes, dependent: :destroy
+  has_many :liked_post_comments, through: :post_comment_likes, source: :post_comment
 
   # Mentions (where this user was mentioned)
   has_many :mentions, dependent: :destroy
@@ -179,6 +190,36 @@ class User < ApplicationRecord
   # Check if user likes a comment
   def likes_comment?(comment)
     liked_comments.include?(comment)
+  end
+
+  # Like a post
+  def like_post(post)
+    liked_posts << post unless likes_post?(post)
+  end
+
+  # Unlike a post
+  def unlike_post(post)
+    liked_posts.delete(post)
+  end
+
+  # Check if user likes a post
+  def likes_post?(post)
+    liked_posts.include?(post)
+  end
+
+  # Like a post comment
+  def like_post_comment(comment)
+    liked_post_comments << comment unless likes_post_comment?(comment)
+  end
+
+  # Unlike a post comment
+  def unlike_post_comment(comment)
+    liked_post_comments.delete(comment)
+  end
+
+  # Check if user likes a post comment
+  def likes_post_comment?(comment)
+    liked_post_comments.include?(comment)
   end
 
   # Check if Last.fm account is connected

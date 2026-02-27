@@ -3,7 +3,7 @@ class Notification < ApplicationRecord
   belongs_to :actor, class_name: 'User', optional: true
   belongs_to :notifiable, polymorphic: true, optional: true
 
-  TYPES = %w[new_follower new_review review_like review_comment comment_like mention].freeze
+  TYPES = %w[new_follower new_review review_like review_comment comment_like mention post_like post_comment post_comment_like].freeze
 
   validates :notification_type, presence: true, inclusion: { in: TYPES }
 
@@ -83,6 +83,51 @@ class Notification < ApplicationRecord
     )
   end
 
+  def self.notify_post_like(post:, liker:)
+    # Don't notify if the liker is the post author
+    return if post.user_id == liker.id
+
+    create!(
+      user: post.user,
+      notification_type: 'post_like',
+      actor: liker,
+      notifiable: post
+    )
+  end
+
+  def self.notify_post_comment(post:, commenter:, comment:)
+    # Don't notify if the commenter is the post author
+    return if post.user_id == commenter.id
+
+    create!(
+      user: post.user,
+      notification_type: 'post_comment',
+      actor: commenter,
+      notifiable: comment
+    )
+  end
+
+  def self.notify_anonymous_post_comment(post:, comment:)
+    create!(
+      user: post.user,
+      notification_type: 'post_comment',
+      actor: nil,
+      notifiable: comment
+    )
+  end
+
+  def self.notify_post_comment_like(comment:, liker:)
+    # Don't notify if the liker is the comment author
+    return if comment.user_id == liker.id
+
+    create!(
+      user: comment.user,
+      notification_type: 'post_comment_like',
+      actor: liker,
+      notifiable: comment
+    )
+  end
+
   private
 
   def send_push_notification
@@ -151,6 +196,47 @@ class Notification < ApplicationRecord
         "#{actor_name} liked your comment",
         { type: 'comment_like', notification_id: id.to_s, comment_id: comment.id.to_s, review_id: comment.review_id.to_s }
       ]
+    when 'post_like'
+      post = notifiable
+      return [nil, nil, {}] unless post.is_a?(Post)
+
+      [
+        'New Like',
+        "#{actor_name} liked your post \"#{post.title.truncate(50)}\"",
+        { type: 'post_like', notification_id: id.to_s, post_id: post.id.to_s }
+      ]
+    when 'post_comment'
+      comment = notifiable
+      return [nil, nil, {}] unless comment.is_a?(PostComment)
+
+      post = comment.post
+      comment_preview = comment.body.truncate(50)
+
+      # Check if user was also mentioned in this comment (combined notification)
+      was_mentioned = comment.user.present? && comment.mentions.exists?(user_id: user_id)
+      title = was_mentioned ? 'New Mention' : 'New Comment'
+      body_text = if actor.nil?
+        "Someone commented: \"#{comment_preview}\""
+      elsif was_mentioned
+        "#{actor_name} mentioned you: \"#{comment_preview}\""
+      else
+        "#{actor_name}: \"#{comment_preview}\""
+      end
+
+      [
+        title,
+        body_text,
+        { type: 'post_comment', notification_id: id.to_s, post_id: post.id.to_s, comment_id: comment.id.to_s, mentioned: was_mentioned }
+      ]
+    when 'post_comment_like'
+      comment = notifiable
+      return [nil, nil, {}] unless comment.is_a?(PostComment)
+
+      [
+        'New Like',
+        "#{actor_name} liked your comment",
+        { type: 'post_comment_like', notification_id: id.to_s, comment_id: comment.id.to_s, post_id: comment.post_id.to_s }
+      ]
     when 'mention'
       case notifiable
       when Review
@@ -166,6 +252,13 @@ class Notification < ApplicationRecord
           'New Mention',
           "#{actor_name} mentioned you in a comment",
           { type: 'mention', notification_id: id.to_s, review_id: comment.review_id.to_s, comment_id: comment.id.to_s }
+        ]
+      when PostComment
+        comment = notifiable
+        [
+          'New Mention',
+          "#{actor_name} mentioned you in a comment",
+          { type: 'mention', notification_id: id.to_s, post_id: comment.post_id.to_s, comment_id: comment.id.to_s }
         ]
       else
         [nil, nil, {}]

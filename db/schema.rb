@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -143,6 +143,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
     t.index ["user_id"], name: "index_bands_on_user_id"
   end
 
+  create_table "blog_images", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_blog_images_on_user_id"
+  end
+
   create_table "device_tokens", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "token", null: false
@@ -248,6 +255,71 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
     t.index ["active"], name: "index_plans_on_active"
     t.index ["key"], name: "index_plans_on_key", unique: true
     t.index ["role"], name: "index_plans_on_role"
+  end
+
+  create_table "post_comment_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "post_comment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["post_comment_id"], name: "index_post_comment_likes_on_post_comment_id"
+    t.index ["user_id", "post_comment_id"], name: "index_post_comment_likes_on_user_id_and_post_comment_id", unique: true
+    t.index ["user_id"], name: "index_post_comment_likes_on_user_id"
+  end
+
+  create_table "post_comments", force: :cascade do |t|
+    t.bigint "user_id"
+    t.bigint "post_id", null: false
+    t.text "body", null: false
+    t.string "guest_name"
+    t.string "guest_email"
+    t.string "claim_token"
+    t.datetime "claimed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["claim_token"], name: "index_post_comments_on_claim_token", unique: true, where: "(claim_token IS NOT NULL)"
+    t.index ["post_id", "created_at"], name: "index_post_comments_on_post_id_and_created_at"
+    t.index ["post_id"], name: "index_post_comments_on_post_id"
+    t.index ["user_id"], name: "index_post_comments_on_user_id"
+  end
+
+  create_table "post_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "post_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["post_id"], name: "index_post_likes_on_post_id"
+    t.index ["user_id", "post_id"], name: "index_post_likes_on_user_id_and_post_id", unique: true
+    t.index ["user_id"], name: "index_post_likes_on_user_id"
+  end
+
+  create_table "posts", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "title", null: false
+    t.string "slug", null: false
+    t.text "excerpt"
+    t.text "body"
+    t.datetime "publish_date"
+    t.integer "status", default: 0, null: false
+    t.boolean "featured", default: false, null: false
+    t.jsonb "tags", default: []
+    t.jsonb "categories", default: []
+    t.jsonb "authors", default: []
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "song_name"
+    t.string "band_name"
+    t.string "album_name"
+    t.string "artwork_url"
+    t.string "song_link"
+    t.uuid "track_id"
+    t.index ["categories"], name: "index_posts_on_categories", using: :gin
+    t.index ["tags"], name: "index_posts_on_tags", using: :gin
+    t.index ["track_id"], name: "index_posts_on_track_id"
+    t.index ["user_id", "featured", "publish_date"], name: "index_posts_featured_by_date"
+    t.index ["user_id", "slug"], name: "index_posts_on_user_id_and_slug", unique: true
+    t.index ["user_id", "status", "publish_date"], name: "index_posts_on_user_id_and_status_and_publish_date"
+    t.index ["user_id"], name: "index_posts_on_user_id"
   end
 
   create_table "refresh_tokens", force: :cascade do |t|
@@ -414,6 +486,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
     t.string "role"
     t.bigint "plan_id"
     t.string "preferred_streaming_platform"
+    t.boolean "allow_anonymous_comments", default: false, null: false
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
     t.index ["lastfm_username"], name: "index_users_on_lastfm_username"
@@ -446,6 +519,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
   add_foreign_key "band_aliases", "bands", on_delete: :cascade
   add_foreign_key "bands", "users"
   add_foreign_key "bands", "users", column: "submitted_by_id"
+  add_foreign_key "blog_images", "users"
   add_foreign_key "device_tokens", "users"
   add_foreign_key "events", "bands"
   add_foreign_key "events", "venues"
@@ -459,6 +533,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_24_214302) do
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "plan_abilities", "abilities"
   add_foreign_key "plan_abilities", "plans"
+  add_foreign_key "post_comment_likes", "post_comments"
+  add_foreign_key "post_comment_likes", "users"
+  add_foreign_key "post_comments", "posts"
+  add_foreign_key "post_comments", "users"
+  add_foreign_key "post_likes", "posts"
+  add_foreign_key "post_likes", "users"
+  add_foreign_key "posts", "tracks"
+  add_foreign_key "posts", "users"
   add_foreign_key "refresh_tokens", "users"
   add_foreign_key "review_comment_likes", "review_comments"
   add_foreign_key "review_comment_likes", "users"
