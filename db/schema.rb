@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_03_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -171,7 +171,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_000001) do
   end
 
   create_table "events", force: :cascade do |t|
-    t.bigint "band_id", null: false
+    t.bigint "band_id"
     t.bigint "venue_id", null: false
     t.string "name", null: false
     t.text "description"
@@ -183,9 +183,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_000001) do
     t.boolean "disabled", default: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
     t.index ["band_id"], name: "index_events_on_band_id"
     t.index ["event_date", "disabled"], name: "index_events_on_event_date_and_disabled"
     t.index ["event_date"], name: "index_events_on_event_date"
+    t.index ["user_id"], name: "index_events_on_user_id"
     t.index ["venue_id"], name: "index_events_on_venue_id"
   end
 
@@ -370,6 +372,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_000001) do
     t.datetime "published_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "content_max_width", default: 1200
     t.index ["user_id"], name: "index_profile_themes_on_user_id", unique: true
   end
 
@@ -581,6 +584,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_03_000001) do
   add_foreign_key "blog_images", "users"
   add_foreign_key "device_tokens", "users"
   add_foreign_key "events", "bands"
+  add_foreign_key "events", "users"
   add_foreign_key "events", "venues"
   add_foreign_key "favorite_bands", "bands"
   add_foreign_key "favorite_bands", "users"

@@ -5,6 +5,7 @@ class User < ApplicationRecord
   has_many :bands, dependent: :destroy
   has_many :scrobbles, dependent: :destroy
   has_many :posts, dependent: :destroy
+  has_many :events, dependent: :destroy
   has_many :blog_images, dependent: :destroy
   has_many :submitted_bands, class_name: 'Band', foreign_key: :submitted_by_id, dependent: :nullify
   has_many :submitted_albums, class_name: 'Album', foreign_key: :submitted_by_id, dependent: :nullify

@@ -15,6 +15,7 @@ class ProfileThemeSerializer
       font_color: theme.font_color,
       header_font: theme.header_font,
       body_font: theme.body_font,
+      content_max_width: theme.content_max_width,
       sections: theme.sections,
       published_at: theme.published_at,
       has_draft: theme.has_draft?,
@@ -63,7 +64,16 @@ class ProfileThemeSerializer
         id: user.id,
         username: user.username,
         role: user.role
-      }
+      },
+
+      # Recent posts for preview (bloggers and bands can have posts)
+      posts: build_recent_posts(user),
+
+      # Recent recommendations/reviews for preview
+      recommendations: build_recent_recommendations(user),
+
+      # Upcoming events for preview
+      events: build_upcoming_events(user)
     }
 
     # Include band data if applicable
@@ -82,6 +92,24 @@ class ProfileThemeSerializer
     end
 
     data
+  end
+
+  # Build array of recent posts for site builder preview
+  def self.build_recent_posts(user)
+    posts = user.posts.published.order(publish_date: :desc).limit(10)
+    posts.map { |p| PostSerializer.summary(p) }
+  end
+
+  # Build array of recent recommendations/reviews for site builder preview
+  def self.build_recent_recommendations(user)
+    reviews = user.reviews.includes(:track, :band, :mentions).order(created_at: :desc).limit(10)
+    reviews.map { |r| ReviewSerializer.with_author(r) }
+  end
+
+  # Build array of upcoming events for site builder preview
+  def self.build_upcoming_events(user)
+    events = user.events.active.upcoming.includes(:venue, :band).limit(10)
+    events.map { |e| EventSerializer.summary(e) }
   end
 
   # Build hash of user's configured social links
@@ -127,7 +155,8 @@ class ProfileThemeSerializer
       brand_color: theme.brand_color,
       font_color: theme.font_color,
       header_font: theme.header_font,
-      body_font: theme.body_font
+      body_font: theme.body_font,
+      content_max_width: theme.content_max_width
     }
   end
 end

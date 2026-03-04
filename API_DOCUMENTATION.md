@@ -1660,9 +1660,53 @@ Returns array of bands (same format as GET /bands)
 
 ## Event Endpoints
 
-### GET /bands/:slug/events
+Events can be created either as standalone events (by any user with `manage_events` ability) or nested under a band. The `band` field is `null` for events not associated with a band.
 
-Get upcoming events for a band.
+### Event Object
+
+```json
+{
+  "id": 1,
+  "name": "Summer Tour Kickoff",
+  "description": "Join us for the first show of our summer tour!",
+  "event_date": "2025-07-15T20:00:00.000Z",
+  "ticket_link": "https://tickets.example.com/event/123",
+  "image_url": "https://...",
+  "price": "$25",
+  "age_restriction": "21+",
+  "venue": {
+    "id": 1,
+    "name": "The Roxy",
+    "address": "9009 Sunset Blvd",
+    "city": "West Hollywood",
+    "region": "California",
+    "latitude": 34.0901,
+    "longitude": -118.3868
+  },
+  "band": {
+    "id": 1,
+    "slug": "band-name",
+    "name": "Band Name",
+    "location": "Los Angeles, California",
+    "profile_picture_url": "https://...",
+    "reviews_count": 5,
+    "user_owned": true
+  },
+  "user_id": 1,
+  "created_at": "2025-01-01T00:00:00.000Z",
+  "updated_at": "2025-01-01T00:00:00.000Z"
+}
+```
+
+**Notes:**
+- `band` is `null` when the event is not associated with a band
+- `user_id` is always present and identifies the event creator
+
+---
+
+### GET /events
+
+Get all upcoming visible events (both band and non-band events).
 
 **Authentication:** None
 
@@ -1673,43 +1717,131 @@ Get upcoming events for a band.
   {
     "id": 1,
     "name": "Summer Tour Kickoff",
-    "description": "Join us for the first show of our summer tour!",
-    "event_date": "2025-07-15T20:00:00.000Z",
-    "ticket_link": "https://tickets.example.com/event/123",
-    "image_url": "https://...",
-    "price": "$25",
-    "age_restriction": "21+",
-    "venue": {
-      "id": 1,
-      "name": "The Roxy",
-      "address": "9009 Sunset Blvd",
-      "city": "West Hollywood",
-      "region": "California",
-      "latitude": 34.0901,
-      "longitude": -118.3868
-    },
-    "band": {
-      "id": 1,
-      "slug": "band-name",
-      "name": "Band Name",
-      "location": "Los Angeles, California",
-      "profile_picture_url": "https://...",
-      "reviews_count": 5,
-      "user_owned": true
-    },
-    "created_at": "2025-01-01T00:00:00.000Z",
-    "updated_at": "2025-01-01T00:00:00.000Z"
+    "band": { "...": "..." },
+    "user_id": 1,
+    "...": "..."
+  },
+  {
+    "id": 2,
+    "name": "Open Mic Night",
+    "band": null,
+    "user_id": 5,
+    "...": "..."
   }
 ]
 ```
+
+**Notes:**
+- Returns active, upcoming events sorted by `event_date` ascending
+- Includes events with no band and events with an active (non-disabled) band
+- Events belonging to disabled bands are excluded
+
+---
+
+### GET /bands/:slug/events
+
+Get upcoming events for a specific band.
+
+**Authentication:** None
+
+**Response (200 OK):**
+Returns array of event objects for the band (same format as Event Object above)
+
+---
+
+### POST /events
+
+Create a standalone event (not tied to a band).
+
+**Authentication:** Required
+
+**Required Ability:** `manage_events`
+
+**Request Body:**
+
+```json
+{
+  "event": {
+    "name": "Open Mic Night",
+    "description": "Weekly open mic at The Roxy!",
+    "event_date": "2025-07-15T20:00:00.000Z",
+    "ticket_link": "https://tickets.example.com/event/456",
+    "price": "Free",
+    "age_restriction": "All Ages",
+    "venue_id": 1,
+    "band_id": 1
+  }
+}
+```
+
+Or with new venue:
+
+```json
+{
+  "event": {
+    "name": "Open Mic Night",
+    "description": "Weekly open mic at The Roxy!",
+    "event_date": "2025-07-15T20:00:00.000Z",
+    "venue_attributes": {
+      "name": "The Roxy",
+      "address": "9009 Sunset Blvd",
+      "city": "West Hollywood",
+      "region": "California"
+    }
+  }
+}
+```
+
+**Fields:**
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `name` | Yes | Event name |
+| `event_date` | Yes | ISO 8601 datetime |
+| `venue_id` | Yes* | Existing venue ID (*one of `venue_id` or `venue_attributes` required) |
+| `venue_attributes` | Yes* | `{name, address, city, region}` for new venue |
+| `description` | No | Event description |
+| `ticket_link` | No | URL to purchase tickets |
+| `price` | No | Price display string (e.g., "$25", "Free") |
+| `age_restriction` | No | `"All Ages"`, `"18+"`, or `"21+"` |
+| `image` | No | Event image file (multipart/form-data) |
+| `image_url` | No | Event image URL |
+| `band_id` | No | Associate with a band you own (validated) |
+
+**Response (201 Created):**
+Returns created event object
+
+**Error Response (422 Unprocessable Entity) - Band not owned:**
+
+```json
+{
+  "errors": ["Band not found or not owned by you"]
+}
+```
+
+**Error Response (403 Forbidden) - Upgrade required:**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "manage_events",
+  "upgrade_plan": "band_starter"
+}
+```
+
+**Notes:**
+- The event is always owned by the authenticated user (`user_id` is set automatically)
+- `band_id` is optional; if provided, the band must be owned by the current user
+- Any user with the `manage_events` ability can create events (not just band accounts)
 
 ---
 
 ### POST /bands/:slug/events
 
-Create a new event for a band.
+Create a new event for a specific band.
 
-**Authentication:** Required (band owner only)
+**Authentication:** Required (band owner + `manage_events` ability)
 
 **Request Body:**
 
@@ -1735,9 +1867,6 @@ Or with new venue:
     "name": "Summer Tour Kickoff",
     "description": "Join us for the first show!",
     "event_date": "2025-07-15T20:00:00.000Z",
-    "ticket_link": "https://tickets.example.com/event/123",
-    "price": "$25",
-    "age_restriction": "21+",
     "venue_attributes": {
       "name": "The Roxy",
       "address": "9009 Sunset Blvd",
@@ -1758,7 +1887,12 @@ event[image]: <file>
 ```
 
 **Response (201 Created):**
-Returns created event object (same format as GET /bands/:slug/events items)
+Returns created event object
+
+**Notes:**
+- You must own the band specified by `:slug`
+- The event's `user_id` is automatically set to the authenticated user
+- The event's `band_id` is automatically set to the band
 
 ---
 
@@ -1769,7 +1903,7 @@ Get a single event by ID.
 **Authentication:** None
 
 **Response (200 OK):**
-Returns event object (same format as GET /bands/:slug/events items)
+Returns event object (same format as Event Object above)
 
 ---
 
@@ -1777,7 +1911,7 @@ Returns event object (same format as GET /bands/:slug/events items)
 
 Update an event.
 
-**Authentication:** Required (band owner only)
+**Authentication:** Required (event creator only)
 
 **Request Body:**
 
@@ -1794,15 +1928,68 @@ Update an event.
 **Response (200 OK):**
 Returns updated event object
 
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "You can only modify your own events"
+}
+```
+
 ---
 
 ### DELETE /events/:id
 
 Delete an event.
 
-**Authentication:** Required (band owner only)
+**Authentication:** Required (event creator only)
 
 **Response (204 No Content)**
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "You can only modify your own events"
+}
+```
+
+---
+
+### GET /users/:user_id/events
+
+Get upcoming events created by a specific user.
+
+**Authentication:** None
+
+**URL Parameters:**
+
+- `user_id` (required): The user's ID
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Summer Tour Kickoff",
+    "band": { "...": "..." },
+    "user_id": 1,
+    "...": "..."
+  },
+  {
+    "id": 2,
+    "name": "Open Mic Night",
+    "band": null,
+    "user_id": 1,
+    "...": "..."
+  }
+]
+```
+
+**Notes:**
+- Returns active, upcoming events sorted by `event_date` ascending
+- Includes both band and non-band events created by the user
 
 ---
 
@@ -2440,6 +2627,120 @@ Get paginated list of all reviews (from active users only).
   }
 }
 ```
+
+---
+
+### GET /discover/events
+
+Get paginated list of upcoming events. Includes both band events (from active bands) and standalone events (no band).
+
+**Authentication:** None
+
+**Query Parameters:**
+
+- `q` (optional): Search by band name (only matches events with a band)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "events": [
+    {
+      "id": 1,
+      "name": "Summer Tour Kickoff",
+      "description": "Join us for the first show!",
+      "event_date": "2025-07-15T20:00:00.000Z",
+      "ticket_link": "https://tickets.example.com/event/123",
+      "image_url": "https://...",
+      "price": "$25",
+      "age_restriction": "21+",
+      "venue": {
+        "id": 1,
+        "name": "The Roxy",
+        "address": "9009 Sunset Blvd",
+        "city": "West Hollywood",
+        "region": "California",
+        "latitude": 34.0901,
+        "longitude": -118.3868
+      },
+      "band": {
+        "id": 1,
+        "slug": "band-name",
+        "name": "Band Name",
+        "location": "Los Angeles, California",
+        "profile_picture_url": "https://...",
+        "reviews_count": 5,
+        "user_owned": true
+      },
+      "user_id": 1,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Open Mic Night",
+      "band": null,
+      "user_id": 5,
+      "...": "..."
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 50,
+    "total_pages": 3,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
+
+**Notes:**
+- Returns active, upcoming events sorted by `event_date` ascending
+- When searching by `q`, only events with a matching band name are returned (band-less events are excluded from band-name search)
+- Without a search query, both band and non-band events are returned
+- Events belonging to disabled bands are excluded
+
+---
+
+### GET /discover/search
+
+Unified search across bands, users, reviews, and events.
+
+**Authentication:** None
+
+**Query Parameters:**
+
+- `q` (required): Search query
+- `limit` (optional): Max results per category (default: 5, max: 20)
+
+**Response (200 OK):**
+
+```json
+{
+  "results": {
+    "bands": [ { "...": "..." } ],
+    "users": [ { "...": "..." } ],
+    "reviews": [ { "...": "..." } ],
+    "events": [ { "...": "..." } ]
+  },
+  "query": "band name",
+  "counts": {
+    "bands": 3,
+    "users": 1,
+    "reviews": 5,
+    "events": 2
+  }
+}
+```
+
+**Notes:**
+- Bands: searched by name using trigram similarity
+- Users: searched by username (active fan users only)
+- Reviews: searched by band name or song name
+- Events: searched by band name (band-less events excluded from search results)
 
 ---
 
@@ -5667,7 +5968,16 @@ Get the authenticated user's profile theme configuration including draft.
       "streaming_links": {
         "spotify": "https://open.spotify.com/artist/...",
         "bandcamp": "https://midnightpines.bandcamp.com"
-      }
+      },
+      "posts": [
+        { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
+      ],
+      "recommendations": [
+        { "id": 10, "content": "Amazing track!", "track": { "...": "..." }, "...": "..." }
+      ],
+      "events": [
+        { "id": 3, "name": "Live at The Doug Fir", "event_date": "2026-04-15T20:00:00Z", "...": "..." }
+      ]
     }
   }
 }
@@ -5697,6 +6007,7 @@ The `source_data` object provides the actual profile data that sections will dis
 1. **Show default values in the editor** - When a section's content field has a `source` (e.g., `headline: { source: "display_name" }`), display `source_data.display_name` as the default/placeholder
 2. **Preview sections accurately** - Render the hero section showing `source_data.display_name` unless the user has provided custom `content.headline`
 3. **Show available links** - Display `source_data.social_links` and `source_data.streaming_links` so users can choose which to show/hide
+4. **Preview dynamic sections** - Use `source_data.posts`, `source_data.recommendations`, and `source_data.events` to preview content sections in the site builder
 
 | source_data field | Used by | Schema source reference |
 |-------------------|---------|------------------------|
@@ -5706,6 +6017,9 @@ The `source_data` object provides the actual profile data that sections will dis
 | `profile_image_url` | Hero image | - |
 | `social_links` | Hero, About | `visible_social_links` setting |
 | `streaming_links` | Hero, Music | `visible_streaming_links` setting |
+| `posts` | Posts section | Up to 10 recent published posts |
+| `recommendations` | Recommendations section | Up to 10 recent reviews |
+| `events` | Events section | Up to 10 upcoming active events |
 | `band` | Band users only | Band profile data |
 
 ---
@@ -6180,7 +6494,7 @@ Each section type has defined `content` and `settings` fields. Content fields ov
 
 #### Events Section
 
-**Content Fields:** None (data hydrated from band)
+**Content Fields:** None (data hydrated from user's events)
 
 **Settings:**
 | Field | Type | Default | Range | Description |

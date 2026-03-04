@@ -111,7 +111,7 @@ module Api
         result = {}
 
         # Extract simple fields
-        %w[background_color brand_color font_color header_font body_font].each do |field|
+        %w[background_color brand_color font_color header_font body_font content_max_width].each do |field|
           result[field] = source[field] if source[field].present?
         end
 

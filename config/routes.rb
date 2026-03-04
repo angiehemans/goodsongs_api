@@ -98,12 +98,13 @@ Rails.application.routes.draw do
   # Band routes - consolidated user bands endpoint
   get '/bands/user', to: 'bands#user_bands'
   resources :bands, except: [:new, :edit], param: :slug do
-    # Events nested under bands
-    resources :events, only: [:index, :create], param: :id, controller: 'events'
+    get 'events', to: 'events#band_index'
+    post 'events', to: 'events#band_create'
   end
 
-  # Events standalone routes (for show, update, destroy)
-  resources :events, only: [:show, :update, :destroy]
+  # Events routes (top-level index, create, show, update, destroy)
+  resources :events, only: [:index, :show, :create, :update, :destroy]
+  get '/users/:user_id/events', to: 'events#user_events'
 
   # Venues routes
   resources :venues, only: [:index, :show, :create]

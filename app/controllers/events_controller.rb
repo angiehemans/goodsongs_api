@@ -1,15 +1,28 @@
 class EventsController < ApplicationController
   include ResourceController
 
-  before_action :authenticate_request, except: [:index, :show]
-  before_action :set_band, only: [:index, :create]
+  before_action :authenticate_request, except: [:index, :band_index, :show, :user_events]
+  before_action :set_band, only: [:band_index, :band_create]
   before_action :set_event, only: [:show, :update, :destroy]
-  before_action :ensure_band_ownership, only: [:create]
+  before_action :ensure_band_ownership, only: [:band_create]
   before_action :ensure_event_ownership, only: [:update, :destroy]
 
-  # GET /bands/:band_slug/events
+  # GET /events
   def index
+    events = Event.active.upcoming.visible.includes(:venue, :band, :user)
+    json_response(events.map { |event| EventSerializer.full(event) })
+  end
+
+  # GET /bands/:band_slug/events
+  def band_index
     events = @band.events.active.upcoming.includes(:venue)
+    json_response(events.map { |event| EventSerializer.full(event) })
+  end
+
+  # GET /users/:user_id/events
+  def user_events
+    user = User.find(params[:user_id])
+    events = user.events.active.upcoming.includes(:venue, :band)
     json_response(events.map { |event| EventSerializer.full(event) })
   end
 
@@ -18,13 +31,42 @@ class EventsController < ApplicationController
     json_response(EventSerializer.full(@event))
   end
 
-  # POST /bands/:band_slug/events
+  # POST /events
   def create
+    require_ability!(:manage_events) and return if performed?
+
+    venue = find_or_create_venue
+    return if venue.nil?
+
+    @event = current_user.events.build(event_params.except(:venue_id, :venue_attributes))
+    @event.venue = venue
+
+    # Optionally associate with a band (must be owned by current user)
+    if params[:event][:band_id].present?
+      band = current_user.bands.find_by(id: params[:event][:band_id])
+      unless band
+        return render json: { errors: ['Band not found or not owned by you'] }, status: :unprocessable_entity
+      end
+      @event.band = band
+    end
+
+    if @event.save
+      json_response(EventSerializer.full(@event), :created)
+    else
+      render_errors(@event)
+    end
+  end
+
+  # POST /bands/:band_slug/events
+  def band_create
+    require_ability!(:manage_events) and return if performed?
+
     venue = find_or_create_venue
     return if venue.nil?
 
     @event = @band.events.build(event_params.except(:venue_id, :venue_attributes))
     @event.venue = venue
+    @event.user = current_user
 
     if @event.save
       json_response(EventSerializer.full(@event), :created)
@@ -63,7 +105,7 @@ class EventsController < ApplicationController
   end
 
   def set_event
-    @event = Event.includes(:venue, :band).find(params[:id])
+    @event = Event.includes(:venue, :band, :user).find(params[:id])
   end
 
   def ensure_band_ownership
@@ -73,8 +115,8 @@ class EventsController < ApplicationController
   end
 
   def ensure_event_ownership
-    unless @event.band.user == current_user
-      render_unauthorized('You can only modify events for bands you own')
+    unless @event.user == current_user
+      render_unauthorized('You can only modify your own events')
     end
   end
 

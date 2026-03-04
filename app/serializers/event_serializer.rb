@@ -12,7 +12,8 @@ class EventSerializer
       price: event.price,
       age_restriction: event.age_restriction,
       venue: VenueSerializer.full(event.venue),
-      band: BandSerializer.summary(event.band),
+      band: event.band ? BandSerializer.summary(event.band) : nil,
+      user_id: event.user_id,
       created_at: event.created_at,
       updated_at: event.updated_at
     }

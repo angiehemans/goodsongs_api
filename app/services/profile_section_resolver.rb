@@ -137,15 +137,15 @@ class ProfileSectionResolver
   end
 
   def hydrate_events(settings)
-    return { events: [] } unless @band
-
     limit = settings['display_limit'] || settings[:display_limit] || 6
     show_past = settings['show_past_events'] || settings[:show_past_events] || false
 
+    # Include both band events and user's own events
+    scope = @user.events.active.includes(:venue, :band)
     events = if show_past
-               @band.events.active.includes(:venue).order(event_date: :desc).limit(limit)
+               scope.order(event_date: :desc).limit(limit)
              else
-               @band.events.active.upcoming.includes(:venue).limit(limit)
+               scope.upcoming.limit(limit)
              end
 
     {
@@ -185,10 +185,10 @@ class ProfileSectionResolver
 
   def hydrate_recommendations(settings)
     limit = settings['display_limit'] || settings[:display_limit] || 12
-    reviews = @user.reviews.includes(:track, :band).order(created_at: :desc).limit(limit)
+    reviews = @user.reviews.includes(:track, :band, :mentions).order(created_at: :desc).limit(limit)
 
     {
-      reviews: reviews.map { |r| ReviewSerializer.summary(r) }
+      reviews: reviews.map { |r| ReviewSerializer.with_author(r) }
     }
   end
 

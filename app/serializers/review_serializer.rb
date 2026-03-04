@@ -35,6 +35,7 @@ class ReviewSerializer
     {
       id: review.id,
       song_link: review.song_link,
+      band_name: review.band_name,
       song_name: review.song_name,
       artwork_url: review.artwork_url,
       review_text: review.review_text,

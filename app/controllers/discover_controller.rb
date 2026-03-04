@@ -130,7 +130,7 @@ class DiscoverController < ApplicationController
     per_page = [per_page, 50].min
     query = params[:q]&.strip.presence
 
-    base_scope = Event.active.upcoming.from_active_bands.includes(:venue, :band)
+    base_scope = Event.active.upcoming.visible.includes(:venue, :band, :user)
 
     if query.present?
       # Search by band name using trigram similarity via join
@@ -199,8 +199,8 @@ class DiscoverController < ApplicationController
                               .map { |review| ReviewSerializer.full(review, current_user: authenticated_user) }
 
     # Search events by band name
-    results[:events] = Event.active.upcoming.from_active_bands
-                            .includes(:venue, :band)
+    results[:events] = Event.active.upcoming.visible
+                            .includes(:venue, :band, :user)
                             .joins(:band)
                             .where("bands.name % ?", query)
                             .order(Arel.sql("similarity(bands.name, #{Band.connection.quote(query)}) DESC"))

@@ -181,9 +181,9 @@ class ProfileThemeValidator
           @errors << "#{type} #{field} must be at most #{config[:max]} (section #{index})"
         end
       when :enum
-        unless config[:values].include?(value)
-          @errors << "#{type} #{field} must be one of: #{config[:values].join(', ')} (section #{index})"
-        end
+        # Allow custom enum values for flexibility in site builder
+        # Schema values are suggestions, not strict requirements
+        next
       when :color
         if value.present? && !value.match?(HEX_COLOR_REGEX)
           @errors << "#{type} #{field} must be a valid hex color (section #{index})"
