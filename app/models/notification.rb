@@ -212,21 +212,26 @@ class Notification < ApplicationRecord
       post = comment.post
       comment_preview = comment.body.truncate(50)
 
+      # For anonymous comments, use guest_name; otherwise use actor display_name
+      commenter_name = if actor.nil? && comment.guest_name.present?
+        comment.guest_name
+      else
+        actor_name
+      end
+
       # Check if user was also mentioned in this comment (combined notification)
       was_mentioned = comment.user.present? && comment.mentions.exists?(user_id: user_id)
       title = was_mentioned ? 'New Mention' : 'New Comment'
-      body_text = if actor.nil?
-        "Someone commented: \"#{comment_preview}\""
-      elsif was_mentioned
-        "#{actor_name} mentioned you: \"#{comment_preview}\""
+      body_text = if was_mentioned
+        "#{commenter_name} mentioned you on \"#{post.title.truncate(30)}\""
       else
-        "#{actor_name}: \"#{comment_preview}\""
+        "#{commenter_name} commented on \"#{post.title.truncate(30)}\": \"#{comment_preview}\""
       end
 
       [
         title,
         body_text,
-        { type: 'post_comment', notification_id: id.to_s, post_id: post.id.to_s, comment_id: comment.id.to_s, mentioned: was_mentioned }
+        { type: 'post_comment', notification_id: id.to_s, post_id: post.id.to_s, post_slug: post.slug, comment_id: comment.id.to_s, mentioned: was_mentioned }
       ]
     when 'post_comment_like'
       comment = notifiable

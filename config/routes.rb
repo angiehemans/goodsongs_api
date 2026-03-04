@@ -190,6 +190,9 @@ Rails.application.routes.draw do
       # Blogger dashboard - combined endpoint for blogger dashboard data
       get 'blogger_dashboard', to: 'blogger_dashboard#show'
 
+      # Blog dashboard - comprehensive analytics dashboard for bloggers
+      get 'blog_dashboard', to: 'blog_dashboard#show'
+
       resources :scrobbles, only: [:index, :create, :destroy] do
         collection do
           get :recent
@@ -203,6 +206,28 @@ Rails.application.routes.draw do
       end
       get 'users/:user_id/scrobbles', to: 'scrobbles#user_scrobbles'
       get 'search', to: 'search#index'
+
+      # Tracking (unauthenticated)
+      post 'track', to: 'tracking#create'
+
+      # Analytics dashboard (authenticated + ability gated)
+      get 'analytics/overview', to: 'analytics#overview'
+      get 'analytics/views_over_time', to: 'analytics#views_over_time'
+      get 'analytics/traffic_sources', to: 'analytics#traffic_sources'
+      get 'analytics/content_performance', to: 'analytics#content_performance'
+      get 'analytics/geography', to: 'analytics#geography'
+      get 'analytics/devices', to: 'analytics#devices'
+
+      # Profile customization (authenticated + ability gated)
+      resource :profile_theme, only: [:show, :update] do
+        post :publish
+        post :discard_draft
+        post :reset
+      end
+      resources :profile_assets, only: [:index, :create, :destroy]
+
+      # Public profiles (no auth required)
+      get 'profiles/:username', to: 'profiles#show'
     end
   end
 end

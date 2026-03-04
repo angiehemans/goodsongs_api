@@ -6,6 +6,7 @@ class Band < ApplicationRecord
   has_many :reviews, dependent: :destroy
   has_many :events, dependent: :destroy
   has_many :band_aliases, dependent: :destroy
+  has_many :page_views, as: :viewable, dependent: :destroy
   has_one_attached :profile_picture
   has_one_attached :cached_artist_image
 
@@ -32,7 +33,18 @@ class Band < ApplicationRecord
   validates :city, length: { maximum: 100 }, allow_blank: true
   validates :region, length: { maximum: 100 }, allow_blank: true
 
+  # Social link URL validations
+  validates :instagram_url, format: { with: /\Ahttps:\/\/(www\.)?instagram\.com\//i, message: "must be a valid Instagram URL" }, allow_blank: true
+  validates :threads_url, format: { with: /\Ahttps:\/\/(www\.)?threads\.net\//i, message: "must be a valid Threads URL" }, allow_blank: true
+  validates :bluesky_url, format: { with: /\Ahttps:\/\/bsky\.app\//i, message: "must be a valid Bluesky URL" }, allow_blank: true
+  validates :twitter_url, format: { with: /\Ahttps:\/\/(www\.)?(twitter\.com|x\.com)\//i, message: "must be a valid Twitter/X URL" }, allow_blank: true
+  validates :tumblr_url, format: { with: /\Ahttps:\/\/(www\.)?[\w-]+\.tumblr\.com/i, message: "must be a valid Tumblr URL" }, allow_blank: true
+  validates :tiktok_url, format: { with: /\Ahttps:\/\/(www\.)?tiktok\.com\/@/i, message: "must be a valid TikTok URL" }, allow_blank: true
+  validates :facebook_url, format: { with: /\Ahttps:\/\/(www\.)?facebook\.com\//i, message: "must be a valid Facebook URL" }, allow_blank: true
+  validates :youtube_url, format: { with: /\Ahttps:\/\/(www\.)?(youtube\.com|youtu\.be)\//i, message: "must be a valid YouTube URL" }, allow_blank: true
+
   before_validation :normalize_links
+  before_validation :normalize_social_links
   before_validation :generate_slug
   
   scope :user_created, -> { where.not(user_id: nil) }
@@ -224,5 +236,20 @@ class Band < ApplicationRecord
   def slug_should_be_auto_generated?
     # Auto-generate if slug is blank or if name changed and slug wasn't manually set
     slug.blank? || (name_changed? && !slug_changed?)
+  end
+
+  def normalize_social_links
+    # Normalize social link URLs to https
+    %i[instagram_url threads_url bluesky_url twitter_url tumblr_url tiktok_url facebook_url youtube_url].each do |field|
+      value = send(field)
+      next if value.blank?
+
+      value = value.strip
+      unless value.match?(/\Ahttps?:\/\//i)
+        value = "https://#{value}"
+      end
+      value = value.sub(/\Ahttp:\/\//i, 'https://')
+      send("#{field}=", value)
+    end
   end
 end

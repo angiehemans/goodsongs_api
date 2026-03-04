@@ -39,9 +39,22 @@ class BandSerializer
       reviews_count: band.reviews.count,
       user_owned: band.user_owned?,
       owner: band.user ? { id: band.user.id, username: band.user.username } : nil,
+      # Social links
+      social_links: social_links(band),
       created_at: band.created_at,
       updated_at: band.updated_at
     }
+  end
+
+  # Returns hash of configured social links
+  def self.social_links(band)
+    links = {}
+    %w[instagram threads bluesky twitter tumblr tiktok facebook youtube].each do |platform|
+      field = "#{platform}_url"
+      value = band.send(field) if band.respond_to?(field)
+      links[platform] = value if value.present?
+    end
+    links
   end
 
   # Returns the band's link for the user's preferred streaming platform

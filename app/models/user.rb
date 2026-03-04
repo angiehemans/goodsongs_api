@@ -51,6 +51,10 @@ class User < ApplicationRecord
   # Refresh tokens for authentication
   has_many :refresh_tokens, dependent: :destroy
 
+  # Profile customization
+  has_one :profile_theme, dependent: :destroy
+  has_many :profile_assets, dependent: :destroy
+
   # Device tokens for push notifications
   has_many :device_tokens, dependent: :destroy
 
@@ -69,8 +73,19 @@ class User < ApplicationRecord
 
   ROLES = %w[fan band blogger].freeze
   STREAMING_PLATFORMS = %w[spotify appleMusic youtubeMusic tidal amazonMusic deezer soundcloud bandcamp].freeze
+  SOCIAL_PLATFORMS = %w[instagram threads bluesky twitter tumblr tiktok facebook youtube].freeze
 
   validates :role, inclusion: { in: ROLES }, allow_nil: true
+
+  # Social link URL validations
+  validates :instagram_url, format: { with: /\Ahttps:\/\/(www\.)?instagram\.com\//i, message: "must be a valid Instagram URL" }, allow_blank: true
+  validates :threads_url, format: { with: /\Ahttps:\/\/(www\.)?threads\.net\//i, message: "must be a valid Threads URL" }, allow_blank: true
+  validates :bluesky_url, format: { with: /\Ahttps:\/\/bsky\.app\//i, message: "must be a valid Bluesky URL" }, allow_blank: true
+  validates :twitter_url, format: { with: /\Ahttps:\/\/(www\.)?(twitter\.com|x\.com)\//i, message: "must be a valid Twitter/X URL" }, allow_blank: true
+  validates :tumblr_url, format: { with: /\Ahttps:\/\/(www\.)?[\w-]+\.tumblr\.com/i, message: "must be a valid Tumblr URL" }, allow_blank: true
+  validates :tiktok_url, format: { with: /\Ahttps:\/\/(www\.)?tiktok\.com\/@/i, message: "must be a valid TikTok URL" }, allow_blank: true
+  validates :facebook_url, format: { with: /\Ahttps:\/\/(www\.)?facebook\.com\//i, message: "must be a valid Facebook URL" }, allow_blank: true
+  validates :youtube_url, format: { with: /\Ahttps:\/\/(www\.)?(youtube\.com|youtu\.be)\//i, message: "must be a valid YouTube URL" }, allow_blank: true
   validates :preferred_streaming_platform, inclusion: { in: STREAMING_PLATFORMS }, allow_nil: true
   validates :email, presence: true, uniqueness: { case_sensitive: false }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }
@@ -319,6 +334,10 @@ class User < ApplicationRecord
         .where.not(id: plan_id)
         .order(:price_cents_monthly)
         .first
+  end
+
+  def profile_theme_with_defaults
+    profile_theme || build_profile_theme(sections: ProfileTheme.default_sections_for_role(role))
   end
 
   private

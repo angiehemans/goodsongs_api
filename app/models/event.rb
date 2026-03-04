@@ -2,6 +2,7 @@ class Event < ApplicationRecord
   belongs_to :band
   belongs_to :venue
   has_one_attached :image
+  has_many :page_views, as: :viewable, dependent: :destroy
 
   scope :upcoming, -> { where('event_date > ?', Time.current).order(event_date: :asc) }
   scope :past, -> { where('event_date <= ?', Time.current).order(event_date: :desc) }

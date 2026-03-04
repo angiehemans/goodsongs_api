@@ -423,7 +423,11 @@ Get current authenticated user's profile.
   },
   "abilities": ["create_recommendation", "follow_users", "create_comments", "scrobble_lastfm"],
   "preferred_streaming_platform": "spotify",
-  "allow_anonymous_comments": false
+  "allow_anonymous_comments": false,
+  "social_links": {
+    "instagram": "https://instagram.com/johndoe",
+    "twitter": "https://twitter.com/johndoe"
+  }
 }
 ```
 
@@ -459,6 +463,10 @@ For BAND accounts:
   "abilities": ["create_recommendation", "manage_storefront", "follow_users", "create_comments", "send_newsletter", "view_analytics", "manage_band_profile", "upload_music", "manage_events", "custom_design"],
   "preferred_streaming_platform": null,
   "allow_anonymous_comments": false,
+  "social_links": {
+    "instagram": "https://instagram.com/thebandname",
+    "tiktok": "https://tiktok.com/@thebandname"
+  },
   "primary_band": {
     "id": 1,
     "slug": "the-band-name",
@@ -488,6 +496,14 @@ city: "Los Angeles"
 region: "California"
 preferred_streaming_platform: "spotify"
 allow_anonymous_comments: true
+instagram_url: "https://instagram.com/username"
+threads_url: "https://threads.net/@username"
+bluesky_url: "https://bsky.app/profile/username.bsky.social"
+twitter_url: "https://twitter.com/username"
+tumblr_url: "https://username.tumblr.com"
+tiktok_url: "https://tiktok.com/@username"
+facebook_url: "https://facebook.com/username"
+youtube_url: "https://youtube.com/@username"
 ```
 
 **Fields:**
@@ -497,6 +513,16 @@ allow_anonymous_comments: true
 - `region` (optional): State/province/country (max 100 characters)
 - `preferred_streaming_platform` (optional): User's preferred streaming service. Valid values: `spotify`, `appleMusic`, `youtubeMusic`, `tidal`, `amazonMusic`, `deezer`, `soundcloud`, `bandcamp`. Set to `null` to clear preference.
 - `allow_anonymous_comments` (optional): Whether to allow anonymous comments on the user's blog posts (default: false). Useful for bloggers who want guest engagement.
+
+**Social Links (all optional):**
+- `instagram_url`: Instagram profile URL (format: `https://instagram.com/...`)
+- `threads_url`: Threads profile URL (format: `https://threads.net/@...`)
+- `bluesky_url`: Bluesky profile URL (format: `https://bsky.app/profile/...`)
+- `twitter_url`: Twitter/X profile URL (format: `https://twitter.com/...` or `https://x.com/...`)
+- `tumblr_url`: Tumblr blog URL (format: `https://username.tumblr.com`)
+- `tiktok_url`: TikTok profile URL (format: `https://tiktok.com/@...`)
+- `facebook_url`: Facebook profile URL (format: `https://facebook.com/...`)
+- `youtube_url`: YouTube channel URL (format: `https://youtube.com/...` or `https://youtu.be/...`)
 
 Note: When city/region are provided, latitude and longitude are automatically calculated via geocoding. The `region` field can be used for US states (e.g., "California"), countries (e.g., "United Kingdom"), or provinces (e.g., "Ontario, Canada").
 
@@ -1485,6 +1511,11 @@ Get all bands (ordered by name).
     "reviews_count": 5,
     "user_owned": true,
     "owner": { "id": 1, "username": "johndoe" },
+    "social_links": {
+      "instagram": "https://instagram.com/bandname",
+      "twitter": "https://twitter.com/bandname",
+      "tiktok": "https://tiktok.com/@bandname"
+    },
     "created_at": "2024-12-01T00:00:00.000Z",
     "updated_at": "2024-12-01T00:00:00.000Z"
   }
@@ -1565,7 +1596,25 @@ band[apple_music_link]: "https://music.apple.com/..."
 band[youtube_music_link]: "https://music.youtube.com/..."
 band[about]: "We make great music"
 band[profile_picture]: <file>
+band[instagram_url]: "https://instagram.com/bandname"
+band[threads_url]: "https://threads.net/@bandname"
+band[bluesky_url]: "https://bsky.app/profile/bandname.bsky.social"
+band[twitter_url]: "https://twitter.com/bandname"
+band[tumblr_url]: "https://bandname.tumblr.com"
+band[tiktok_url]: "https://tiktok.com/@bandname"
+band[facebook_url]: "https://facebook.com/bandname"
+band[youtube_url]: "https://youtube.com/@bandname"
 ```
+
+**Social Links (all optional):**
+- `instagram_url`: Instagram profile URL
+- `threads_url`: Threads profile URL
+- `bluesky_url`: Bluesky profile URL
+- `twitter_url`: Twitter/X profile URL
+- `tumblr_url`: Tumblr blog URL
+- `tiktok_url`: TikTok profile URL
+- `facebook_url`: Facebook page URL
+- `youtube_url`: YouTube channel URL
 
 Note: When city/region are provided, latitude and longitude are automatically calculated via geocoding.
 
@@ -5547,3 +5596,707 @@ Search for users by username prefix (for mention autocomplete).
 - Excludes the current user from results
 - Excludes disabled accounts
 - Case-insensitive prefix matching
+
+---
+
+## Profile Customization Endpoints
+
+Profile customization allows paid band and blogger accounts to customize their public profiles with theming, sections, and layout ordering.
+
+**Required Ability:** `can_customize_profile` (Band Starter, Band Pro, Blogger, Blogger Pro)
+
+### GET /api/v1/profile_theme
+
+Get the authenticated user's profile theme configuration including draft.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "user_id": 42,
+    "background_color": "#121212",
+    "brand_color": "#6366f1",
+    "font_color": "#f5f5f5",
+    "header_font": "Inter",
+    "body_font": "Inter",
+    "sections": [
+      { "type": "hero", "visible": true, "order": 0, "content": {} },
+      { "type": "music", "visible": true, "order": 1, "content": {} },
+      { "type": "events", "visible": true, "order": 2, "content": {} }
+    ],
+    "draft_sections": null,
+    "has_draft": false,
+    "published_at": "2026-03-02T10:30:00Z",
+    "created_at": "2026-03-01T09:00:00Z",
+    "updated_at": "2026-03-02T10:30:00Z",
+    "config": {
+      "approved_fonts": ["Inter", "Space Grotesk", "DM Sans", "..."],
+      "section_types": ["hero", "music", "events", "posts", "about", "recommendations", "custom_text", "mailing_list", "merch"],
+      "max_sections": 12,
+      "max_custom_text": 3,
+      "section_schemas": { "...see Section Schemas Reference..." },
+      "social_link_types": ["instagram", "threads", "bluesky", "twitter", "tumblr", "tiktok", "facebook", "youtube"],
+      "streaming_link_types": ["spotify", "appleMusic", "bandcamp", "soundcloud", "youtubeMusic"]
+    },
+    "source_data": {
+      "display_name": "The Midnight Pines",
+      "location": "Portland, OR",
+      "about_text": "We are an indie rock band from Portland.",
+      "profile_image_url": "https://...",
+      "social_links": {
+        "instagram": "https://instagram.com/midnightpines",
+        "twitter": "https://twitter.com/midnightpines"
+      },
+      "user": {
+        "id": 42,
+        "username": "midnightpines",
+        "role": "band"
+      },
+      "band": {
+        "id": 5,
+        "slug": "midnight-pines",
+        "name": "The Midnight Pines",
+        "location": "Portland, OR",
+        "about": "We are an indie rock band from Portland.",
+        "profile_picture_url": "https://..."
+      },
+      "streaming_links": {
+        "spotify": "https://open.spotify.com/artist/...",
+        "bandcamp": "https://midnightpines.bandcamp.com"
+      }
+    }
+  }
+}
+```
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "can_customize_profile",
+  "upgrade_plan": "band_starter"
+}
+```
+
+**Notes:**
+- Returns default theme if none exists
+- `config` contains static configuration for frontend reference
+- `draft_sections` contains unpublished changes (null if no draft)
+- `source_data` contains the actual user/band data for site builder previews (see below)
+
+**Using source_data for Site Builder:**
+
+The `source_data` object provides the actual profile data that sections will display. Use it to:
+
+1. **Show default values in the editor** - When a section's content field has a `source` (e.g., `headline: { source: "display_name" }`), display `source_data.display_name` as the default/placeholder
+2. **Preview sections accurately** - Render the hero section showing `source_data.display_name` unless the user has provided custom `content.headline`
+3. **Show available links** - Display `source_data.social_links` and `source_data.streaming_links` so users can choose which to show/hide
+
+| source_data field | Used by | Schema source reference |
+|-------------------|---------|------------------------|
+| `display_name` | Hero headline | `source: "display_name"` |
+| `location` | Hero subtitle | `source: "location"` |
+| `about_text` | About bio | `source: "about_text"` |
+| `profile_image_url` | Hero image | - |
+| `social_links` | Hero, About | `visible_social_links` setting |
+| `streaming_links` | Hero, Music | `visible_streaming_links` setting |
+| `band` | Band users only | Band profile data |
+
+---
+
+### PUT /api/v1/profile_theme
+
+Update the profile theme. Section changes go to `draft_sections` and must be published separately.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Request Body:**
+
+```json
+{
+  "background_color": "#1a1a1a",
+  "brand_color": "#ff6b35",
+  "font_color": "#f0f0f0",
+  "header_font": "Space Grotesk",
+  "body_font": "Inter",
+  "sections": [
+    {
+      "type": "hero",
+      "visible": true,
+      "order": 0,
+      "content": { "headline": "Welcome to our page" },
+      "settings": {
+        "show_profile_image": true,
+        "visible_streaming_links": ["spotify", "bandcamp"],
+        "visible_social_links": ["instagram", "twitter"]
+      }
+    },
+    {
+      "type": "music",
+      "visible": true,
+      "order": 1,
+      "settings": { "display_limit": 6 }
+    },
+    {
+      "type": "events",
+      "visible": true,
+      "order": 2,
+      "settings": { "display_limit": 4, "show_past_events": false }
+    },
+    {
+      "type": "about",
+      "visible": true,
+      "order": 3,
+      "content": { "bio": "About us..." },
+      "settings": { "show_social_links": true }
+    }
+  ]
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "background_color": "#1a1a1a",
+    "brand_color": "#ff6b35",
+    "sections": [...],
+    "draft_sections": [...],
+    "has_draft": true,
+    "...": "..."
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "validation_error",
+  "message": "Cannot have more than 12 sections, hero section can only appear once",
+  "details": [
+    "Cannot have more than 12 sections",
+    "hero section can only appear once"
+  ]
+}
+```
+
+**Notes:**
+- Global theme fields (colors, fonts) are updated immediately
+- Section changes go to `draft_sections` until published
+- Color fields must be valid hex colors (e.g., `#FF5733`)
+- Fonts must be from the approved list
+
+---
+
+### POST /api/v1/profile_theme/publish
+
+Publish draft sections to make them live on the public profile.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "sections": [...],
+    "draft_sections": null,
+    "has_draft": false,
+    "published_at": "2026-03-02T15:00:00Z",
+    "...": "..."
+  },
+  "message": "Theme published successfully"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "no_draft",
+  "message": "No draft to publish"
+}
+```
+
+---
+
+### POST /api/v1/profile_theme/discard_draft
+
+Discard unpublished draft sections.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "sections": [...],
+    "draft_sections": null,
+    "has_draft": false,
+    "...": "..."
+  },
+  "message": "Draft discarded"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "no_draft",
+  "message": "No draft to discard"
+}
+```
+
+---
+
+### POST /api/v1/profile_theme/reset
+
+Reset the theme to role-based defaults (colors, fonts, and sections).
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "background_color": "#121212",
+    "brand_color": "#6366f1",
+    "font_color": "#f5f5f5",
+    "header_font": "Inter",
+    "body_font": "Inter",
+    "sections": [...],
+    "draft_sections": null,
+    "has_draft": false,
+    "published_at": null,
+    "...": "..."
+  },
+  "message": "Theme reset to defaults"
+}
+```
+
+---
+
+### GET /api/v1/profile_assets
+
+List the authenticated user's uploaded profile assets (background images, etc.).
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "purpose": "background",
+      "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../image.jpg",
+      "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/representations/.../image.jpg",
+      "file_type": "image/jpeg",
+      "file_size": 245000,
+      "created_at": "2026-03-01T09:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+### POST /api/v1/profile_assets
+
+Upload a new profile asset image.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+
+- `image` (required): Image file (JPEG, PNG, or WebP, max 5MB)
+- `purpose` (optional): Asset purpose - `"background"`, `"header"`, or `"custom"` (default: `"background"`)
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "id": 2,
+    "purpose": "background",
+    "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../new-image.jpg",
+    "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/representations/.../new-image.jpg",
+    "file_type": "image/png",
+    "file_size": 180000,
+    "created_at": "2026-03-02T14:00:00Z"
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "validation_error",
+  "message": "Image must be less than 5MB, Image must be a JPEG, PNG, or WebP image",
+  "details": {
+    "image": ["must be less than 5MB", "must be a JPEG, PNG, or WebP image"]
+  }
+}
+```
+
+**Notes:**
+- Maximum 20 assets per user
+- Maximum file size: 5MB
+- Allowed types: JPEG, PNG, WebP
+
+---
+
+### DELETE /api/v1/profile_assets/:id
+
+Delete a profile asset.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**URL Parameters:**
+
+- `id` (required): The asset ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Asset deleted successfully"
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "error": "not_found",
+  "message": "Asset not found"
+}
+```
+
+---
+
+### GET /api/v1/profiles/:username
+
+Get a user's public profile with theme and hydrated section data. This is the public-facing profile endpoint.
+
+**Authentication:** None required
+
+**URL Parameters:**
+
+- `username` (required): The user's username
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "user": {
+      "id": 42,
+      "username": "midnightpines",
+      "email": "band@example.com",
+      "about_me": "We are a band from Portland.",
+      "profile_image_url": "https://...",
+      "reviews_count": 15,
+      "role": "band",
+      "display_name": "The Midnight Pines",
+      "location": "Portland, OR",
+      "followers_count": 1200,
+      "following_count": 50,
+      "primary_band": {
+        "id": 5,
+        "slug": "midnight-pines",
+        "name": "The Midnight Pines",
+        "location": "Portland, OR",
+        "profile_picture_url": "https://..."
+      }
+    },
+    "theme": {
+      "background_color": "#121212",
+      "brand_color": "#6366f1",
+      "font_color": "#f5f5f5",
+      "header_font": "Inter",
+      "body_font": "Inter"
+    },
+    "sections": [
+      {
+        "type": "hero",
+        "order": 0,
+        "content": {
+          "headline": "The Midnight Pines",
+          "subtitle": "Portland, OR"
+        },
+        "settings": {
+          "show_profile_image": true,
+          "visible_streaming_links": ["spotify", "bandcamp"],
+          "visible_social_links": ["instagram", "twitter"]
+        },
+        "data": {
+          "display_name": "The Midnight Pines",
+          "profile_image_url": "https://...",
+          "location": "Portland, OR",
+          "streaming_links": {
+            "spotify": "https://open.spotify.com/artist/...",
+            "bandcamp": "https://midnightpines.bandcamp.com"
+          },
+          "social_links": {
+            "instagram": "https://instagram.com/midnightpines",
+            "twitter": "https://twitter.com/midnightpines"
+          },
+          "band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" }
+        }
+      },
+      {
+        "type": "music",
+        "order": 1,
+        "content": {},
+        "settings": { "display_limit": 6 },
+        "data": {
+          "band": { "...": "..." },
+          "tracks": [{ "id": 1, "name": "Song Title", "...": "..." }],
+          "bandcamp_embed": "<iframe>...</iframe>",
+          "streaming_links": { "spotify": "...", "bandcamp": "..." }
+        }
+      },
+      {
+        "type": "events",
+        "order": 2,
+        "content": {},
+        "settings": { "display_limit": 6, "show_past_events": false },
+        "data": {
+          "events": [
+            { "id": 1, "name": "Live at The Fillmore", "event_date": "2026-04-15", "...": "..." }
+          ]
+        }
+      },
+      {
+        "type": "posts",
+        "order": 3,
+        "content": {},
+        "settings": { "display_limit": 6 },
+        "data": {
+          "posts": [
+            { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**Response (404 Not Found):**
+
+```json
+{
+  "error": "not_found",
+  "message": "User not found"
+}
+```
+
+**Notes:**
+- Returns only visible sections
+- Filters out sections the user's plan doesn't support (mailing_list, merch)
+- Each section includes hydrated `data` with pre-fetched content
+- Fan accounts return basic profile without customization
+- If no theme exists, returns default sections based on user role
+
+---
+
+### Section Types Reference
+
+| Section Type | Description | Plan Availability |
+|--------------|-------------|-------------------|
+| `hero` | Profile header with name, image, location | All paid plans |
+| `music` | Band's tracks and music embeds | All paid plans |
+| `events` | Upcoming events list | All paid plans |
+| `posts` | Blog posts list | All paid plans |
+| `about` | About text/bio section | All paid plans |
+| `recommendations` | User's song recommendations/reviews | All paid plans |
+| `custom_text` | Custom text blocks (up to 3) | All paid plans |
+| `mailing_list` | Newsletter signup form | Band Pro, Blogger Pro |
+| `merch` | Merchandise links | Band Pro only |
+
+---
+
+### Approved Fonts
+
+Inter, Space Grotesk, DM Sans, Plus Jakarta Sans, Outfit, Sora, Manrope, Rubik, Work Sans, Nunito Sans, Lora, Merriweather, Playfair Display, Source Serif 4, Libre Baskerville, IBM Plex Mono, JetBrains Mono
+
+---
+
+### Section Schemas Reference
+
+Each section type has defined `content` and `settings` fields. Content fields override profile-derived data, while settings control display behavior.
+
+#### Hero Section
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `headline` | 120 | Override display name (source: user display_name) |
+| `subtitle` | 200 | Override location text (source: user/band location) |
+| `cta_text` | 40 | Call-to-action button text |
+| `cta_url` | URL | Call-to-action button link |
+
+**Settings:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `background_color` | hex color | - | Section background color override |
+| `show_profile_image` | boolean | true | Show/hide profile image |
+| `visible_streaming_links` | array | `:configured` | Which streaming links to show (see Link Visibility) |
+| `visible_social_links` | array | `:configured` | Which social links to show (see Link Visibility) |
+
+#### Music Section
+
+**Content Fields:** None (data hydrated from band)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 6 | 1-24 | Number of tracks to display |
+
+#### Events Section
+
+**Content Fields:** None (data hydrated from band)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 6 | 1-24 | Number of events to display |
+| `show_past_events` | boolean | false | - | Include past events |
+
+#### Posts Section
+
+**Content Fields:** None (data hydrated from user)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 6 | 1-24 | Number of posts to display |
+
+#### About Section
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `bio` | 2000 | Override bio text (source: band about or user about_me) |
+
+**Settings:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `show_social_links` | boolean | true | Show social links in about section |
+| `visible_social_links` | array | `:configured` | Which social links to show |
+
+#### Recommendations Section
+
+**Content Fields:** None (data hydrated from user reviews)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 12 | 1-24 | Number of recommendations to display |
+
+#### Custom Text Section
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `title` | 120 | Section heading |
+| `body` | 5000 | Main text content |
+
+**Settings:**
+| Field | Type | Values | Description |
+|-------|------|--------|-------------|
+| `text_align` | enum | left, center, right | Text alignment |
+| `background_color` | hex color | - | Section background color |
+
+#### Mailing List Section (Pro Plans)
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `heading` | 120 | Section heading |
+| `description` | 500 | Signup prompt text |
+
+**Settings:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider_url` | URL | External mailing list provider URL |
+
+#### Merch Section (Band Pro)
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `heading` | 120 | Section heading |
+
+**Settings:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `store_url` | URL | External merch store URL |
+
+---
+
+### Link Visibility Settings
+
+The `visible_streaming_links` and `visible_social_links` settings control which links are shown:
+
+| Value | Behavior |
+|-------|----------|
+| `null` or `:configured` | Show all configured links (default) |
+| `[]` (empty array) | Show no links |
+| `["spotify", "bandcamp"]` | Show only specified link types |
+
+**Streaming Link Types:** `spotify`, `appleMusic`, `bandcamp`, `soundcloud`, `youtubeMusic`
+
+**Social Link Types:** `instagram`, `threads`, `bluesky`, `twitter`, `tumblr`, `tiktok`, `facebook`, `youtube`
+
+**Example - Show only Spotify and Instagram:**
+```json
+{
+  "type": "hero",
+  "visible": true,
+  "order": 0,
+  "settings": {
+    "visible_streaming_links": ["spotify"],
+    "visible_social_links": ["instagram"]
+  }
+}
+```
+
+**Example - Hide all social links:**
+```json
+{
+  "type": "hero",
+  "visible": true,
+  "order": 0,
+  "settings": {
+    "visible_social_links": []
+  }
+}
+```
+
+**Note:** Links are only shown if the user/band has them configured. The visibility setting filters the configured links; it cannot add links that don't exist.

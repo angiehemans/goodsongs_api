@@ -39,7 +39,9 @@ class UserSerializer
       plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
       abilities: user.abilities,
       preferred_streaming_platform: user.preferred_streaming_platform,
-      allow_anonymous_comments: user.allow_anonymous_comments
+      allow_anonymous_comments: user.allow_anonymous_comments,
+      # Social links
+      social_links: social_links(user)
     )
 
     # Include primary band for BAND accounts
@@ -65,7 +67,9 @@ class UserSerializer
       location: user.location,
       followers_count: user.followers_count,   # Use counter cache
       following_count: user.following_count,   # Use counter cache
-      allow_anonymous_comments: user.allow_anonymous_comments
+      allow_anonymous_comments: user.allow_anonymous_comments,
+      # Social links
+      social_links: social_links(user)
     }
 
     # Include primary band for BAND accounts
@@ -74,5 +78,16 @@ class UserSerializer
     end
 
     result
+  end
+
+  # Returns hash of configured social links
+  def self.social_links(user)
+    links = {}
+    %w[instagram threads bluesky twitter tumblr tiktok facebook youtube].each do |platform|
+      field = "#{platform}_url"
+      value = user.send(field) if user.respond_to?(field)
+      links[platform] = value if value.present?
+    end
+    links
   end
 end

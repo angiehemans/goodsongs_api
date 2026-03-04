@@ -550,9 +550,293 @@ If GoodSongs reaches a scale where analytics queries compete with application qu
 
 ---
 
+## Implementation Status
+
+### Implemented (Phase 1 & 2)
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `page_views` table | Done | Migration `20260227000001_create_page_views.rb` |
+| `PageView` model | Done | `app/models/page_view.rb` |
+| Tracking endpoint | Done | `POST /api/v1/track` |
+| Session management | Done | `gs_session` cookie, 24-hour expiry |
+| Referrer parsing | Done | `app/services/referrer_parser.rb` |
+| Device detection | Done | `app/services/device_type_parser.rb` |
+| GeoIP lookup | Done | `app/services/geoip_lookup.rb` |
+| IP hashing | Done | SHA-256 with secret salt |
+| Self-view exclusion | Done | Skips if authenticated owner |
+| Rate limiting | Done | 100 req/min per IP |
+| Deduplication | Done | Same session + page within 1 hour |
+| Analytics controller | Done | 6 endpoints with ability gating |
+| Blog dashboard endpoint | Done | `GET /api/v1/blog_dashboard` - comprehensive dashboard data |
+| Period filtering | Done | 7d, 30d, 90d, custom |
+| Period-over-period comparison | Done | In overview endpoint |
+
+### Deferred
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Table partitioning | Deferred | Not needed until page_views exceeds 50M rows |
+| Redis buffered writes | Deferred | Direct writes handle 100 req/s, sufficient for launch |
+| Bot filtering | Deferred | Phase 4 enhancement, post-launch iteration |
+| Referrer spam filtering | Deferred | Phase 4 enhancement, post-launch iteration |
+| `page_view_aggregates` table | Deferred | Build when approaching 12 months of data |
+| GeoIP auto-update job | Deferred | Manual monthly updates for now |
+
+---
+
+## API Reference
+
+All analytics endpoints require authentication and the `view_analytics` ability.
+
+### Tracking (Unauthenticated)
+
+#### `POST /api/v1/track`
+
+Record a page view. Unauthenticated, rate-limited to 100/min per IP.
+
+**Request:**
+```json
+{
+  "viewable_type": "post",
+  "viewable_id": 123,
+  "path": "/blogs/johndoe/my-post",
+  "referrer": "https://google.com/search?q=music"
+}
+```
+
+**Response:** `204 No Content`
+
+| viewable_type | Description |
+|---------------|-------------|
+| `post` | Blog post |
+| `band` | Band profile |
+| `event` | Event page |
+
+---
+
+### Analytics Dashboard
+
+All endpoints support `?period=` parameter: `7d`, `30d` (default), `90d`, or `custom` with `start_date` and `end_date`.
+
+#### `GET /api/v1/analytics/overview`
+
+Summary cards with period-over-period comparison.
+
+**Response:**
+```json
+{
+  "data": {
+    "total_views": 2847,
+    "total_views_change": 12.5,
+    "unique_visitors": 1923,
+    "unique_visitors_change": 8.3,
+    "period": "30d",
+    "start_date": "2026-01-28T00:00:00Z",
+    "end_date": "2026-02-27T23:59:59Z"
+  }
+}
+```
+
+#### `GET /api/v1/analytics/views_over_time`
+
+Time-series data for charting.
+
+**Response:**
+```json
+{
+  "data": {
+    "views": [
+      { "date": "2026-02-01", "views": 142 },
+      { "date": "2026-02-02", "views": 156 }
+    ],
+    "period": "30d"
+  }
+}
+```
+
+#### `GET /api/v1/analytics/traffic_sources`
+
+Breakdown by referrer source.
+
+**Response:**
+```json
+{
+  "data": {
+    "sources": [
+      { "source": "google", "views": 1204, "percentage": 42.3 },
+      { "source": "direct", "views": 892, "percentage": 31.3 },
+      { "source": "goodsongs", "views": 412, "percentage": 14.5 }
+    ],
+    "total": 2847,
+    "period": "30d"
+  }
+}
+```
+
+#### `GET /api/v1/analytics/content_performance`
+
+Top content ranked by views.
+
+**Response:**
+```json
+{
+  "data": {
+    "content": [
+      {
+        "type": "post",
+        "id": 456,
+        "title": "Why Deftones Hit Different",
+        "views": 312,
+        "path": "/blogs/johndoe/why-deftones-hit-different"
+      }
+    ],
+    "period": "30d"
+  }
+}
+```
+
+#### `GET /api/v1/analytics/geography`
+
+Breakdown by country.
+
+**Response:**
+```json
+{
+  "data": {
+    "countries": [
+      { "country": "US", "views": 1523, "percentage": 53.5 },
+      { "country": "GB", "views": 412, "percentage": 14.5 }
+    ],
+    "unknown": 203,
+    "total": 2847,
+    "period": "30d"
+  }
+}
+```
+
+#### `GET /api/v1/analytics/devices`
+
+Breakdown by device type.
+
+**Response:**
+```json
+{
+  "data": {
+    "devices": [
+      { "device": "desktop", "views": 1821, "percentage": 64.0 },
+      { "device": "mobile", "views": 923, "percentage": 32.4 },
+      { "device": "tablet", "views": 103, "percentage": 3.6 }
+    ],
+    "total": 2847,
+    "period": "30d"
+  }
+}
+```
+
+---
+
+### Blog Dashboard (Comprehensive)
+
+#### `GET /api/v1/blog_dashboard`
+
+Comprehensive blog dashboard combining totals, analytics, content, and engagement metrics in a single request. Requires authentication.
+
+**Response:**
+```json
+{
+  "totals": {
+    "page_views": 12500,
+    "posts": 42,
+    "recommendations": 156,
+    "followers": 892,
+    "comments": 234
+  },
+  "page_views_over_time": [
+    { "date": "2026-01-01", "views": 125 },
+    { "date": "2026-01-02", "views": 143 }
+  ],
+  "traffic_sources": [
+    { "source": "google", "views": 4500, "percentage": 36.0 },
+    { "source": "direct", "views": 3200, "percentage": 25.6 },
+    { "source": "goodsongs", "views": 2100, "percentage": 16.8 },
+    { "source": "twitter", "views": 1500, "percentage": 12.0 }
+  ],
+  "recent_posts": [
+    {
+      "id": 123,
+      "title": "Why Deftones Hit Different",
+      "slug": "why-deftones-hit-different",
+      "excerpt": "A deep dive into the sonic textures...",
+      "status": "published",
+      "featured": true,
+      "publish_date": "2026-02-20T12:00:00Z",
+      "created_at": "2026-02-19T10:30:00Z",
+      "likes_count": 45,
+      "comments_count": 12
+    }
+  ],
+  "recent_notifications": [
+    {
+      "id": 456,
+      "type": "post_like",
+      "read": false,
+      "actor": {
+        "id": 789,
+        "username": "musicfan42",
+        "display_name": "Music Fan",
+        "profile_image_url": "https://..."
+      },
+      "created_at": "2026-02-27T08:15:00Z"
+    }
+  ],
+  "follower_growth": [
+    { "week": "2025-12-01", "new_followers": 12 },
+    { "week": "2025-12-08", "new_followers": 8 },
+    { "week": "2025-12-15", "new_followers": 15 }
+  ],
+  "top_performing_posts": [
+    {
+      "id": 123,
+      "title": "Why Deftones Hit Different",
+      "slug": "why-deftones-hit-different",
+      "excerpt": "A deep dive into the sonic textures...",
+      "publish_date": "2026-02-20T12:00:00Z",
+      "views": 1250,
+      "likes": 45,
+      "comments": 12,
+      "engagement_score": 1376
+    }
+  ]
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `totals.page_views` | Total page views across all user's content (all time) |
+| `totals.posts` | Total number of posts created |
+| `totals.recommendations` | Total number of reviews/recommendations created |
+| `totals.followers` | Current follower count |
+| `totals.comments` | Total comments received on posts and recommendations |
+| `page_views_over_time` | Daily page views for the last 60 days |
+| `traffic_sources` | Referrer source breakdown for last 60 days with percentages |
+| `recent_posts` | 5 most recent posts with engagement metrics |
+| `recent_notifications` | 5 most recent notifications with actor details |
+| `follower_growth` | Weekly new follower counts for the last 3 months |
+| `top_performing_posts` | 5 top published posts by engagement score |
+
+**Engagement Score Calculation:**
+```
+engagement_score = views + (likes × 2) + (comments × 3)
+```
+
+Interactions are weighted higher than views to surface truly engaging content.
+
+---
+
 ## Implementation Phases
 
-### Phase 1: Core Tracking (Week 1)
+### Phase 1: Core Tracking (Week 1) ✅ COMPLETE
 
 - Create `page_views` table and migration
 - Build tracking API endpoint with referrer parsing, IP hashing, and session management
@@ -560,7 +844,7 @@ If GoodSongs reaches a scale where analytics queries compete with application qu
 - Add self-view exclusion
 - Add rate limiting to tracking endpoint
 
-### Phase 2: Dashboard API (Week 2)
+### Phase 2: Dashboard API (Week 2) ✅ COMPLETE
 
 - Build analytics controller with ability gating
 - Implement overview, views_over_time, traffic_sources, content_performance, geography, and devices endpoints
@@ -578,12 +862,12 @@ If GoodSongs reaches a scale where analytics queries compete with application qu
 - Add date range selector
 - Add upgrade prompt for users without `view_analytics` ability
 
-### Phase 4: Polish & Ops (Week 3–4)
+### Phase 4: Polish & Ops (Week 3–4) — DEFERRED
 
-- Add bot filtering (user-agent blocklist)
-- Add referrer spam filtering
-- Set up data retention job and `page_view_aggregates` table
-- Add GeoIP database auto-update job
+- Add bot filtering (user-agent blocklist) — *Deferred for post-launch iteration*
+- Add referrer spam filtering — *Deferred for post-launch iteration*
+- Set up data retention job and `page_view_aggregates` table — *Deferred until approaching 12 months of data*
+- Add GeoIP database auto-update job — *Manual updates for now*
 - Load test tracking endpoint
 - Monitor page_views table growth and index performance
 

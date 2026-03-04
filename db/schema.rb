@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_03_000001) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -131,6 +131,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
     t.string "artist_image_source"
     t.datetime "artist_image_cached_at"
     t.string "soundcloud_link"
+    t.string "instagram_url"
+    t.string "threads_url"
+    t.string "bluesky_url"
+    t.string "twitter_url"
+    t.string "tumblr_url"
+    t.string "tiktok_url"
+    t.string "facebook_url"
+    t.string "youtube_url"
     t.index ["artist_image_source"], name: "index_bands_on_artist_image_source", where: "(artist_image_source IS NOT NULL)"
     t.index ["audiodb_artist_id"], name: "index_bands_on_audiodb_artist_id", unique: true, where: "(audiodb_artist_id IS NOT NULL)"
     t.index ["created_at"], name: "index_bands_on_created_at"
@@ -234,6 +242,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
     t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
+  create_table "page_views", force: :cascade do |t|
+    t.string "viewable_type", null: false
+    t.bigint "viewable_id", null: false
+    t.bigint "owner_id", null: false
+    t.string "referrer"
+    t.string "referrer_source", default: "direct", null: false
+    t.string "path", null: false
+    t.string "session_id", null: false
+    t.string "ip_hash", null: false
+    t.string "user_agent"
+    t.string "device_type", default: "desktop", null: false
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.index ["created_at"], name: "index_page_views_on_created_at"
+    t.index ["owner_id", "created_at"], name: "index_page_views_on_owner_id_and_created_at"
+    t.index ["owner_id", "referrer_source", "created_at"], name: "index_page_views_on_owner_referrer_created_at"
+    t.index ["viewable_type", "viewable_id", "created_at"], name: "index_page_views_on_viewable_and_created_at"
+  end
+
   create_table "plan_abilities", force: :cascade do |t|
     t.bigint "plan_id", null: false
     t.bigint "ability_id", null: false
@@ -320,6 +347,30 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
     t.index ["user_id", "slug"], name: "index_posts_on_user_id_and_slug", unique: true
     t.index ["user_id", "status", "publish_date"], name: "index_posts_on_user_id_and_status_and_publish_date"
     t.index ["user_id"], name: "index_posts_on_user_id"
+  end
+
+  create_table "profile_assets", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "purpose", default: "background"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "purpose"], name: "index_profile_assets_on_user_id_and_purpose"
+    t.index ["user_id"], name: "index_profile_assets_on_user_id"
+  end
+
+  create_table "profile_themes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "background_color", default: "#121212"
+    t.string "brand_color", default: "#6366f1"
+    t.string "font_color", default: "#f5f5f5"
+    t.string "header_font", default: "Inter"
+    t.string "body_font", default: "Inter"
+    t.jsonb "sections", default: [], null: false
+    t.jsonb "draft_sections"
+    t.datetime "published_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_profile_themes_on_user_id", unique: true
   end
 
   create_table "refresh_tokens", force: :cascade do |t|
@@ -487,6 +538,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
     t.bigint "plan_id"
     t.string "preferred_streaming_platform"
     t.boolean "allow_anonymous_comments", default: false, null: false
+    t.string "instagram_url"
+    t.string "threads_url"
+    t.string "bluesky_url"
+    t.string "twitter_url"
+    t.string "tumblr_url"
+    t.string "tiktok_url"
+    t.string "facebook_url"
+    t.string "youtube_url"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
     t.index ["lastfm_username"], name: "index_users_on_lastfm_username"
@@ -541,6 +600,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_204937) do
   add_foreign_key "post_likes", "users"
   add_foreign_key "posts", "tracks"
   add_foreign_key "posts", "users"
+  add_foreign_key "profile_assets", "users"
+  add_foreign_key "profile_themes", "users"
   add_foreign_key "refresh_tokens", "users"
   add_foreign_key "review_comment_likes", "review_comments"
   add_foreign_key "review_comment_likes", "users"

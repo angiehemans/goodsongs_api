@@ -22,6 +22,11 @@ gem 'dotenv-rails'        # Load environment variables from .env file
 gem 'geocoder'            # For geocoding user locations
 gem 'fcm'                 # Firebase Cloud Messaging for push notifications
 
+# Analytics
+gem 'groupdate'           # Time-series grouping
+gem 'maxmind-db'          # GeoIP lookup
+gem 'device_detector'     # User-agent parsing
+
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 # gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -42,7 +47,7 @@ gem "kamal", require: false
 gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
-# gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 1.2"
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"

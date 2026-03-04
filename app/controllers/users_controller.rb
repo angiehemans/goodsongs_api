@@ -118,7 +118,12 @@ class UsersController < ApplicationController
   end
 
   def profile_params
-    params.permit(:about_me, :profile_image, :city, :region, :preferred_streaming_platform, :allow_anonymous_comments)
+    params.permit(
+      :about_me, :profile_image, :city, :region, :preferred_streaming_platform, :allow_anonymous_comments,
+      # Social links
+      :instagram_url, :threads_url, :bluesky_url, :twitter_url,
+      :tumblr_url, :tiktok_url, :facebook_url, :youtube_url
+    )
   end
 
 end

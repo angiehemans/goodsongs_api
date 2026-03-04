@@ -5,6 +5,7 @@ class Post < ApplicationRecord
   has_many :post_likes, dependent: :destroy
   has_many :likers, through: :post_likes, source: :user
   has_many :post_comments, dependent: :destroy
+  has_many :page_views, as: :viewable, dependent: :destroy
 
   enum :status, { draft: 0, published: 1, scheduled: 2 }
 

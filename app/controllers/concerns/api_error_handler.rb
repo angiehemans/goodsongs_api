@@ -27,6 +27,7 @@ module ApiErrorHandler
     rescue_from ExceptionHandler::AuthenticationError, with: :handle_unauthorized
     rescue_from ExceptionHandler::MissingToken, with: :handle_unauthorized
     rescue_from ExceptionHandler::InvalidToken, with: :handle_unauthorized
+    rescue_from ExceptionHandler::ExpiredToken, with: :handle_token_expired
   end
 
   private
@@ -35,6 +36,14 @@ module ApiErrorHandler
     render_api_error(
       code: 'unauthorized',
       message: 'Missing or invalid authentication token',
+      status: :unauthorized
+    )
+  end
+
+  def handle_token_expired(_exception)
+    render_api_error(
+      code: 'token_expired',
+      message: 'Token has expired. Please refresh your token.',
       status: :unauthorized
     )
   end

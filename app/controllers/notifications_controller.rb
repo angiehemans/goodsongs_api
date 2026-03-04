@@ -123,6 +123,66 @@ class NotificationsController < ApplicationController
           body: comment.body.truncate(50)
         }
       end
+    when 'post_like'
+      if notification.notifiable.is_a?(Post)
+        post = notification.notifiable
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} liked your post \"#{post.title.truncate(50)}\""
+        data[:post] = {
+          id: post.id,
+          title: post.title,
+          slug: post.slug
+        }
+      end
+    when 'post_comment'
+      if notification.notifiable.is_a?(PostComment)
+        comment = notification.notifiable
+        post = comment.post
+
+        # For anonymous comments, use guest_name; for authenticated, use actor display_name
+        if notification.actor.nil? && comment.guest_name.present?
+          actor_name = comment.guest_name
+          data[:anonymous_commenter] = {
+            name: comment.guest_name
+          }
+        else
+          actor_name = notification.actor&.display_name || 'Someone'
+        end
+
+        # Check if user was also mentioned in this comment
+        was_mentioned = comment.user.present? && comment.mentions.exists?(user_id: notification.user_id)
+        data[:mentioned] = was_mentioned
+
+        if was_mentioned
+          data[:message] = "#{actor_name} mentioned you in a comment on \"#{post.title.truncate(50)}\""
+        else
+          data[:message] = "#{actor_name} commented on your post \"#{post.title.truncate(50)}\""
+        end
+
+        data[:post] = {
+          id: post.id,
+          title: post.title,
+          slug: post.slug
+        }
+        data[:comment] = {
+          id: comment.id,
+          body: comment.body.truncate(100)
+        }
+      end
+    when 'post_comment_like'
+      if notification.notifiable.is_a?(PostComment)
+        comment = notification.notifiable
+        post = comment.post
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} liked your comment on \"#{post.title.truncate(50)}\""
+        data[:post] = {
+          id: post.id,
+          title: post.title,
+          slug: post.slug
+        }
+        data[:comment] = {
+          id: comment.id,
+          body: comment.body.truncate(50)
+        }
+      end
     when 'mention'
       case notification.notifiable
       when Review
@@ -141,6 +201,19 @@ class NotificationsController < ApplicationController
           id: review.id,
           song_name: review.song_name,
           band_name: review.band_name
+        }
+        data[:comment] = {
+          id: comment.id,
+          body: comment.body.truncate(50)
+        }
+      when PostComment
+        comment = notification.notifiable
+        post = comment.post
+        data[:message] = "#{notification.actor&.display_name || 'Someone'} mentioned you in a comment"
+        data[:post] = {
+          id: post.id,
+          title: post.title,
+          slug: post.slug
         }
         data[:comment] = {
           id: comment.id,
