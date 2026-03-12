@@ -16,7 +16,10 @@ class ProfileThemeSerializer
       header_font: theme.header_font,
       body_font: theme.body_font,
       content_max_width: theme.content_max_width,
+      card_background_color: theme.card_background_color,
+      card_background_opacity: theme.card_background_opacity,
       sections: theme.sections,
+      single_post_layout: theme.resolved_single_post_layout,
       published_at: theme.published_at,
       has_draft: theme.has_draft?,
       created_at: theme.created_at,
@@ -25,6 +28,7 @@ class ProfileThemeSerializer
 
     if include_draft
       data[:draft_sections] = theme.draft_sections
+      data[:draft_single_post_layout] = theme.draft_single_post_layout
     end
 
     # Include static config for frontend reference
@@ -35,7 +39,20 @@ class ProfileThemeSerializer
       max_custom_text: ProfileTheme::MAX_CUSTOM_TEXT,
       section_schemas: ProfileSectionFields::SECTION_SCHEMAS,
       social_link_types: ProfileSectionFields::SOCIAL_LINK_TYPES,
-      streaming_link_types: ProfileSectionFields::STREAMING_LINK_TYPES
+      streaming_link_types: ProfileSectionFields::STREAMING_LINK_TYPES,
+      single_post_content_layouts: ProfileTheme::SINGLE_POST_CONTENT_LAYOUTS,
+      single_post_layout_schema: {
+        show_featured_image: { type: 'boolean', default: true },
+        show_author: { type: 'boolean', default: true },
+        show_song_embed: { type: 'boolean', default: true },
+        show_comments: { type: 'boolean', default: true },
+        show_related_posts: { type: 'boolean', default: true },
+        show_navigation: { type: 'boolean', default: true },
+        content_layout: { type: 'enum', options: ProfileTheme::SINGLE_POST_CONTENT_LAYOUTS, default: 'default' },
+        background_color: { type: 'color', optional: true, description: 'Inherits from theme if null' },
+        font_color: { type: 'color', optional: true, description: 'Inherits from theme if null' },
+        max_width: { type: 'integer', min: 600, max: 1600, optional: true, description: 'Inherits from theme if null' }
+      }
     }
 
     # Include source data for site builder preview
@@ -70,10 +87,15 @@ class ProfileThemeSerializer
       posts: build_recent_posts(user),
 
       # Recent recommendations/reviews for preview
+      # For bands: reviews about the band by others. For bloggers: reviews by the user.
       recommendations: build_recent_recommendations(user),
+      recommendations_source: user.band? ? 'about_band' : 'by_user',
 
       # Upcoming events for preview
-      events: build_upcoming_events(user)
+      events: build_upcoming_events(user),
+
+      # Sample post for single post layout preview in site builder
+      sample_post: build_sample_post(user)
     }
 
     # Include band data if applicable
@@ -101,8 +123,25 @@ class ProfileThemeSerializer
   end
 
   # Build array of recent recommendations/reviews for site builder preview
+  # Band profiles: reviews ABOUT the band by other users
+  # Blogger profiles: reviews written BY the user
   def self.build_recent_recommendations(user)
-    reviews = user.reviews.includes(:track, :band, :mentions).order(created_at: :desc).limit(10)
+    band = user.primary_band if user.band?
+
+    reviews = if band
+                band.reviews
+                    .where.not(user_id: user.id)
+                    .from_active_users
+                    .includes(:user, :track, :band, :mentions)
+                    .order(created_at: :desc)
+                    .limit(10)
+              else
+                user.reviews
+                    .includes(:track, :band, :mentions)
+                    .order(created_at: :desc)
+                    .limit(10)
+              end
+
     reviews.map { |r| ReviewSerializer.with_author(r) }
   end
 
@@ -112,39 +151,12 @@ class ProfileThemeSerializer
     events.map { |e| EventSerializer.summary(e) }
   end
 
-  # Build hash of user's configured social links
   def self.build_social_links(user, band = nil)
-    links = {}
-
-    ProfileSectionFields::SOCIAL_LINK_TYPES.each do |platform|
-      field = "#{platform}_url"
-
-      # Check user first
-      if user.respond_to?(field) && user.send(field).present?
-        links[platform] = user.send(field)
-      end
-
-      # For band users, band links take precedence
-      if band && band.respond_to?(field) && band.send(field).present?
-        links[platform] = band.send(field) if user.band?
-        links[platform] ||= band.send(field)
-      end
-    end
-
-    links
+    ProfileLinkHelper.social_links(user, band)
   end
 
-  # Build hash of band's configured streaming links
   def self.build_streaming_links(band)
-    return {} unless band
-
-    links = {}
-    links['spotify'] = band.spotify_link if band.spotify_link.present?
-    links['appleMusic'] = band.apple_music_link if band.apple_music_link.present?
-    links['bandcamp'] = band.bandcamp_link if band.bandcamp_link.present?
-    links['soundcloud'] = band.soundcloud_link if band.soundcloud_link.present?
-    links['youtubeMusic'] = band.youtube_music_link if band.youtube_music_link.present?
-    links
+    ProfileLinkHelper.streaming_links(band)
   end
 
   def self.public(theme)
@@ -156,7 +168,66 @@ class ProfileThemeSerializer
       font_color: theme.font_color,
       header_font: theme.header_font,
       body_font: theme.body_font,
-      content_max_width: theme.content_max_width
+      content_max_width: theme.content_max_width,
+      card_background_color: theme.card_background_color,
+      card_background_opacity: theme.card_background_opacity,
+      single_post_layout: theme.resolved_single_post_layout
+    }
+  end
+
+  # Build a sample post with comments, related posts, and navigation for site builder preview
+  def self.build_sample_post(user)
+    post = user.posts.published.order(publish_date: :desc).first
+    return nil unless post
+
+    data = PostSerializer.full(post)
+
+    # Add sample comments (up to 5)
+    comments = post.post_comments.includes(:user, :mentions).order(created_at: :desc).limit(5)
+    data[:comments] = comments.map { |c| serialize_preview_comment(c) }
+
+    # Add related posts (up to 3, excluding current post)
+    related = user.posts.published.where.not(id: post.id).order(publish_date: :desc).limit(3)
+    data[:related_posts] = related.map { |p| PostSerializer.summary(p) }
+
+    # Add navigation (prev/next)
+    data[:navigation] = build_post_navigation(user, post)
+
+    data
+  end
+
+  def self.serialize_preview_comment(comment)
+    result = {
+      id: comment.id,
+      body: comment.body,
+      anonymous: comment.anonymous?,
+      likes_count: comment.likes_count,
+      created_at: comment.created_at
+    }
+
+    if comment.anonymous?
+      result[:guest_name] = comment.guest_name
+    elsif comment.user
+      result[:author] = {
+        id: comment.user.id,
+        username: comment.user.username,
+        display_name: comment.user.display_name,
+        profile_image_url: UserSerializer.profile_image_url(comment.user)
+      }
+    end
+
+    result
+  end
+
+  def self.build_post_navigation(user, post)
+    posts = user.posts.published.order(publish_date: :desc)
+
+    next_post = posts.where("publish_date > ?", post.publish_date).order(publish_date: :asc).first
+    previous_post = posts.where("publish_date < ?", post.publish_date).first
+
+    {
+      next_post: next_post ? { title: next_post.title, slug: next_post.slug } : nil,
+      previous_post: previous_post ? { title: previous_post.title, slug: previous_post.slug } : nil
     }
   end
 end

@@ -2,6 +2,7 @@ class ReviewsController < ApplicationController
   include ResourceController
   include Ownership
   include TrackFinder
+  include Paginatable
 
   before_action :authenticate_request, except: [:show]
   before_action :authenticate_request_optional, only: [:show]
@@ -76,31 +77,27 @@ class ReviewsController < ApplicationController
 
   # GET /feed/following
   def following_feed
-    page = (params[:page] || 1).to_i
-    per_page = (params[:per_page] || 20).to_i
-    per_page = [per_page, 50].min # Cap at 50 per page
+    page = page_param
+    per_page = per_page_param(default: 20, max: 50)
 
     reviews = QueryService.following_feed(current_user, page: page, per_page: per_page)
     total_count = QueryService.following_feed_count(current_user)
-    total_pages = (total_count.to_f / per_page).ceil
 
     json_response({
       reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
-      pagination: {
-        current_page: page,
-        per_page: per_page,
-        total_count: total_count,
-        total_pages: total_pages,
-        has_next_page: page < total_pages,
-        has_previous_page: page > 1
-      }
+      pagination: pagination_meta(page, per_page, total_count)
     })
   end
 
   def user_reviews
     user = User.find(params[:user_id])
     reviews = QueryService.user_reviews_with_associations(user)
-    json_response(reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) })
+    total_count = reviews.count
+    reviews = paginate(reviews)
+    json_response({
+      reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   def current_user_reviews

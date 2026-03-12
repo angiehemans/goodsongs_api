@@ -106,7 +106,7 @@ class ScrobbleEnrichmentService
     end
 
     # 3. Create new band — fetch full artist details from MusicBrainz
-    full_artist = mbid.present? ? MusicbrainzService.get_artist(mbid) : nil
+    full_artist = mbid.present? ? ScrobbleCacheService.get_musicbrainz_artist(mbid) : nil
     image_url = fetch_artist_image(full_artist)
 
     Band.create!(
@@ -130,7 +130,7 @@ class ScrobbleEnrichmentService
     # Only backfill if key fields are missing
     return if band.genres.present? && band.country.present? && band.artist_type.present?
 
-    full_artist = MusicbrainzService.get_artist(mbid)
+    full_artist = ScrobbleCacheService.get_musicbrainz_artist(mbid)
     return unless full_artist
 
     updates = {}

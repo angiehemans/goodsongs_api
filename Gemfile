@@ -12,7 +12,7 @@ gem "puma", ">= 5.0"
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # Gemfile
 gem 'bcrypt', '~> 3.1.7'  # For password encryption
-gem 'jwt'                  # For JWT tokens
+gem 'jwt', '~> 2.7'        # For JWT tokens
 gem 'rack-cors'           # For CORS (needed for frontend integration)
 gem 'httparty'            # For making HTTP requests to Spotify API
 gem 'omniauth'            # OAuth framework
@@ -48,9 +48,6 @@ gem "thruster", require: false
 
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 1.2"
-
-# Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
-# gem "rack-cors"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

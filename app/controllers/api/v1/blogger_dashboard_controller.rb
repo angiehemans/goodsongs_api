@@ -143,18 +143,8 @@ module Api
 
         Rails.application.routes.url_helpers.rails_blob_url(
           user.profile_image,
-          **active_storage_url_options
+          **ImageUrlHelper.active_storage_url_options
         )
-      end
-
-      def active_storage_url_options
-        if ENV['API_URL'].present?
-          uri = URI.parse(ENV['API_URL'])
-          port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-          { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-        else
-          Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-        end
       end
     end
   end

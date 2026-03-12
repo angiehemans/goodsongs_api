@@ -104,10 +104,18 @@ module Api
       end
 
       # GET /api/v1/users/:user_id/scrobbles
+      # Currently restricted to own listening history only.
+      # TODO: Open to followers/public when privacy settings are implemented.
       def user_scrobbles
         user = User.find(params[:user_id])
 
-        # TODO: Check privacy settings when implemented
+        unless user == current_user
+          return render json: error_response(
+            'forbidden',
+            'You can only view your own listening history'
+          ), status: :forbidden
+        end
+
         scrobbles = user.scrobbles.recent
         scrobbles = apply_filters(scrobbles)
         scrobbles = apply_cursor_pagination(scrobbles)
@@ -140,23 +148,17 @@ module Api
           ), status: :unprocessable_entity
         end
 
-        if scrobble.update(preferred_artwork_url: artwork_url)
-          # Invalidate cache so the new artwork shows up
-          ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+        scrobble.update_column(:preferred_artwork_url, artwork_url)
 
-          render json: {
-            data: {
-              message: 'Preferred artwork set successfully',
-              scrobble: serialize_scrobble_with_artwork(scrobble)
-            }
+        # Invalidate cache so the new artwork shows up
+        ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
+
+        render json: {
+          data: {
+            message: 'Preferred artwork set successfully',
+            scrobble: serialize_scrobble_with_artwork(scrobble.reload)
           }
-        else
-          render json: error_response(
-            'validation_failed',
-            'Could not update artwork',
-            scrobble.errors.full_messages
-          ), status: :unprocessable_entity
-        end
+        }
       end
 
       # DELETE /api/v1/scrobbles/:id/artwork
@@ -164,7 +166,7 @@ module Api
       def clear_artwork
         scrobble = current_user.scrobbles.find(params[:id])
 
-        scrobble.update!(preferred_artwork_url: nil)
+        scrobble.update_column(:preferred_artwork_url, nil)
 
         # Invalidate cache
         ScrobbleCacheService.invalidate_recent_scrobbles(current_user.id)
@@ -354,6 +356,8 @@ module Api
         nil
       end
 
+      ALLOWED_IMAGE_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
+
       def attach_album_art(scrobble, album_art_data)
         return unless album_art_data.present?
 
@@ -371,6 +375,9 @@ module Api
             content_type = 'image/jpeg'
             base64_data = album_art_data
           end
+
+          # Validate content type against allowlist
+          return unless ALLOWED_IMAGE_TYPES.include?(content_type)
 
           decoded_data = Base64.strict_decode64(base64_data)
 

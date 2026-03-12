@@ -71,6 +71,7 @@ module Api
       # 5 most recent posts
       def recent_posts_data
         posts = current_user.posts
+                            .includes(:post_likes, :post_comments)
                             .order(created_at: :desc)
                             .limit(5)
 
@@ -84,8 +85,8 @@ module Api
             featured: post.featured,
             publish_date: post.publish_date&.iso8601,
             created_at: post.created_at.iso8601,
-            likes_count: post.post_likes.count,
-            comments_count: post.post_comments.count
+            likes_count: post.post_likes.size,
+            comments_count: post.post_comments.size
           }
         end
       end
@@ -125,7 +126,7 @@ module Api
 
       # 5 top performing posts based on views + interactions (likes + comments)
       def top_performing_posts_data
-        posts = current_user.posts.published
+        posts = current_user.posts.published.includes(:post_likes, :post_comments)
 
         # Get page view counts for posts
         post_view_counts = PageView.for_owner(current_user)
@@ -136,8 +137,8 @@ module Api
         # Calculate scores for each post
         scored_posts = posts.map do |post|
           views = post_view_counts[post.id] || 0
-          likes = post.post_likes.count
-          comments = post.post_comments.count
+          likes = post.post_likes.size
+          comments = post.post_comments.size
           # Score: views + (2 * likes) + (3 * comments) - weighting interactions higher
           score = views + (likes * 2) + (comments * 3)
 
@@ -174,18 +175,8 @@ module Api
 
         Rails.application.routes.url_helpers.rails_blob_url(
           user.profile_image,
-          **active_storage_url_options
+          **ImageUrlHelper.active_storage_url_options
         )
-      end
-
-      def active_storage_url_options
-        if ENV['API_URL'].present?
-          uri = URI.parse(ENV['API_URL'])
-          port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-          { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-        else
-          Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-        end
       end
     end
   end

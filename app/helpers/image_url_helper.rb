@@ -1,11 +1,28 @@
 module ImageUrlHelper
+  # Shared URL options for generating absolute Active Storage blob URLs.
+  # Used by models, controllers, and services via `**ImageUrlHelper.active_storage_url_options`.
+  def self.active_storage_url_options
+    if ENV['API_URL'].present?
+      uri = URI.parse(ENV['API_URL'])
+      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
+      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
+    else
+      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
+    end
+  end
+
+  # Instance-level delegate for use in classes that include this module
+  def active_storage_url_options
+    ImageUrlHelper.active_storage_url_options
+  end
+
   def attachment_url(attachment)
     return nil unless attachment.attached?
-    
-    # Set default URL options if not already set
-    Rails.application.routes.default_url_options[:host] ||= default_host
-    
-    Rails.application.routes.url_helpers.url_for(attachment)
+
+    Rails.application.routes.url_helpers.rails_blob_url(
+      attachment,
+      **ImageUrlHelper.active_storage_url_options
+    )
   end
 
   def profile_image_url(resource)
@@ -14,13 +31,5 @@ module ImageUrlHelper
 
   def profile_picture_url(resource)
     attachment_url(resource.profile_picture)
-  end
-
-  private
-
-  def default_host
-    Rails.application.config.action_mailer.default_url_options[:host] || 
-    ENV['HOST'] || 
-    'localhost:3000'
   end
 end

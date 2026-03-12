@@ -121,7 +121,8 @@ class User < ApplicationRecord
 
   before_validation :normalize_preferred_streaming_platform
   before_save :downcase_email, :downcase_username
-  after_create :send_confirmation_email
+  before_create :set_email_confirmation_token
+  after_create_commit :send_confirmation_email
 
   def profile_data
     UserSerializer.profile_data(self)
@@ -369,8 +370,15 @@ class User < ApplicationRecord
     self.username = username&.downcase
   end
 
+  def set_email_confirmation_token
+    loop do
+      self.email_confirmation_token = SecureRandom.urlsafe_base64(32)
+      break unless User.exists?(email_confirmation_token: email_confirmation_token)
+    end
+    self.email_confirmation_sent_at = Time.current
+  end
+
   def send_confirmation_email
-    generate_email_confirmation_token!
     UserMailerJob.perform_later(id, :confirmation)
   end
 end

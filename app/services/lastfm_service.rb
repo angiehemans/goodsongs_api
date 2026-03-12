@@ -1,6 +1,7 @@
 class LastfmService
   include HTTParty
   base_uri 'https://ws.audioscrobbler.com/2.0'
+  default_timeout 10
 
   class << self
     # Get album info (class method - no user required)

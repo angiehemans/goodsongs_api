@@ -72,7 +72,22 @@ class AdminController < ApplicationController
       return json_response({ error: 'You cannot modify your own admin status' }, :unprocessable_entity)
     end
 
+    changes_to_log = {}
+    changes_to_log[:admin] = [user.admin?, params[:admin]] if params.key?(:admin) && params[:admin] != user.admin?
+    changes_to_log[:role] = [user.role, params[:role]] if params.key?(:role) && params[:role] != user.role
+    changes_to_log[:plan_id] = [user.plan_id, params[:plan_id].to_i] if params.key?(:plan_id) && params[:plan_id].to_i != user.plan_id
+    changes_to_log[:disabled] = [user.disabled?, params[:disabled]] if params.key?(:disabled) && params[:disabled] != user.disabled?
+
     if user.update(admin_user_params)
+      if changes_to_log.any?
+        Rails.logger.info(
+          "[AdminAudit] admin=#{current_user.id} (#{current_user.username}) " \
+          "updated user=#{user.id} (#{user.username}) " \
+          "changes=#{changes_to_log.inspect} " \
+          "ip=#{request.remote_ip}"
+        )
+      end
+
       json_response({
         message: 'User has been updated',
         user: admin_user_data_full(user)

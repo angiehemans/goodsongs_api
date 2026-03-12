@@ -5929,7 +5929,20 @@ Get the authenticated user's profile theme configuration including draft.
       { "type": "music", "visible": true, "order": 1, "content": {} },
       { "type": "events", "visible": true, "order": 2, "content": {} }
     ],
+    "single_post_layout": {
+      "show_featured_image": true,
+      "show_author": true,
+      "show_song_embed": true,
+      "show_comments": true,
+      "show_related_posts": true,
+      "show_navigation": true,
+      "content_layout": "default",
+      "background_color": null,
+      "font_color": null,
+      "max_width": null
+    },
     "draft_sections": null,
+    "draft_single_post_layout": null,
     "has_draft": false,
     "published_at": "2026-03-02T10:30:00Z",
     "created_at": "2026-03-01T09:00:00Z",
@@ -5941,7 +5954,20 @@ Get the authenticated user's profile theme configuration including draft.
       "max_custom_text": 3,
       "section_schemas": { "...see Section Schemas Reference..." },
       "social_link_types": ["instagram", "threads", "bluesky", "twitter", "tumblr", "tiktok", "facebook", "youtube"],
-      "streaming_link_types": ["spotify", "appleMusic", "bandcamp", "soundcloud", "youtubeMusic"]
+      "streaming_link_types": ["spotify", "appleMusic", "bandcamp", "soundcloud", "youtubeMusic"],
+      "single_post_content_layouts": ["default", "wide", "narrow"],
+      "single_post_layout_schema": {
+        "show_featured_image": { "type": "boolean", "default": true },
+        "show_author": { "type": "boolean", "default": true },
+        "show_song_embed": { "type": "boolean", "default": true },
+        "show_comments": { "type": "boolean", "default": true },
+        "show_related_posts": { "type": "boolean", "default": true },
+        "show_navigation": { "type": "boolean", "default": true },
+        "content_layout": { "type": "enum", "options": ["default", "wide", "narrow"], "default": "default" },
+        "background_color": { "type": "color", "optional": true, "description": "Inherits from theme if null" },
+        "font_color": { "type": "color", "optional": true, "description": "Inherits from theme if null" },
+        "max_width": { "type": "integer", "min": 600, "max": 1600, "optional": true, "description": "Inherits from theme if null" }
+      }
     },
     "source_data": {
       "display_name": "The Midnight Pines",
@@ -5977,7 +6003,24 @@ Get the authenticated user's profile theme configuration including draft.
       ],
       "events": [
         { "id": 3, "name": "Live at The Doug Fir", "event_date": "2026-04-15T20:00:00Z", "...": "..." }
-      ]
+      ],
+      "sample_post": {
+        "id": 1,
+        "title": "New Album Announcement",
+        "slug": "new-album",
+        "body": "<p>Full post body...</p>",
+        "...": "...",
+        "comments": [
+          { "id": 1, "body": "Great post!", "author": { "username": "fan1", "...": "..." }, "...": "..." }
+        ],
+        "related_posts": [
+          { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
+        ],
+        "navigation": {
+          "next_post": { "title": "Newer Post", "slug": "newer-post" },
+          "previous_post": { "title": "Older Post", "slug": "older-post" }
+        }
+      }
     }
   }
 }
@@ -5997,7 +6040,9 @@ Get the authenticated user's profile theme configuration including draft.
 **Notes:**
 - Returns default theme if none exists
 - `config` contains static configuration for frontend reference
-- `draft_sections` contains unpublished changes (null if no draft)
+- `draft_sections` contains unpublished section changes (null if no draft)
+- `draft_single_post_layout` contains unpublished single post layout changes (null if no draft)
+- `single_post_layout` is the published layout merged with defaults (all fields always present)
 - `source_data` contains the actual user/band data for site builder previews (see below)
 
 **Using source_data for Site Builder:**
@@ -6008,6 +6053,7 @@ The `source_data` object provides the actual profile data that sections will dis
 2. **Preview sections accurately** - Render the hero section showing `source_data.display_name` unless the user has provided custom `content.headline`
 3. **Show available links** - Display `source_data.social_links` and `source_data.streaming_links` so users can choose which to show/hide
 4. **Preview dynamic sections** - Use `source_data.posts`, `source_data.recommendations`, and `source_data.events` to preview content sections in the site builder
+5. **Preview single post page** - Use `source_data.sample_post` to render a preview of the single post layout in the site builder, including comments, related posts, and navigation
 
 | source_data field | Used by | Schema source reference |
 |-------------------|---------|------------------------|
@@ -6020,13 +6066,14 @@ The `source_data` object provides the actual profile data that sections will dis
 | `posts` | Posts section | Up to 10 recent published posts |
 | `recommendations` | Recommendations section | Up to 10 recent reviews |
 | `events` | Events section | Up to 10 upcoming active events |
+| `sample_post` | Single post layout preview | Latest published post with comments, related posts, and navigation |
 | `band` | Band users only | Band profile data |
 
 ---
 
 ### PUT /api/v1/profile_theme
 
-Update the profile theme. Section changes go to `draft_sections` and must be published separately.
+Update the profile theme. Section and single post layout changes go to draft and must be published separately.
 
 **Authentication:** Required + `can_customize_profile` ability
 
@@ -6070,7 +6117,16 @@ Update the profile theme. Section changes go to `draft_sections` and must be pub
       "content": { "bio": "About us..." },
       "settings": { "show_social_links": true }
     }
-  ]
+  ],
+  "single_post_layout": {
+    "show_featured_image": true,
+    "show_author": true,
+    "show_song_embed": true,
+    "show_comments": true,
+    "show_related_posts": false,
+    "show_navigation": true,
+    "content_layout": "wide"
+  }
 }
 ```
 
@@ -6106,6 +6162,8 @@ Update the profile theme. Section changes go to `draft_sections` and must be pub
 **Notes:**
 - Global theme fields (colors, fonts) are updated immediately
 - Section changes go to `draft_sections` until published
+- `single_post_layout` changes go to `draft_single_post_layout` until published
+- Only include the fields you want to override in `single_post_layout` — omitted fields keep their current values
 - Color fields must be valid hex colors (e.g., `#FF5733`)
 - Fonts must be from the approved list
 
@@ -6113,7 +6171,7 @@ Update the profile theme. Section changes go to `draft_sections` and must be pub
 
 ### POST /api/v1/profile_theme/publish
 
-Publish draft sections to make them live on the public profile.
+Publish draft sections and/or draft single post layout to make them live on the public profile.
 
 **Authentication:** Required + `can_customize_profile` ability
 
@@ -6146,7 +6204,7 @@ Publish draft sections to make them live on the public profile.
 
 ### POST /api/v1/profile_theme/discard_draft
 
-Discard unpublished draft sections.
+Discard unpublished draft sections and draft single post layout.
 
 **Authentication:** Required + `can_customize_profile` ability
 
@@ -6436,6 +6494,148 @@ Get a user's public profile with theme and hydrated section data. This is the pu
 - Each section includes hydrated `data` with pre-fetched content
 - Fan accounts return basic profile without customization
 - If no theme exists, returns default sections based on user role
+
+---
+
+### GET /api/v1/profiles/bands/:slug/posts/:post_slug
+
+Get a single blog post wrapped in the band's profile theme. Used for themed single post pages.
+
+**Authentication:** None required
+
+**URL Parameters:**
+
+- `slug` (required): The band's URL slug
+- `post_slug` (required): The post's URL slug
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "post": {
+      "id": 1,
+      "title": "New Album Announcement",
+      "slug": "new-album",
+      "body": "<p>Full post body...</p>",
+      "excerpt": "Short summary...",
+      "featured_image_url": "https://...",
+      "publish_date": "2026-03-01T12:00:00Z",
+      "song": { "name": "Track Name", "band_name": "Artist", "...": "..." },
+      "author": { "username": "midnightpines", "display_name": "The Midnight Pines", "...": "..." },
+      "likes_count": 12,
+      "comments_count": 5,
+      "...": "..."
+    },
+    "user": {
+      "id": 42,
+      "username": "midnightpines",
+      "display_name": "The Midnight Pines",
+      "role": "band",
+      "primary_band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" },
+      "...": "..."
+    },
+    "theme": {
+      "background_color": "#121212",
+      "brand_color": "#6366f1",
+      "font_color": "#f5f5f5",
+      "header_font": "Inter",
+      "body_font": "Inter",
+      "content_max_width": 1200,
+      "single_post_layout": {
+        "show_featured_image": true,
+        "show_author": true,
+        "show_song_embed": true,
+        "show_comments": true,
+        "show_related_posts": true,
+        "show_navigation": true,
+        "content_layout": "default",
+        "background_color": null,
+        "font_color": null,
+        "max_width": null
+      }
+    },
+    "comments": {
+      "data": [
+        {
+          "id": 1,
+          "body": "Great post!",
+          "anonymous": false,
+          "likes_count": 3,
+          "author": { "id": 99, "username": "fan1", "display_name": "Fan One", "profile_image_url": "https://..." },
+          "created_at": "2026-03-01T14:00:00Z",
+          "updated_at": "2026-03-01T14:00:00Z"
+        }
+      ],
+      "pagination": {
+        "current_page": 1,
+        "total_count": 42,
+        "total_pages": 3,
+        "per_page": 20
+      }
+    },
+    "related_posts": [
+      { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
+    ],
+    "navigation": {
+      "next_post": { "title": "Newer Post Title", "slug": "newer-post" },
+      "previous_post": { "title": "Older Post Title", "slug": "older-post" }
+    }
+  }
+}
+```
+
+**Response (404 Not Found):**
+
+```json
+{
+  "error": "not_found",
+  "message": "Post not found"
+}
+```
+
+**Notes:**
+- `comments`, `related_posts`, and `navigation` are conditionally included based on the `single_post_layout` toggles
+- If `show_comments` is `false`, `comments` is omitted from the response
+- If `show_related_posts` is `false`, `related_posts` is omitted
+- If `show_navigation` is `false`, `navigation` is omitted
+- If no theme exists, `theme` is `null` and all defaults are used (all toggles on)
+- Comments do not include `liked_by_current_user` (no auth on public endpoint)
+- Comments are paginated (20 per page, first page only)
+
+---
+
+### GET /api/v1/profiles/users/:username/posts/:post_slug
+
+Get a single blog post wrapped in the user's profile theme. Same response shape as the band post endpoint above.
+
+**Authentication:** None required
+
+**URL Parameters:**
+
+- `username` (required): The user's username
+- `post_slug` (required): The post's URL slug
+
+**Response:** Same as `GET /api/v1/profiles/bands/:slug/posts/:post_slug`
+
+---
+
+### Single Post Layout Reference
+
+The `single_post_layout` controls how individual blog post pages are rendered. It follows the same draft/publish workflow as sections.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `show_featured_image` | boolean | `true` | Show the post's featured image |
+| `show_author` | boolean | `true` | Show the post author info |
+| `show_song_embed` | boolean | `true` | Show the linked song embed |
+| `show_comments` | boolean | `true` | Show comments section |
+| `show_related_posts` | boolean | `true` | Show related posts from the same author |
+| `show_navigation` | boolean | `true` | Show prev/next post navigation |
+| `content_layout` | enum | `"default"` | `"default"`, `"wide"`, or `"narrow"` |
+| `background_color` | color/null | `null` | Override theme background (null = inherit) |
+| `font_color` | color/null | `null` | Override theme font color (null = inherit) |
+| `max_width` | integer/null | `null` | Override content max width, 600-1600 (null = inherit) |
 
 ---
 

@@ -30,10 +30,20 @@ class AuthenticateUser
 
   attr_reader :email, :password, :request, :device_name
 
+  # Constant-time authentication to prevent email enumeration via timing
+  DUMMY_PASSWORD_HASH = BCrypt::Password.create("dummy_password_for_timing_safety").to_s.freeze
+
   def authenticate_user!
     @user = User.find_by(email: email)
 
-    raise(ExceptionHandler::AuthenticationError, Message.account_disabled) if @user&.disabled?
-    raise(ExceptionHandler::AuthenticationError, Message.invalid_credentials) unless @user&.authenticate(password)
+    if @user.nil?
+      # Perform a dummy bcrypt comparison so the response time is consistent
+      # whether or not the email exists
+      BCrypt::Password.new(DUMMY_PASSWORD_HASH).is_password?(password)
+      raise(ExceptionHandler::AuthenticationError, Message.invalid_credentials)
+    end
+
+    raise(ExceptionHandler::AuthenticationError, Message.account_disabled) if @user.disabled?
+    raise(ExceptionHandler::AuthenticationError, Message.invalid_credentials) unless @user.authenticate(password)
   end
 end

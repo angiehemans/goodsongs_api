@@ -9,7 +9,7 @@ class BandSerializer
       name: band.name,
       location: band.location,
       profile_picture_url: band_image_url(band),
-      reviews_count: band.reviews.count,
+      reviews_count: band.reviews_count,
       user_owned: band.user_owned?
     }
   end
@@ -36,7 +36,7 @@ class BandSerializer
       lastfm_url: band.lastfm_url,
       about: band.about,
       profile_picture_url: band_image_url(band),
-      reviews_count: band.reviews.count,
+      reviews_count: band.reviews_count,
       user_owned: band.user_owned?,
       owner: band.user ? { id: band.user.id, username: band.user.username } : nil,
       # Social links

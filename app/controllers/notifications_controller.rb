@@ -9,7 +9,7 @@ class NotificationsController < ApplicationController
     per_page = (params[:per_page] || 20).to_i
     per_page = [per_page, 50].min
 
-    notifications = current_user.notifications.recent
+    notifications = current_user.notifications.recent.includes(:actor, :notifiable)
     total_count = notifications.count
     paginated_notifications = notifications.offset((page - 1) * per_page).limit(per_page)
 

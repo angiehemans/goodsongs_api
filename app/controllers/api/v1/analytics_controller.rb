@@ -89,6 +89,8 @@ module Api
 
         content_data = content_stats.map do |(type_id, count)|
           viewable_type, viewable_id = type_id
+          next unless PageView::VALID_VIEWABLE_TYPES.include?(viewable_type)
+
           viewable = viewable_type.constantize.find_by(id: viewable_id)
 
           next unless viewable

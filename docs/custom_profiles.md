@@ -317,20 +317,26 @@ Deletes an uploaded asset. If the asset is referenced in any section's `backgrou
 **Response (200):** Success.
 **Response (404):** Asset not found or not owned by account.
 
-### `GET /api/v1/profiles/:username` (public, no auth required)
+### `GET /api/v1/profiles/bands/:slug` (public, no auth required)
 
-Returns the published profile for public rendering. This is the endpoint the frontend hits when any visitor loads a profile.
+Returns the published profile for a band, looked up by band slug. This is the endpoint the frontend hits when a visitor loads a band profile page.
 
-**Response (200):**
+### `GET /api/v1/profiles/users/:username` (public, no auth required)
+
+Returns the published profile for a blogger or fan, looked up by username. Fans without customizable profiles receive a basic `UserSerializer.public_profile` response.
+
+**Why two endpoints?** Band slugs and usernames could collide (e.g., a band slug `"johndoe"` and a username `"johndoe"`). Separate routes eliminate ambiguity — the frontend knows which to call based on the profile type.
+
+**Response (200) — both endpoints:**
 
 ```json
 {
-  "profile": {
-    "account": {
+  "data": {
+    "user": {
       "username": "midnightpines",
       "display_name": "The Midnight Pines",
-      "avatar_url": "https://...",
-      "account_type": "band"
+      "profile_image_url": "https://...",
+      "role": "band"
     },
     "theme": {
       "background_color": "#1a1a1a",
@@ -362,6 +368,8 @@ Returns the published profile for public rendering. This is the endpoint the fro
   }
 }
 ```
+
+**Response (404):** `{ "error": "not_found", "message": "Band not found" }` or `{ "error": "not_found", "message": "User not found" }`
 
 **Key detail:** Only visible sections are included. Each section that renders live data includes a `data` key with the relevant records, pre-queried according to the section's settings (e.g., respecting `display_limit`, filtering past events). The client should not need to make additional API calls to render the profile.
 
@@ -448,7 +456,7 @@ This list can be extended without a migration — the validator references a con
 
 ### Authentication
 
-All endpoints except `GET /api/v1/profiles/:username` require authentication via Bearer token. Profile customization endpoints also require the `can_customize_profile` ability.
+All endpoints except `GET /api/v1/profiles/bands/:slug` and `GET /api/v1/profiles/users/:username` require authentication via Bearer token. Profile customization endpoints also require the `can_customize_profile` ability.
 
 ### Endpoints
 
@@ -506,10 +514,10 @@ Updates theme settings. Section changes go to `draft_sections`.
 
 #### `POST /api/v1/profile_theme/publish`
 
-Publishes draft sections.
+Publishes draft sections. Idempotent — if no draft exists, returns 200 with the current theme.
 
 **Response (200):** `{ "data": {...}, "message": "Theme published successfully" }`
-**Response (422):** `{ "error": "no_draft", "message": "No draft to publish" }`
+**Response (200):** `{ "data": {...}, "message": "No draft changes to publish" }` (no draft, returns current theme)
 
 #### `POST /api/v1/profile_theme/discard_draft`
 
@@ -563,9 +571,9 @@ Deletes an asset.
 **Response (200):** `{ "message": "Asset deleted successfully" }`
 **Response (404):** `{ "error": "not_found" }`
 
-#### `GET /api/v1/profiles/:username` (Public)
+#### `GET /api/v1/profiles/bands/:slug` (Public)
 
-Returns public profile with hydrated section data. No authentication required.
+Returns public profile for a band by slug. No authentication required.
 
 **Response (200):**
 ```json
@@ -576,8 +584,7 @@ Returns public profile with hydrated section data. No authentication required.
       "username": "midnightpines",
       "display_name": "The Midnight Pines",
       "profile_image_url": "https://...",
-      "role": "band",
-      ...
+      "role": "band"
     },
     "theme": {
       "background_color": "#121212",
@@ -620,5 +627,22 @@ Returns public profile with hydrated section data. No authentication required.
   }
 }
 ```
+
+**Response (404):** `{ "error": "not_found", "message": "Band not found" }`
+
+#### `GET /api/v1/profiles/users/:username` (Public)
+
+Returns public profile for a blogger or fan by username. No authentication required. Fans receive a basic profile without theme/sections.
+
+**Response (200) — blogger/band user with theme:**
+Same shape as the band profile response above.
+
+**Response (200) — fan (no customization):**
+```json
+{
+  "data": { ... }
+}
+```
+Returns `UserSerializer.public_profile` directly (no theme or sections).
 
 **Response (404):** `{ "error": "not_found", "message": "User not found" }`

@@ -1,5 +1,5 @@
 class Review < ApplicationRecord
-  belongs_to :band
+  belongs_to :band, counter_cache: true
   belongs_to :user, counter_cache: true
   belongs_to :track, optional: true
   has_many :review_likes, dependent: :destroy
@@ -18,16 +18,16 @@ class Review < ApplicationRecord
   scope :from_active_users, -> { joins(:user).where(users: { disabled: false }) }
 
   def likes_count
-    review_likes.count
+    self[:review_likes_count] || review_likes.size
   end
 
   def comments_count
-    review_comments.count
+    self[:review_comments_count] || review_comments.size
   end
 
   def liked_by?(user)
     return false unless user
-    review_likes.exists?(user_id: user.id)
+    review_likes.any? { |like| like.user_id == user.id }
   end
 
   validates :band_name, presence: true

@@ -3,7 +3,7 @@ class ReviewSerializer
   extend ImageUrlHelper
 
   def self.full(review, current_user: nil)
-    mentions = review.mentions.includes(:user)
+    mentions = review.mentions.loaded? ? review.mentions : review.mentions.includes(:user)
     {
       id: review.id,
       song_link: review.song_link,
@@ -31,7 +31,7 @@ class ReviewSerializer
   end
 
   def self.with_author(review, current_user: nil)
-    mentions = review.mentions.includes(:user)
+    mentions = review.mentions.loaded? ? review.mentions : review.mentions.includes(:user)
     {
       id: review.id,
       song_link: review.song_link,

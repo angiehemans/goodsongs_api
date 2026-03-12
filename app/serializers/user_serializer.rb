@@ -3,46 +3,42 @@ class UserSerializer
   extend ImageUrlHelper
 
   def self.profile_data(user)
-    base_data = user.as_json(except: [
-      :password_digest,
-      :created_at,
-      :updated_at,
-      :spotify_access_token,
-      :spotify_refresh_token,
-      :spotify_expires_at,
-      :primary_band_id,
-      :email_confirmation_token,
-      :email_confirmation_sent_at,
-      :password_reset_token,
-      :password_reset_sent_at
-    ])
-
-    result = base_data.merge(
-      reviews_count: user.reviews_count,       # Use counter cache
-      bands_count: user.bands.count,
-      lastfm_connected: user.lastfm_connected?,
-      lastfm_username: user.lastfm_username,
+    result = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      about_me: user.about_me,
       profile_image_url: profile_image_url(user),
-      onboarding_completed: user.onboarding_completed,
       display_name: user.display_name,
+      role: user.role,
       admin: user.admin?,
+      onboarding_completed: user.onboarding_completed,
+      email_confirmed: user.email_confirmed?,
+      can_resend_confirmation: user.can_resend_confirmation?,
+      # Location
       city: user.city,
       region: user.region,
       location: user.location,
       latitude: user.latitude,
       longitude: user.longitude,
-      followers_count: user.followers_count,   # Use counter cache
-      following_count: user.following_count,   # Use counter cache
-      email_confirmed: user.email_confirmed?,
-      can_resend_confirmation: user.can_resend_confirmation?,
-      role: user.role,
+      # Counts (use counter caches)
+      reviews_count: user.reviews_count,
+      bands_count: user.bands.count,
+      followers_count: user.followers_count,
+      following_count: user.following_count,
+      # Last.fm
+      lastfm_connected: user.lastfm_connected?,
+      lastfm_username: user.lastfm_username,
+      # Plan & abilities
       plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
       abilities: user.abilities,
+      # Preferences
       preferred_streaming_platform: user.preferred_streaming_platform,
       allow_anonymous_comments: user.allow_anonymous_comments,
+      dark_mode: user.dark_mode,
       # Social links
       social_links: social_links(user)
-    )
+    }
 
     # Include primary band for BAND accounts
     if user.band? && user.primary_band
@@ -56,7 +52,6 @@ class UserSerializer
     result = {
       id: user.id,
       username: user.username,
-      email: user.email,
       about_me: user.about_me,
       profile_image_url: profile_image_url(user),
       reviews_count: user.reviews_count,       # Use counter cache

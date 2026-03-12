@@ -5,6 +5,7 @@ class MusicbrainzService
   # MusicBrainz requires a User-Agent header identifying your application
   headers 'User-Agent' => 'GoodSongs/1.0 (https://goodsongs.app; api@goodsongs.app)'
   headers 'Accept' => 'application/json'
+  default_timeout 10
 
   # Rate limiting: 1 request per second
   RATE_LIMIT_DELAY = 1.1

@@ -1,6 +1,7 @@
 class LastfmArtistService
   include HTTParty
   base_uri 'https://ws.audioscrobbler.com/2.0'
+  default_timeout 10
 
   class << self
     def fetch_artist_image(artist_identifier)

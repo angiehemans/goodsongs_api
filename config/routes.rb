@@ -228,7 +228,12 @@ Rails.application.routes.draw do
       resources :profile_assets, only: [:index, :create, :destroy]
 
       # Public profiles (no auth required)
-      get 'profiles/:username', to: 'profiles#show'
+      get 'profiles/bands/:slug', to: 'profiles#band'
+      get 'profiles/users/:username', to: 'profiles#user'
+
+      # Public themed single post pages
+      get 'profiles/bands/:slug/posts/:post_slug', to: 'profiles#band_post'
+      get 'profiles/users/:username/posts/:post_slug', to: 'profiles#user_post'
     end
   end
 end

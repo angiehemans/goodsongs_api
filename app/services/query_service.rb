@@ -1,6 +1,6 @@
 class QueryService
   def self.reviews_with_associations(scope = Review)
-    scope.from_active_users.includes(:user, :band).order(created_at: :desc)
+    scope.from_active_users.includes(:user, :band, :track, :mentions, :review_likes, :review_comments).order(created_at: :desc)
   end
 
   def self.bands_with_associations(scope = Band)
@@ -12,7 +12,7 @@ class QueryService
   end
 
   def self.user_reviews_with_associations(user)
-    user.reviews.includes(:band).order(created_at: :desc)
+    user.reviews.includes(:band, :track, :mentions, :review_likes, :review_comments).order(created_at: :desc)
   end
 
   def self.recent_reviews(limit: 50)
@@ -25,43 +25,29 @@ class QueryService
 
   # For band pages - only show reviews from active users
   def self.band_reviews_from_active_users(band)
-    band.reviews.from_active_users.includes(:user).order(created_at: :desc)
+    band.reviews.from_active_users.includes(:user, :track, :mentions, :review_likes, :review_comments).order(created_at: :desc)
   end
 
   # Combined feed - user's own reviews + reviews from users I follow + reviews about bands owned by users I follow
   # Returns paginated results
   def self.following_feed(user, page: 1, per_page: 20)
-    followed_user_ids = user.following.where(disabled: false).pluck(:id)
-    followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id) if followed_user_ids.any?
-
-    # Build conditions: own reviews OR from followed users OR about followed bands
-    conditions = ['reviews.user_id = ?']
-    values = [user.id]
-
-    if followed_user_ids.any?
-      conditions << 'reviews.user_id IN (?)'
-      values << followed_user_ids
-    end
-
-    if followed_band_ids&.any?
-      conditions << 'reviews.band_id IN (?)'
-      values << followed_band_ids
-    end
-
-    Review.from_active_users
-          .includes(:user, :band)
-          .where(conditions.join(' OR '), *values)
-          .order(created_at: :desc)
-          .offset((page - 1) * per_page)
-          .limit(per_page)
+    following_feed_scope(user)
+      .includes(:user, :band)
+      .order(created_at: :desc)
+      .offset((page - 1) * per_page)
+      .limit(per_page)
   end
 
   # Count total reviews in following feed for pagination metadata
   def self.following_feed_count(user)
+    following_feed_scope(user).count
+  end
+
+  # Base scope for following feed queries
+  def self.following_feed_scope(user)
     followed_user_ids = user.following.where(disabled: false).pluck(:id)
     followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id) if followed_user_ids.any?
 
-    # Build conditions: own reviews OR from followed users OR about followed bands
     conditions = ['reviews.user_id = ?']
     values = [user.id]
 
@@ -75,8 +61,7 @@ class QueryService
       values << followed_band_ids
     end
 
-    Review.from_active_users
-          .where(conditions.join(' OR '), *values)
-          .count
+    Review.from_active_users.where(conditions.join(' OR '), *values)
   end
+  private_class_method :following_feed_scope
 end

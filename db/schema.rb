@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -139,9 +139,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.string "tiktok_url"
     t.string "facebook_url"
     t.string "youtube_url"
+    t.integer "reviews_count", default: 0, null: false
     t.index ["artist_image_source"], name: "index_bands_on_artist_image_source", where: "(artist_image_source IS NOT NULL)"
     t.index ["audiodb_artist_id"], name: "index_bands_on_audiodb_artist_id", unique: true, where: "(audiodb_artist_id IS NOT NULL)"
     t.index ["created_at"], name: "index_bands_on_created_at"
+    t.index ["discogs_artist_id"], name: "index_bands_on_discogs_artist_id", unique: true, where: "(discogs_artist_id IS NOT NULL)"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
     t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
     t.index ["name"], name: "index_bands_on_name"
@@ -261,6 +263,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.index ["owner_id", "created_at"], name: "index_page_views_on_owner_id_and_created_at"
     t.index ["owner_id", "referrer_source", "created_at"], name: "index_page_views_on_owner_referrer_created_at"
     t.index ["viewable_type", "viewable_id", "created_at"], name: "index_page_views_on_viewable_and_created_at"
+    t.index ["viewable_type", "viewable_id", "session_id", "created_at"], name: "index_page_views_on_dedup"
   end
 
   create_table "plan_abilities", force: :cascade do |t|
@@ -342,6 +345,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.string "artwork_url"
     t.string "song_link"
     t.uuid "track_id"
+    t.integer "post_likes_count", default: 0, null: false
+    t.integer "post_comments_count", default: 0, null: false
     t.index ["categories"], name: "index_posts_on_categories", using: :gin
     t.index ["tags"], name: "index_posts_on_tags", using: :gin
     t.index ["track_id"], name: "index_posts_on_track_id"
@@ -373,6 +378,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "content_max_width", default: 1200
+    t.jsonb "single_post_layout", default: {}, null: false
+    t.jsonb "draft_single_post_layout"
+    t.string "card_background_color"
+    t.integer "card_background_opacity", default: 10, null: false
     t.index ["user_id"], name: "index_profile_themes_on_user_id", unique: true
   end
 
@@ -437,9 +446,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.datetime "updated_at", null: false
     t.jsonb "genres", default: []
     t.uuid "track_id"
+    t.integer "review_likes_count", default: 0, null: false
+    t.integer "review_comments_count", default: 0, null: false
     t.index ["band_id", "created_at"], name: "index_reviews_on_band_id_and_created_at"
     t.index ["band_id"], name: "index_reviews_on_band_id"
+    t.index ["band_name"], name: "index_reviews_on_band_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["created_at"], name: "index_reviews_on_created_at"
+    t.index ["song_name"], name: "index_reviews_on_song_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["track_id"], name: "index_reviews_on_track_id"
     t.index ["user_id", "created_at"], name: "index_reviews_on_user_id_and_created_at"
     t.index ["user_id"], name: "index_reviews_on_user_id"
@@ -549,6 +562,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.string "tiktok_url"
     t.string "facebook_url"
     t.string "youtube_url"
+    t.index ["disabled", "onboarding_completed", "role"], name: "index_users_on_disabled_onboarding_role"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["email_confirmation_token"], name: "index_users_on_email_confirmation_token", unique: true
     t.index ["lastfm_username"], name: "index_users_on_lastfm_username"
@@ -559,6 +573,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_04_000002) do
     t.index ["role"], name: "index_users_on_role"
     t.index ["spotify_expires_at"], name: "index_users_on_spotify_expires_at"
     t.index ["username"], name: "index_users_on_username", unique: true
+    t.index ["username"], name: "index_users_on_username_trgm", opclass: :gin_trgm_ops, using: :gin
   end
 
   create_table "venues", force: :cascade do |t|

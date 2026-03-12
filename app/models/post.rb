@@ -1,4 +1,5 @@
 class Post < ApplicationRecord
+  include ImageUrlHelper
   belongs_to :user
   belongs_to :track, optional: true
   has_one_attached :featured_image
@@ -79,16 +80,6 @@ class Post < ApplicationRecord
   end
 
   private
-
-  def active_storage_url_options
-    if ENV['API_URL'].present?
-      uri = URI.parse(ENV['API_URL'])
-      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-    else
-      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-    end
-  end
 
   def generate_slug
     return if title.blank?

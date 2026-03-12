@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class Scrobble < ApplicationRecord
+  include ImageUrlHelper
   belongs_to :user
   belongs_to :track, optional: true
   has_one_attached :album_art
@@ -58,14 +59,14 @@ class Scrobble < ApplicationRecord
   end
 
   # Returns the artwork URL to display with priority:
-  # 1. artwork_uri (external URL from Android, e.g., Spotify CDN)
-  # 2. album_art (uploaded base64 bitmap via Active Storage)
-  # 3. preferred_artwork_url (user-selected override)
+  # 1. preferred_artwork_url (user-selected override)
+  # 2. artwork_uri (external URL from Android, e.g., Spotify CDN)
+  # 3. album_art (uploaded base64 bitmap via Active Storage)
   # 4. track.album.resolved_cover_art_url (cached or external, triggers caching)
   def effective_artwork_url
-    artwork_uri.presence ||
+    preferred_artwork_url.presence ||
+      artwork_uri.presence ||
       album_art_url ||
-      preferred_artwork_url.presence ||
       track&.album&.resolved_cover_art_url
   end
 
@@ -77,16 +78,6 @@ class Scrobble < ApplicationRecord
       album_art,
       **active_storage_url_options
     )
-  end
-
-  def active_storage_url_options
-    if ENV['API_URL'].present?
-      uri = URI.parse(ENV['API_URL'])
-      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-    else
-      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-    end
   end
 
   # Check if user has uploaded artwork (Active Storage attachment)
@@ -118,7 +109,7 @@ class Scrobble < ApplicationRecord
   end
 
   def album_art_format_and_size
-    return unless album_art.attached?
+    return unless album_art.attached? && attachment_changes['album_art']
 
     allowed_types = %w[image/jpeg image/png image/webp]
     unless allowed_types.include?(album_art.content_type)

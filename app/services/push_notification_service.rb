@@ -53,11 +53,8 @@ class PushNotificationService
                       # Raw JSON from environment variable
                       StringIO.new(ENV['FIREBASE_SERVICE_ACCOUNT_JSON'])
                     else
-                      # Use file path (for development)
-                      service_account_path = Rails.root.join('config', 'firebase-service-account.json')
-                      return nil unless File.exist?(service_account_path)
-
-                      service_account_path.to_s
+                      Rails.logger.warn("PushNotificationService: No Firebase credentials configured. Set FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 or FIREBASE_SERVICE_ACCOUNT_JSON.")
+                      return nil
                     end
 
       # FCM.new(json_key_path, project_name, http_options = {})

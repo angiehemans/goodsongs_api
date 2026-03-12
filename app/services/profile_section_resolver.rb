@@ -18,7 +18,7 @@ class ProfileSectionResolver
       order: section['order'] || section[:order],
       content: resolve_content(type, content),
       settings: resolve_settings(type, settings),
-      data: hydrate_data(type, settings)
+      data: hydrate_data(type, content, settings)
     }
   end
 
@@ -79,10 +79,10 @@ class ProfileSectionResolver
     end
   end
 
-  def hydrate_data(type, settings)
+  def hydrate_data(type, content, settings)
     case type
     when :hero
-      hydrate_hero(settings)
+      hydrate_hero(content, settings)
     when :music
       hydrate_music(settings)
     when :events
@@ -90,7 +90,7 @@ class ProfileSectionResolver
     when :posts
       hydrate_posts(settings)
     when :about
-      hydrate_about(settings)
+      hydrate_about(content, settings)
     when :recommendations
       hydrate_recommendations(settings)
     else
@@ -98,22 +98,30 @@ class ProfileSectionResolver
     end
   end
 
-  def hydrate_hero(settings)
+  def hydrate_hero(content, settings)
     data = {
       display_name: @user.display_name,
       profile_image_url: profile_image_url,
       location: @user.location || @band&.location
     }
 
-    # Resolve streaming links (only configured ones, filtered by visibility)
+    # Merge streaming links: content overrides model columns
+    content_streaming = content['streaming_links'] || content[:streaming_links] || {}
+    model_streaming = configured_streaming_links
+    all_streaming = model_streaming.merge(content_streaming.select { |_, v| v.present? })
+
     data[:streaming_links] = filter_links(
-      configured_streaming_links,
+      all_streaming,
       settings['visible_streaming_links'] || settings[:visible_streaming_links]
     )
 
-    # Resolve social links
+    # Merge social links: content overrides model columns
+    content_social = content['social_links'] || content[:social_links] || {}
+    model_social = configured_social_links
+    all_social = model_social.merge(content_social.select { |_, v| v.present? })
+
     data[:social_links] = filter_links(
-      configured_social_links,
+      all_social,
       settings['visible_social_links'] || settings[:visible_social_links]
     )
 
@@ -162,7 +170,7 @@ class ProfileSectionResolver
     }
   end
 
-  def hydrate_about(settings)
+  def hydrate_about(content, settings)
     data = {
       about_me: @user.about_me,
       bio: @band&.about || @user.about_me,
@@ -172,8 +180,12 @@ class ProfileSectionResolver
     # Include social links if enabled
     show_social = settings['show_social_links'] || settings[:show_social_links]
     if show_social != false
+      content_social = content['social_links'] || content[:social_links] || {}
+      model_social = configured_social_links
+      all_social = model_social.merge(content_social.select { |_, v| v.present? })
+
       data[:social_links] = filter_links(
-        configured_social_links,
+        all_social,
         settings['visible_social_links'] || settings[:visible_social_links]
       )
     end
@@ -185,53 +197,35 @@ class ProfileSectionResolver
 
   def hydrate_recommendations(settings)
     limit = settings['display_limit'] || settings[:display_limit] || 12
-    reviews = @user.reviews.includes(:track, :band, :mentions).order(created_at: :desc).limit(limit)
+
+    reviews = if @band
+                # Band profiles: reviews ABOUT this band by other users
+                @band.reviews
+                     .where.not(user_id: @user.id)
+                     .from_active_users
+                     .includes(:user, :track, :band, :mentions)
+                     .order(created_at: :desc)
+                     .limit(limit)
+              else
+                # Blogger/fan profiles: reviews written BY this user
+                @user.reviews
+                     .includes(:track, :band, :mentions)
+                     .order(created_at: :desc)
+                     .limit(limit)
+              end
 
     {
-      reviews: reviews.map { |r| ReviewSerializer.with_author(r) }
+      reviews: reviews.map { |r| ReviewSerializer.with_author(r) },
+      source: @band ? 'about_band' : 'by_user'
     }
   end
 
   def configured_streaming_links
-    return {} unless @band
-
-    links = {}
-    links['spotify'] = @band.spotify_link if @band.spotify_link.present?
-    links['appleMusic'] = @band.apple_music_link if @band.apple_music_link.present?
-    links['bandcamp'] = @band.bandcamp_link if @band.bandcamp_link.present?
-    links['soundcloud'] = @band.soundcloud_link if @band.soundcloud_link.present?
-    links['youtubeMusic'] = @band.youtube_music_link if @band.youtube_music_link.present?
-    links
+    ProfileLinkHelper.streaming_links(@band)
   end
 
   def configured_social_links
-    links = {}
-
-    # Social link field names matching SOCIAL_LINK_TYPES
-    social_fields = %w[instagram threads bluesky twitter tumblr tiktok facebook youtube]
-
-    # User social links
-    social_fields.each do |platform|
-      field = "#{platform}_url"
-      if @user.respond_to?(field) && @user.send(field).present?
-        links[platform] = @user.send(field)
-      end
-    end
-
-    # Band social links (if band exists) - band links take precedence for band users
-    if @band
-      social_fields.each do |platform|
-        field = "#{platform}_url"
-        if @band.respond_to?(field) && @band.send(field).present?
-          # For band users, band links take precedence
-          links[platform] = @band.send(field) if @user.band?
-          # For non-band users, only use band link if user doesn't have one
-          links[platform] ||= @band.send(field)
-        end
-      end
-    end
-
-    links
+    ProfileLinkHelper.social_links(@user, @band)
   end
 
   def filter_links(all_links, visible_setting)
@@ -259,12 +253,6 @@ class ProfileSectionResolver
   end
 
   def active_storage_url_options
-    if ENV['API_URL'].present?
-      uri = URI.parse(ENV['API_URL'])
-      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-    else
-      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-    end
+    ImageUrlHelper.active_storage_url_options
   end
 end

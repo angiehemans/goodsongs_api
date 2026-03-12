@@ -1,5 +1,6 @@
 class FollowsController < ApplicationController
   extend ImageUrlHelper
+  include Paginatable
 
   before_action :authenticate_request
   before_action :set_user, only: [:create, :destroy]
@@ -43,27 +44,47 @@ class FollowsController < ApplicationController
   # GET /following
   def following
     users = current_user.following.where(disabled: false)
-    json_response(users.map { |user| user_summary(user) })
+    total_count = users.count
+    users = paginate(users)
+    json_response({
+      users: users.map { |user| user_summary(user) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   # GET /followers
   def followers
     users = current_user.followers.where(disabled: false)
-    json_response(users.map { |user| user_summary(user) })
+    total_count = users.count
+    users = paginate(users)
+    json_response({
+      users: users.map { |user| user_summary(user) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   # GET /users/:user_id/following
   def user_following
     user = find_active_user(params[:user_id])
     users = user.following.where(disabled: false)
-    json_response(users.map { |u| user_summary(u) })
+    total_count = users.count
+    users = paginate(users)
+    json_response({
+      users: users.map { |u| user_summary(u) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   # GET /users/:user_id/followers
   def user_followers
     user = find_active_user(params[:user_id])
     users = user.followers.where(disabled: false)
-    json_response(users.map { |u| user_summary(u) })
+    total_count = users.count
+    users = paginate(users)
+    json_response({
+      users: users.map { |u| user_summary(u) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   private

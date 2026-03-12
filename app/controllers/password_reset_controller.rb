@@ -58,12 +58,16 @@ class PasswordResetController < ApplicationController
 
     user = service.call
 
-    # Generate new auth token for the user
+    # Generate new auth token and refresh token for the user
+    # (all previous sessions were revoked during password reset)
     auth_token = JsonWebToken.encode(user_id: user.id)
+    raw_refresh_token, _refresh_token = RefreshToken.generate_for(user, request: request)
 
     json_response({
       message: 'Password reset successfully',
-      auth_token: auth_token
+      auth_token: auth_token,
+      refresh_token: raw_refresh_token,
+      expires_in: JsonWebToken::ACCESS_TOKEN_EXPIRATION.to_i
     })
   rescue PasswordResetService::TokenInvalid
     json_response({ error: 'Invalid reset token' }, :bad_request)

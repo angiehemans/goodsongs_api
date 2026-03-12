@@ -1,5 +1,6 @@
 class EventsController < ApplicationController
   include ResourceController
+  include Paginatable
 
   before_action :authenticate_request, except: [:index, :band_index, :show, :user_events]
   before_action :set_band, only: [:band_index, :band_create]
@@ -10,20 +11,35 @@ class EventsController < ApplicationController
   # GET /events
   def index
     events = Event.active.upcoming.visible.includes(:venue, :band, :user)
-    json_response(events.map { |event| EventSerializer.full(event) })
+    total_count = events.count
+    events = paginate(events)
+    json_response({
+      events: events.map { |event| EventSerializer.full(event) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   # GET /bands/:band_slug/events
   def band_index
     events = @band.events.active.upcoming.includes(:venue)
-    json_response(events.map { |event| EventSerializer.full(event) })
+    total_count = events.count
+    events = paginate(events)
+    json_response({
+      events: events.map { |event| EventSerializer.full(event) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   # GET /users/:user_id/events
   def user_events
     user = User.find(params[:user_id])
     events = user.events.active.upcoming.includes(:venue, :band)
-    json_response(events.map { |event| EventSerializer.full(event) })
+    total_count = events.count
+    events = paginate(events)
+    json_response({
+      events: events.map { |event| EventSerializer.full(event) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   # GET /events/:id

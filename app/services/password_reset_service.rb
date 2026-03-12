@@ -43,5 +43,8 @@ class PasswordResetService
     # Token is automatically invalidated when password changes
     # (the token includes password_salt which changes with the password)
     @user.save!
+
+    # Revoke all existing sessions so stolen refresh tokens can't be used
+    RefreshToken.revoke_all_for_user(@user)
   end
 end

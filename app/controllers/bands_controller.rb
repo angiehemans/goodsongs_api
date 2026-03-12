@@ -1,6 +1,7 @@
 class BandsController < ApplicationController
   include ResourceController
   include Ownership
+  include Paginatable
 
   before_action :authenticate_request, except: [:index, :show]
   before_action :set_band, only: [:show, :update, :destroy]
@@ -8,7 +9,12 @@ class BandsController < ApplicationController
 
   def index
     bands = QueryService.bands_ordered_by_name
-    json_response(bands.map { |band| BandSerializer.full(band, current_user: authenticated_user) })
+    total_count = bands.count
+    bands = paginate(bands)
+    json_response({
+      bands: bands.map { |band| BandSerializer.full(band, current_user: authenticated_user) },
+      pagination: pagination_meta(page_param, per_page_param, total_count)
+    })
   end
 
   def show

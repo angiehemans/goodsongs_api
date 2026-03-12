@@ -2,6 +2,7 @@
 
 # Canonical album data from MusicBrainz
 class Album < ApplicationRecord
+  include ImageUrlHelper
   belongs_to :band, optional: true
   belongs_to :submitted_by, class_name: 'User', optional: true
   has_many :tracks, dependent: :nullify
@@ -84,13 +85,4 @@ class Album < ApplicationRecord
     )
   end
 
-  def active_storage_url_options
-    if ENV['API_URL'].present?
-      uri = URI.parse(ENV['API_URL'])
-      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-    else
-      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-    end
-  end
 end

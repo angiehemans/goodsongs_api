@@ -3,6 +3,10 @@ module Ownership
 
   private
 
+  def render_unauthorized(message = 'Unauthorized')
+    render json: { error: message }, status: :unauthorized
+  end
+
   def ensure_ownership(resource, user = current_user, message = 'You can only modify resources you own')
     unless resource.user == user
       render_unauthorized(message)

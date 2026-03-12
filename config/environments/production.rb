@@ -46,13 +46,12 @@ Rails.application.configure do
   # Use Redis for caching (simpler than solid_cache which requires separate DB)
   config.cache_store = :redis_cache_store, { url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0") }
 
-  # Replace the default in-process and non-durable queuing backend for Active Job.
-  # Using async adapter for now, can be changed to solid_queue later when needed
-  config.active_job.queue_adapter = :async
+  # Use solid_queue for durable background jobs (survives server restarts)
+  config.active_job.queue_adapter = :solid_queue
 
   # Disable automatic image analysis to avoid SolidQueue dependency issues
   config.active_storage.analyze = false
-  config.active_storage.variant_processor = :mini_magick
+  config.active_storage.variant_processor = :vips
 
   # Enable email delivery errors in production
   config.action_mailer.raise_delivery_errors = true

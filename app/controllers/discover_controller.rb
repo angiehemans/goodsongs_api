@@ -242,10 +242,10 @@ class DiscoverController < ApplicationController
       about_me: user.about_me,
       profile_image_url: self.class.profile_image_url(user),
       location: user.location,
-      reviews_count: user.reviews.count,
-      bands_count: user.bands.count,
-      followers_count: user.followers.count,
-      following_count: user.following.count
+      reviews_count: user.reviews_count,
+      bands_count: user.bands.size,
+      followers_count: user.followers_count,
+      following_count: user.following_count
     }
 
     # Include primary band for BAND accounts

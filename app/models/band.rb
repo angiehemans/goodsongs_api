@@ -1,4 +1,5 @@
 class Band < ApplicationRecord
+  include ImageUrlHelper
   belongs_to :user, optional: true
   belongs_to :submitted_by, class_name: 'User', optional: true
   has_many :albums, dependent: :destroy
@@ -136,16 +137,6 @@ class Band < ApplicationRecord
   end
 
   private
-
-  def active_storage_url_options
-    if ENV['API_URL'].present?
-      uri = URI.parse(ENV['API_URL'])
-      port_suffix = [80, 443].include?(uri.port) ? '' : ":#{uri.port}"
-      { host: "#{uri.host}#{port_suffix}", protocol: uri.scheme }
-    else
-      Rails.env.production? ? { host: 'api.goodsongs.app', protocol: 'https' } : { host: 'localhost:3000', protocol: 'http' }
-    end
-  end
 
   def detect_artist_image_source
     return if artist_image_url.blank?

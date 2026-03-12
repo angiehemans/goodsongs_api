@@ -14,20 +14,19 @@ module Authenticable
   end
 
   def authenticate_request_optional
-    begin
-      @current_user = AuthorizeApiRequest.new(request.headers).call[:user]
-    rescue
-      @current_user = nil
-    end
+    @current_user = AuthorizeApiRequest.new(request.headers).call[:user]
+  rescue ExceptionHandler::AuthenticationError, ExceptionHandler::MissingToken,
+         ExceptionHandler::InvalidToken, ExceptionHandler::ExpiredToken
+    @current_user = nil
   end
 
   # Get authenticated user without raising error (for optional auth endpoints)
   def authenticated_user
     return @current_user if defined?(@current_user) && @current_user
-    begin
-      AuthorizeApiRequest.new(request.headers).call[:user]
-    rescue
-      nil
-    end
+
+    AuthorizeApiRequest.new(request.headers).call[:user]
+  rescue ExceptionHandler::AuthenticationError, ExceptionHandler::MissingToken,
+         ExceptionHandler::InvalidToken, ExceptionHandler::ExpiredToken
+    nil
   end
 end

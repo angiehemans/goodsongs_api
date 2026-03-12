@@ -1,6 +1,6 @@
 class PostComment < ApplicationRecord
   belongs_to :user, optional: true  # Nullable for anonymous comments
-  belongs_to :post
+  belongs_to :post, counter_cache: true
   has_many :post_comment_likes, dependent: :destroy
   has_many :likers, through: :post_comment_likes, source: :user
   has_many :mentions, as: :mentionable, dependent: :destroy

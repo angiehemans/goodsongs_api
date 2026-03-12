@@ -74,6 +74,20 @@ class ScrobbleCacheService
       end
     end
 
+    # Cache key for MusicBrainz artist lookup
+    def musicbrainz_artist_key(mbid)
+      "musicbrainz:artist:#{mbid}"
+    end
+
+    # Get cached MusicBrainz artist or fetch from API
+    def get_musicbrainz_artist(mbid)
+      cache_key = musicbrainz_artist_key(mbid)
+
+      Rails.cache.fetch(cache_key, expires_in: MUSICBRAINZ_CACHE_TTL) do
+        MusicbrainzService.get_artist(mbid)
+      end
+    end
+
     # Cache key for recording detail
     def recording_detail_key(mbid)
       "musicbrainz:recording_detail:#{mbid}"

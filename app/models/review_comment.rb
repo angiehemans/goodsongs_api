@@ -1,6 +1,6 @@
 class ReviewComment < ApplicationRecord
   belongs_to :user
-  belongs_to :review
+  belongs_to :review, counter_cache: true
   has_many :review_comment_likes, dependent: :destroy
   has_many :likers, through: :review_comment_likes, source: :user
   has_many :mentions, as: :mentionable, dependent: :destroy

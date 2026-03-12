@@ -41,11 +41,33 @@ class ProfileTheme < ApplicationRecord
     'Source Serif 4',
     'Libre Baskerville',
     'IBM Plex Mono',
-    'JetBrains Mono'
+    'JetBrains Mono',
+    'Creepster',
+    'Jacquard 12',
+    'Astloch',
+    'Pirata One',
+    'Special Elite',
+    'Courier Prime',
+    'Cutive Mono',
   ].freeze
 
   MAX_SECTIONS = 12
   MAX_CUSTOM_TEXT = 3
+
+  SINGLE_POST_CONTENT_LAYOUTS = %w[default wide narrow].freeze
+
+  DEFAULT_SINGLE_POST_LAYOUT = {
+    'show_featured_image' => true,
+    'show_author' => true,
+    'show_song_embed' => true,
+    'show_comments' => true,
+    'show_related_posts' => true,
+    'show_navigation' => true,
+    'content_layout' => 'default',
+    'background_color' => nil,
+    'font_color' => nil,
+    'max_width' => nil
+  }.freeze
 
   # Color validation regex for hex colors
   HEX_COLOR_REGEX = /\A#[0-9A-Fa-f]{6}\z/
@@ -56,6 +78,8 @@ class ProfileTheme < ApplicationRecord
   validates :font_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }
   validates :header_font, inclusion: { in: APPROVED_FONTS, message: "is not an approved font" }
   validates :body_font, inclusion: { in: APPROVED_FONTS, message: "is not an approved font" }
+  validates :card_background_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }, allow_nil: true
+  validates :card_background_opacity, numericality: { only_integer: true, in: 0..100, message: "must be between 0 and 100" }
   validate :validate_sections_structure
 
   def self.default_sections_for_role(role)
@@ -84,17 +108,25 @@ class ProfileTheme < ApplicationRecord
   end
 
   def publish!
-    return false unless draft_sections.present?
+    return false unless has_draft?
 
-    update!(
-      sections: draft_sections,
-      draft_sections: nil,
-      published_at: Time.current
-    )
+    attrs = { published_at: Time.current }
+
+    if draft_sections.present?
+      attrs[:sections] = draft_sections
+      attrs[:draft_sections] = nil
+    end
+
+    if draft_single_post_layout.present?
+      attrs[:single_post_layout] = draft_single_post_layout
+      attrs[:draft_single_post_layout] = nil
+    end
+
+    update!(attrs)
   end
 
   def discard_draft!
-    update!(draft_sections: nil)
+    update!(draft_sections: nil, draft_single_post_layout: nil)
   end
 
   def reset_to_defaults!
@@ -105,14 +137,22 @@ class ProfileTheme < ApplicationRecord
       font_color: '#f5f5f5',
       header_font: 'Inter',
       body_font: 'Inter',
+      card_background_color: nil,
+      card_background_opacity: 10,
       sections: default_sections,
       draft_sections: nil,
+      single_post_layout: {},
+      draft_single_post_layout: nil,
       published_at: nil
     )
   end
 
   def has_draft?
-    draft_sections.present?
+    draft_sections.present? || draft_single_post_layout.present?
+  end
+
+  def resolved_single_post_layout
+    DEFAULT_SINGLE_POST_LAYOUT.merge(single_post_layout || {})
   end
 
   def active_sections
