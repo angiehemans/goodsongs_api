@@ -451,7 +451,7 @@ DEPENDENCIES
   groupdate
   httparty
   image_processing (~> 1.2)
-  jwt
+  jwt (~> 2.7)
   kamal
   letter_opener_web (~> 3.0)
   maxmind-db
