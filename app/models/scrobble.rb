@@ -94,6 +94,8 @@ class Scrobble < ApplicationRecord
 
   def enqueue_enrichment_job
     ScrobbleEnrichmentJob.perform_later(id)
+  rescue StandardError => e
+    Rails.logger.error("Failed to enqueue enrichment for scrobble #{id}: #{e.message}")
   end
 
   def played_at_not_in_future

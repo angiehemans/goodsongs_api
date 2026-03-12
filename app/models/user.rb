@@ -61,7 +61,7 @@ class User < ApplicationRecord
 
   # Geocoding for user location
   geocoded_by :full_location
-  after_validation :geocode, if: :should_geocode?
+  after_validation :safe_geocode, if: :should_geocode?
 
   # Token expiration constants
   EMAIL_CONFIRMATION_EXPIRY = 24.hours
@@ -344,6 +344,12 @@ class User < ApplicationRecord
 
   private
 
+  def safe_geocode
+    geocode
+  rescue StandardError => e
+    Rails.logger.error("Geocoding failed for user #{id}: #{e.message}")
+  end
+
   # Only geocode if location fields changed and we have location data
   def should_geocode?
     (city_changed? || region_changed?) && full_location.present?
@@ -380,5 +386,7 @@ class User < ApplicationRecord
 
   def send_confirmation_email
     UserMailerJob.perform_later(id, :confirmation)
+  rescue StandardError => e
+    Rails.logger.error("Failed to enqueue confirmation email for user #{id}: #{e.message}")
   end
 end

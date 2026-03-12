@@ -140,6 +140,8 @@ class Notification < ApplicationRecord
       body: body,
       data: data
     )
+  rescue StandardError => e
+    Rails.logger.error("Failed to enqueue push notification #{id}: #{e.message}")
   end
 
   def push_notification_content
