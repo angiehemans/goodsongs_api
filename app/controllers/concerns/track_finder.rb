@@ -38,7 +38,11 @@ module TrackFinder
     )
 
     # Queue background job to enrich track with MusicBrainz data (ISRC, etc.)
-    TrackEnrichmentJob.perform_later(track.id)
+    begin
+      TrackEnrichmentJob.perform_later(track.id)
+    rescue StandardError => e
+      Rails.logger.warn("Failed to queue track enrichment for track #{track.id}: #{e.message}")
+    end
 
     track
   end

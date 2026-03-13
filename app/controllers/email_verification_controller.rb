@@ -18,7 +18,13 @@ class EmailVerificationController < ApplicationController
     end
 
     current_user.generate_email_confirmation_token!
-    UserMailerJob.perform_later(current_user.id, :confirmation)
+
+    begin
+      UserMailerJob.perform_later(current_user.id, :confirmation)
+    rescue StandardError => e
+      Rails.logger.error("Failed to enqueue confirmation email for user #{current_user.id}: #{e.message}")
+      return json_response({ error: 'Failed to send confirmation email. Please try again later.' }, :service_unavailable)
+    end
 
     json_response({
       message: 'Confirmation email sent',

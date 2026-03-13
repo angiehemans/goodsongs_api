@@ -19,7 +19,11 @@ class PasswordResetController < ApplicationController
       if user.can_request_password_reset?
         # Update rate limit timestamp (token is generated on-demand by Rails 8)
         user.update!(password_reset_sent_at: Time.current)
-        UserMailerJob.perform_later(user.id, :password_reset)
+        begin
+          UserMailerJob.perform_later(user.id, :password_reset)
+        rescue StandardError => e
+          Rails.logger.error("Failed to enqueue password reset email for user #{user.id}: #{e.message}")
+        end
       end
     end
 
