@@ -81,13 +81,17 @@ class PostSerializer
   end
 
   def self.author_data(user)
-    {
+    data = {
       id: user.id,
       username: user.username,
       display_name: user.display_name,
-      profile_image_url: profile_image_url(user),
+      role: user.role,
+      plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
+      profile_image_url: author_avatar_url(user),
       allow_anonymous_comments: user.allow_anonymous_comments
     }
+    data[:band_slug] = user.primary_band.slug if user.band? && user.primary_band
+    data
   end
 
   def self.song_data(post, current_user: nil)

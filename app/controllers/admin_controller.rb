@@ -162,7 +162,7 @@ class AdminController < ApplicationController
     json_response({
       band: admin_band_data_full(band),
       reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
-      events: events.map { |event| EventSerializer.full(event) }
+      events: events.map { |event| EventSerializer.full(event, current_user: current_user) }
     })
   end
 
@@ -423,7 +423,8 @@ class AdminController < ApplicationController
   def admin_user_data(user)
     UserSerializer.public_profile(user).merge(
       admin: user.admin?,
-      disabled: user.disabled?
+      disabled: user.disabled?,
+      email_confirmed: user.email_confirmed?
     )
   end
 
@@ -453,6 +454,7 @@ class AdminController < ApplicationController
       bands_count: user.bands.count,
       followers_count: user.followers.count,
       following_count: user.following.count,
+      email_confirmed: user.email_confirmed?,
       created_at: user.created_at,
       updated_at: user.updated_at
     }

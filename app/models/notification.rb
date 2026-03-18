@@ -3,7 +3,7 @@ class Notification < ApplicationRecord
   belongs_to :actor, class_name: 'User', optional: true
   belongs_to :notifiable, polymorphic: true, optional: true
 
-  TYPES = %w[new_follower new_review review_like review_comment comment_like mention post_like post_comment post_comment_like].freeze
+  TYPES = %w[new_follower new_review review_like review_comment comment_like mention post_like post_comment post_comment_like event_like event_comment event_comment_like].freeze
 
   validates :notification_type, presence: true, inclusion: { in: TYPES }
 
@@ -112,6 +112,42 @@ class Notification < ApplicationRecord
       user: post.user,
       notification_type: 'post_comment',
       actor: nil,
+      notifiable: comment
+    )
+  end
+
+  def self.notify_event_like(event:, liker:)
+    # Don't notify if the liker is the event creator
+    return if event.user_id == liker.id
+
+    create!(
+      user: event.user,
+      notification_type: 'event_like',
+      actor: liker,
+      notifiable: event
+    )
+  end
+
+  def self.notify_event_comment(event:, commenter:, comment:)
+    # Don't notify if the commenter is the event creator
+    return if event.user_id == commenter.id
+
+    create!(
+      user: event.user,
+      notification_type: 'event_comment',
+      actor: commenter,
+      notifiable: comment
+    )
+  end
+
+  def self.notify_event_comment_like(comment:, liker:)
+    # Don't notify if the liker is the comment author
+    return if comment.user_id == liker.id
+
+    create!(
+      user: comment.user,
+      notification_type: 'event_comment_like',
+      actor: liker,
       notifiable: comment
     )
   end
@@ -244,6 +280,44 @@ class Notification < ApplicationRecord
         "#{actor_name} liked your comment",
         { type: 'post_comment_like', notification_id: id.to_s, comment_id: comment.id.to_s, post_id: comment.post_id.to_s }
       ]
+    when 'event_like'
+      event = notifiable
+      return [nil, nil, {}] unless event.is_a?(Event)
+
+      [
+        'New Like',
+        "#{actor_name} liked your event \"#{event.name.truncate(50)}\"",
+        { type: 'event_like', notification_id: id.to_s, event_id: event.id.to_s }
+      ]
+    when 'event_comment'
+      comment = notifiable
+      return [nil, nil, {}] unless comment.is_a?(EventComment)
+
+      event = comment.event
+      comment_preview = comment.body.truncate(50)
+
+      was_mentioned = comment.mentions.exists?(user_id: user_id)
+      title = was_mentioned ? 'New Mention' : 'New Comment'
+      body_text = if was_mentioned
+        "#{actor_name} mentioned you on \"#{event.name.truncate(30)}\""
+      else
+        "#{actor_name} commented on \"#{event.name.truncate(30)}\": \"#{comment_preview}\""
+      end
+
+      [
+        title,
+        body_text,
+        { type: 'event_comment', notification_id: id.to_s, event_id: event.id.to_s, comment_id: comment.id.to_s, mentioned: was_mentioned }
+      ]
+    when 'event_comment_like'
+      comment = notifiable
+      return [nil, nil, {}] unless comment.is_a?(EventComment)
+
+      [
+        'New Like',
+        "#{actor_name} liked your comment",
+        { type: 'event_comment_like', notification_id: id.to_s, comment_id: comment.id.to_s, event_id: comment.event_id.to_s }
+      ]
     when 'mention'
       case notifiable
       when Review
@@ -266,6 +340,13 @@ class Notification < ApplicationRecord
           'New Mention',
           "#{actor_name} mentioned you in a comment",
           { type: 'mention', notification_id: id.to_s, post_id: comment.post_id.to_s, comment_id: comment.id.to_s }
+        ]
+      when EventComment
+        comment = notifiable
+        [
+          'New Mention',
+          "#{actor_name} mentioned you in a comment",
+          { type: 'mention', notification_id: id.to_s, event_id: comment.event_id.to_s, comment_id: comment.id.to_s }
         ]
       else
         [nil, nil, {}]

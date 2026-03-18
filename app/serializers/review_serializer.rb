@@ -17,11 +17,7 @@ class ReviewSerializer
       genres: review.genres || [],
       track: review.track ? track_summary(review.track, current_user: current_user) : nil,
       band: BandSerializer.full(review.band, current_user: current_user),
-      author: {
-        id: review.user.id,
-        username: review.user.username,
-        profile_image_url: profile_image_url(review.user)
-      },
+      author: author_data(review.user),
       likes_count: review.likes_count,
       liked_by_current_user: review.liked_by?(current_user),
       comments_count: review.comments_count,
@@ -44,11 +40,7 @@ class ReviewSerializer
       liked_aspects: review.liked_aspects_array,
       genres: review.genres || [],
       track: review.track ? track_summary(review.track, current_user: current_user) : nil,
-      author: {
-        id: review.user.id,
-        username: review.user.username,
-        profile_image_url: profile_image_url(review.user)
-      },
+      author: author_data(review.user),
       likes_count: review.likes_count,
       liked_by_current_user: review.liked_by?(current_user),
       comments_count: review.comments_count,
@@ -84,6 +76,19 @@ class ReviewSerializer
 
     links = track.streaming_links || {}
     links[user.preferred_streaming_platform]
+  end
+
+  def self.author_data(user)
+    data = {
+      id: user.id,
+      username: user.username,
+      display_name: user.display_name,
+      role: user.role,
+      plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
+      profile_image_url: author_avatar_url(user)
+    }
+    data[:band_slug] = user.primary_band.slug if user.band? && user.primary_band
+    data
   end
 
   def self.serialize_mentions(mentions)

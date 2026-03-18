@@ -32,4 +32,13 @@ module ImageUrlHelper
   def profile_picture_url(resource)
     attachment_url(resource.profile_picture)
   end
+
+  # For feed author avatars: band-role users show their band's image, others show user profile image
+  def author_avatar_url(user)
+    if user.band? && user.primary_band
+      profile_picture_url(user.primary_band) || user.primary_band.resolved_artist_image_url
+    else
+      profile_image_url(user)
+    end
+  end
 end

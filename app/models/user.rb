@@ -43,6 +43,15 @@ class User < ApplicationRecord
   has_many :post_comment_likes, dependent: :destroy
   has_many :liked_post_comments, through: :post_comment_likes, source: :post_comment
 
+  # Event likes
+  has_many :event_likes, dependent: :destroy
+  has_many :liked_events, through: :event_likes, source: :event
+
+  # Event comments
+  has_many :event_comments, dependent: :destroy
+  has_many :event_comment_likes, dependent: :destroy
+  has_many :liked_event_comments, through: :event_comment_likes, source: :event_comment
+
   # Mentions (where this user was mentioned)
   has_many :mentions, dependent: :destroy
 
@@ -55,6 +64,7 @@ class User < ApplicationRecord
   # Profile customization
   has_one :profile_theme, dependent: :destroy
   has_many :profile_assets, dependent: :destroy
+  has_many :profile_links, dependent: :destroy
 
   # Device tokens for push notifications
   has_many :device_tokens, dependent: :destroy
@@ -237,6 +247,36 @@ class User < ApplicationRecord
   # Check if user likes a post comment
   def likes_post_comment?(comment)
     liked_post_comments.include?(comment)
+  end
+
+  # Like an event
+  def like_event(event)
+    liked_events << event unless likes_event?(event)
+  end
+
+  # Unlike an event
+  def unlike_event(event)
+    liked_events.delete(event)
+  end
+
+  # Check if user likes an event
+  def likes_event?(event)
+    liked_events.include?(event)
+  end
+
+  # Like an event comment
+  def like_event_comment(comment)
+    liked_event_comments << comment unless likes_event_comment?(comment)
+  end
+
+  # Unlike an event comment
+  def unlike_event_comment(comment)
+    liked_event_comments.delete(comment)
+  end
+
+  # Check if user likes an event comment
+  def likes_event_comment?(comment)
+    liked_event_comments.include?(comment)
   end
 
   # Check if Last.fm account is connected

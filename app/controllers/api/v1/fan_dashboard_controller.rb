@@ -80,63 +80,76 @@ module Api
         []
       end
 
-      # Preview of feed including own reviews and reviews from followed users
+      # Preview of unified feed: reviews + posts + events from followed users
       def following_feed_preview
-        reviews = combined_feed_query(limit: 5)
+        items = QueryService.unified_following_feed_preview(current_user, limit: 20)
 
-        # Get IDs of reviews the current user has liked (single query)
-        review_ids = reviews.map(&:id)
-        liked_review_ids = current_user.review_likes
-                                       .where(review_id: review_ids)
-                                       .pluck(:review_id)
-                                       .to_set
+        # Batch-load liked review and post IDs for the current user
+        review_ids = items.select { |i| i[:type] == 'review' }.map { |i| i[:record].id }
+        post_ids = items.select { |i| i[:type] == 'post' }.map { |i| i[:record].id }
+        event_ids = items.select { |i| i[:type] == 'event' }.map { |i| i[:record].id }
+        liked_review_ids = review_ids.any? ? current_user.review_likes.where(review_id: review_ids).pluck(:review_id).to_set : Set.new
+        liked_post_ids = post_ids.any? ? current_user.post_likes.where(post_id: post_ids).pluck(:post_id).to_set : Set.new
+        liked_event_ids = event_ids.any? ? current_user.event_likes.where(event_id: event_ids).pluck(:event_id).to_set : Set.new
 
-        reviews.map do |review|
-          {
-            id: review.id,
-            song_name: review.song_name,
-            band_name: review.band_name,
-            artwork_url: review.artwork_url,
-            review_text: review.review_text.truncate(150),
-            author: {
-              id: review.user.id,
-              username: review.user.username,
-              profile_image_url: profile_image_url(review.user)
-            },
-            created_at: review.created_at.iso8601,
-            likes_count: review.likes_count,
-            comments_count: review.comments_count,
-            liked_by_current_user: liked_review_ids.include?(review.id),
-            track: review.track ? track_with_links(review.track) : nil,
-            band: band_with_links(review.band)
-          }
+        items.map do |item|
+          case item[:type]
+          when 'review'
+            review = item[:record]
+            {
+              type: 'review',
+              data: {
+                id: review.id,
+                song_name: review.song_name,
+                band_name: review.band_name,
+                artwork_url: review.artwork_url,
+                review_text: review.review_text.truncate(150),
+                author: feed_author_data(review.user),
+                created_at: review.created_at.iso8601,
+                likes_count: review.likes_count,
+                comments_count: review.comments_count,
+                liked_by_current_user: liked_review_ids.include?(review.id),
+                track: review.track ? track_with_links(review.track) : nil,
+                band: band_with_links(review.band)
+              }
+            }
+          when 'post'
+            post = item[:record]
+            {
+              type: 'post',
+              data: {
+                id: post.id,
+                title: post.title,
+                slug: post.slug,
+                excerpt: post.excerpt,
+                featured_image_url: post.featured_image_url,
+                author: feed_author_data(post.user),
+                created_at: post.created_at.iso8601,
+                likes_count: post.likes_count,
+                comments_count: post.comments_count,
+                liked_by_current_user: liked_post_ids.include?(post.id)
+              }
+            }
+          when 'event'
+            event = item[:record]
+            {
+              type: 'event',
+              data: {
+                id: event.id,
+                name: event.name,
+                event_date: event.event_date,
+                image_url: EventSerializer.event_image_url(event),
+                author: feed_author_data(event.user),
+                created_at: event.created_at.iso8601,
+                likes_count: event.likes_count,
+                comments_count: event.comments_count,
+                liked_by_current_user: liked_event_ids.include?(event.id),
+                venue: event.venue ? { id: event.venue.id, name: event.venue.name } : nil,
+                band: event.band ? { id: event.band.id, name: event.band.name, slug: event.band.slug } : nil
+              }
+            }
+          end
         end
-      end
-
-      # Combined feed: user's own reviews + reviews from followed users + reviews about followed bands
-      def combined_feed_query(limit:)
-        followed_user_ids = current_user.following.where(disabled: false).pluck(:id)
-        followed_band_ids = Band.where(user_id: followed_user_ids).pluck(:id) if followed_user_ids.any?
-
-        # Build conditions: own reviews OR from followed users OR about followed bands
-        conditions = ['reviews.user_id = ?']
-        values = [current_user.id]
-
-        if followed_user_ids.any?
-          conditions << 'reviews.user_id IN (?)'
-          values << followed_user_ids
-        end
-
-        if followed_band_ids&.any?
-          conditions << 'reviews.band_id IN (?)'
-          values << followed_band_ids
-        end
-
-        Review.from_active_users
-              .includes(:user, :band, :track)
-              .where(conditions.join(' OR '), *values)
-              .order(created_at: :desc)
-              .limit(limit)
       end
 
       # User's favorite bands
@@ -175,6 +188,36 @@ module Api
 
         Rails.application.routes.url_helpers.rails_blob_url(
           user.profile_image,
+          **ImageUrlHelper.active_storage_url_options
+        )
+      end
+
+      def feed_author_data(user)
+        data = {
+          id: user.id,
+          username: user.username,
+          display_name: user.display_name,
+          role: user.role,
+          plan: user.plan ? { key: user.plan.key, name: user.plan.name } : nil,
+          profile_image_url: author_avatar_url(user)
+        }
+        data[:band_slug] = user.primary_band.slug if user.band? && user.primary_band
+        data
+      end
+
+      def author_avatar_url(user)
+        if user.band? && user.primary_band
+          band_picture_url(user.primary_band) || user.primary_band.resolved_artist_image_url
+        else
+          profile_image_url(user)
+        end
+      end
+
+      def band_picture_url(band)
+        return nil unless band.profile_picture.attached?
+
+        Rails.application.routes.url_helpers.rails_blob_url(
+          band.profile_picture,
           **ImageUrlHelper.active_storage_url_options
         )
       end

@@ -43,7 +43,65 @@ module Api
         render_themed_post(user, params[:post_slug])
       end
 
+      # GET /api/v1/profiles/bands/:slug/links
+      def band_links
+        band = Band.find_by("lower(slug) = ?", params[:slug].to_s.downcase)
+        return render json: { error: "not_found", message: "Band not found" }, status: :not_found unless band
+
+        render_link_page(band.user)
+      end
+
+      # GET /api/v1/profiles/users/:username/links
+      def user_links
+        user = User.find_by("lower(username) = ?", params[:username].to_s.downcase)
+        return render json: { error: "not_found", message: "User not found" }, status: :not_found unless user
+
+        render_link_page(user)
+      end
+
       private
+
+      def render_link_page(user)
+        theme = user.profile_theme
+        pages = theme&.pages || []
+        links_page = pages.find { |p| (p['type'] || p[:type]) == 'links' }
+
+        unless links_page && (links_page['visible'] == true || links_page[:visible] == true)
+          return render json: { error: "not_found", message: "Link page not found" }, status: :not_found
+        end
+
+        band = user.primary_band if user.band?
+        page_settings = links_page['settings'] || links_page[:settings] || {}
+
+        custom_links = user.profile_links.visible.ordered.map do |link|
+          {
+            id: link.id,
+            title: link.title,
+            description: link.description,
+            url: link.url,
+            icon: link.icon,
+            position: link.position,
+            thumbnail_url: link.thumbnail_url
+          }
+        end
+
+        render json: {
+          data: {
+            user: UserSerializer.public_profile(user),
+            theme: theme ? ProfileThemeSerializer.public(theme) : nil,
+            page_settings: page_settings,
+            profile: {
+              display_name: user.display_name,
+              about: user.about_me || band&.about,
+              profile_image_url: UserSerializer.profile_image_url(user),
+              location: user.location || band&.location
+            },
+            custom_links: custom_links,
+            social_links: ProfileLinkHelper.social_links(user, band),
+            streaming_links: band ? ProfileLinkHelper.streaming_links(band) : {}
+          }
+        }
+      end
 
       def render_custom_profile(user)
         theme = user.profile_theme

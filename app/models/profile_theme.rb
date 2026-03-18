@@ -54,6 +54,8 @@ class ProfileTheme < ApplicationRecord
   MAX_SECTIONS = 12
   MAX_CUSTOM_TEXT = 3
 
+  PAGE_TYPES = %w[links].freeze
+
   SINGLE_POST_CONTENT_LAYOUTS = %w[default wide narrow].freeze
 
   DEFAULT_SINGLE_POST_LAYOUT = {
@@ -80,7 +82,17 @@ class ProfileTheme < ApplicationRecord
   validates :body_font, inclusion: { in: APPROVED_FONTS, message: "is not an approved font" }
   validates :card_background_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }, allow_nil: true
   validates :card_background_opacity, numericality: { only_integer: true, in: 0..100, message: "must be between 0 and 100" }
+  validates :border_radius, numericality: { only_integer: true, in: 0..32, message: "must be between 0 and 32" }
   validate :validate_sections_structure
+
+  def self.default_pages_for_role(role)
+    case role.to_s
+    when 'band', 'blogger'
+      [{ 'type' => 'links', 'slug' => 'links', 'visible' => true, 'settings' => {} }]
+    else
+      []
+    end
+  end
 
   def self.default_sections_for_role(role)
     case role.to_s
@@ -122,15 +134,21 @@ class ProfileTheme < ApplicationRecord
       attrs[:draft_single_post_layout] = nil
     end
 
+    if draft_pages.present?
+      attrs[:pages] = draft_pages
+      attrs[:draft_pages] = nil
+    end
+
     update!(attrs)
   end
 
   def discard_draft!
-    update!(draft_sections: nil, draft_single_post_layout: nil)
+    update!(draft_sections: nil, draft_single_post_layout: nil, draft_pages: nil)
   end
 
   def reset_to_defaults!
     default_sections = self.class.default_sections_for_role(user.role)
+    default_pages = self.class.default_pages_for_role(user.role)
     update!(
       background_color: '#121212',
       brand_color: '#6366f1',
@@ -139,16 +157,19 @@ class ProfileTheme < ApplicationRecord
       body_font: 'Inter',
       card_background_color: nil,
       card_background_opacity: 10,
+      border_radius: 8,
       sections: default_sections,
       draft_sections: nil,
       single_post_layout: {},
       draft_single_post_layout: nil,
+      pages: default_pages,
+      draft_pages: nil,
       published_at: nil
     )
   end
 
   def has_draft?
-    draft_sections.present? || draft_single_post_layout.present?
+    draft_sections.present? || draft_single_post_layout.present? || draft_pages.present?
   end
 
   def resolved_single_post_layout

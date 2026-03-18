@@ -82,6 +82,7 @@ class BandSerializer
     upcoming_events = band.events.active.upcoming.includes(:venue).limit(10)
 
     full(band, current_user: current_user).merge(
+      following_owner: current_user && band.user ? current_user.following?(band.user) : false,
       reviews: active_reviews.map do |review|
         ReviewSerializer.with_author(review, current_user: current_user)
       end,

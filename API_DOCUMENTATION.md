@@ -728,6 +728,1379 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 
 ---
 
+## User Search Endpoint
+
+### GET /users/search
+
+Search for users by username prefix (for mention autocomplete).
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `q` (required): Username prefix to search (minimum 2 characters)
+
+**Response (200 OK):**
+
+```json
+{
+  "users": [
+    {
+      "id": 123,
+      "username": "johndoe",
+      "display_name": "John Doe",
+      "profile_image_url": "https://..."
+    },
+    {
+      "id": 456,
+      "username": "johnsmith",
+      "display_name": "John Smith",
+      "profile_image_url": null
+    }
+  ]
+}
+```
+
+**Notes:**
+- Returns up to 10 matching users
+- Excludes the current user from results
+- Excludes disabled accounts
+- Case-insensitive prefix matching
+
+---
+
+## Follow Endpoints
+
+### POST /users/:user_id/follow
+
+Follow a user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Successfully followed johndoe",
+  "following": true,
+  "followers_count": 10,
+  "following_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You are already following this user"
+}
+```
+
+---
+
+### DELETE /users/:user_id/follow
+
+Unfollow a user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Successfully unfollowed johndoe",
+  "following": false,
+  "followers_count": 9,
+  "following_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You are not following this user"
+}
+```
+
+---
+
+### GET /following
+
+Get list of users the current user is following.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 2,
+    "username": "janedoe",
+    "display_name": "janedoe",
+    "role": "fan",
+    "profile_image_url": "https://...",
+    "location": "Los Angeles, California",
+    "following": true
+  },
+  {
+    "id": 3,
+    "username": null,
+    "display_name": "The Band Name",
+    "role": "band",
+    "profile_image_url": "https://...",
+    "location": "New York, New York",
+    "following": true
+  }
+]
+```
+
+---
+
+### GET /followers
+
+Get list of users following the current user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+Returns array of users (same format as GET /following)
+
+---
+
+### GET /users/:user_id/following
+
+Get list of users a specific user is following.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+Returns array of users (same format as GET /following)
+
+---
+
+### GET /users/:user_id/followers
+
+Get list of users following a specific user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+Returns array of users (same format as GET /following)
+
+---
+
+## Profile Customization Endpoints
+
+Profile customization allows paid band and blogger accounts to customize their public profiles with theming, sections, and layout ordering.
+
+**Required Ability:** `can_customize_profile` (Band Starter, Band Pro, Blogger, Blogger Pro)
+
+### GET /api/v1/profile_theme
+
+Get the authenticated user's profile theme configuration including draft.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "user_id": 42,
+    "background_color": "#121212",
+    "brand_color": "#6366f1",
+    "font_color": "#f5f5f5",
+    "header_font": "Inter",
+    "body_font": "Inter",
+    "sections": [
+      { "type": "hero", "visible": true, "order": 0, "content": {} },
+      { "type": "music", "visible": true, "order": 1, "content": {} },
+      { "type": "events", "visible": true, "order": 2, "content": {} }
+    ],
+    "single_post_layout": {
+      "show_featured_image": true,
+      "show_author": true,
+      "show_song_embed": true,
+      "show_comments": true,
+      "show_related_posts": true,
+      "show_navigation": true,
+      "content_layout": "default",
+      "background_color": null,
+      "font_color": null,
+      "max_width": null
+    },
+    "draft_sections": null,
+    "draft_single_post_layout": null,
+    "has_draft": false,
+    "published_at": "2026-03-02T10:30:00Z",
+    "created_at": "2026-03-01T09:00:00Z",
+    "updated_at": "2026-03-02T10:30:00Z",
+    "config": {
+      "approved_fonts": ["Inter", "Space Grotesk", "DM Sans", "..."],
+      "section_types": ["hero", "music", "events", "posts", "about", "recommendations", "custom_text", "mailing_list", "merch"],
+      "max_sections": 12,
+      "max_custom_text": 3,
+      "section_schemas": { "...see Section Schemas Reference..." },
+      "social_link_types": ["instagram", "threads", "bluesky", "twitter", "tumblr", "tiktok", "facebook", "youtube"],
+      "streaming_link_types": ["spotify", "appleMusic", "bandcamp", "soundcloud", "youtubeMusic"],
+      "single_post_content_layouts": ["default", "wide", "narrow"],
+      "single_post_layout_schema": {
+        "show_featured_image": { "type": "boolean", "default": true },
+        "show_author": { "type": "boolean", "default": true },
+        "show_song_embed": { "type": "boolean", "default": true },
+        "show_comments": { "type": "boolean", "default": true },
+        "show_related_posts": { "type": "boolean", "default": true },
+        "show_navigation": { "type": "boolean", "default": true },
+        "content_layout": { "type": "enum", "options": ["default", "wide", "narrow"], "default": "default" },
+        "background_color": { "type": "color", "optional": true, "description": "Inherits from theme if null" },
+        "font_color": { "type": "color", "optional": true, "description": "Inherits from theme if null" },
+        "max_width": { "type": "integer", "min": 600, "max": 1600, "optional": true, "description": "Inherits from theme if null" }
+      }
+    },
+    "source_data": {
+      "display_name": "The Midnight Pines",
+      "location": "Portland, OR",
+      "about_text": "We are an indie rock band from Portland.",
+      "profile_image_url": "https://...",
+      "social_links": {
+        "instagram": "https://instagram.com/midnightpines",
+        "twitter": "https://twitter.com/midnightpines"
+      },
+      "user": {
+        "id": 42,
+        "username": "midnightpines",
+        "role": "band"
+      },
+      "band": {
+        "id": 5,
+        "slug": "midnight-pines",
+        "name": "The Midnight Pines",
+        "location": "Portland, OR",
+        "about": "We are an indie rock band from Portland.",
+        "profile_picture_url": "https://..."
+      },
+      "streaming_links": {
+        "spotify": "https://open.spotify.com/artist/...",
+        "bandcamp": "https://midnightpines.bandcamp.com"
+      },
+      "posts": [
+        { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
+      ],
+      "recommendations": [
+        { "id": 10, "content": "Amazing track!", "track": { "...": "..." }, "...": "..." }
+      ],
+      "events": [
+        { "id": 3, "name": "Live at The Doug Fir", "event_date": "2026-04-15T20:00:00Z", "...": "..." }
+      ],
+      "sample_post": {
+        "id": 1,
+        "title": "New Album Announcement",
+        "slug": "new-album",
+        "body": "<p>Full post body...</p>",
+        "...": "...",
+        "comments": [
+          { "id": 1, "body": "Great post!", "author": { "username": "fan1", "...": "..." }, "...": "..." }
+        ],
+        "related_posts": [
+          { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
+        ],
+        "navigation": {
+          "next_post": { "title": "Newer Post", "slug": "newer-post" },
+          "previous_post": { "title": "Older Post", "slug": "older-post" }
+        }
+      }
+    }
+  }
+}
+```
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "can_customize_profile",
+  "upgrade_plan": "band_starter"
+}
+```
+
+**Notes:**
+- Returns default theme if none exists
+- `config` contains static configuration for frontend reference
+- `draft_sections` contains unpublished section changes (null if no draft)
+- `draft_single_post_layout` contains unpublished single post layout changes (null if no draft)
+- `single_post_layout` is the published layout merged with defaults (all fields always present)
+- `source_data` contains the actual user/band data for site builder previews (see below)
+
+**Using source_data for Site Builder:**
+
+The `source_data` object provides the actual profile data that sections will display. Use it to:
+
+1. **Show default values in the editor** - When a section's content field has a `source` (e.g., `headline: { source: "display_name" }`), display `source_data.display_name` as the default/placeholder
+2. **Preview sections accurately** - Render the hero section showing `source_data.display_name` unless the user has provided custom `content.headline`
+3. **Show available links** - Display `source_data.social_links` and `source_data.streaming_links` so users can choose which to show/hide
+4. **Preview dynamic sections** - Use `source_data.posts`, `source_data.recommendations`, and `source_data.events` to preview content sections in the site builder
+5. **Preview single post page** - Use `source_data.sample_post` to render a preview of the single post layout in the site builder, including comments, related posts, and navigation
+
+| source_data field | Used by | Schema source reference |
+|-------------------|---------|------------------------|
+| `display_name` | Hero headline | `source: "display_name"` |
+| `location` | Hero subtitle | `source: "location"` |
+| `about_text` | About bio | `source: "about_text"` |
+| `profile_image_url` | Hero image | - |
+| `social_links` | Hero, About | `visible_social_links` setting |
+| `streaming_links` | Hero, Music | `visible_streaming_links` setting |
+| `posts` | Posts section | Up to 10 recent published posts |
+| `recommendations` | Recommendations section | Up to 10 recent reviews |
+| `events` | Events section | Up to 10 upcoming active events |
+| `sample_post` | Single post layout preview | Latest published post with comments, related posts, and navigation |
+| `band` | Band users only | Band profile data |
+
+---
+
+### PUT /api/v1/profile_theme
+
+Update the profile theme. Section and single post layout changes go to draft and must be published separately.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Request Body:**
+
+```json
+{
+  "background_color": "#1a1a1a",
+  "brand_color": "#ff6b35",
+  "font_color": "#f0f0f0",
+  "header_font": "Space Grotesk",
+  "body_font": "Inter",
+  "sections": [
+    {
+      "type": "hero",
+      "visible": true,
+      "order": 0,
+      "content": { "headline": "Welcome to our page" },
+      "settings": {
+        "show_profile_image": true,
+        "visible_streaming_links": ["spotify", "bandcamp"],
+        "visible_social_links": ["instagram", "twitter"]
+      }
+    },
+    {
+      "type": "music",
+      "visible": true,
+      "order": 1,
+      "settings": { "display_limit": 6 }
+    },
+    {
+      "type": "events",
+      "visible": true,
+      "order": 2,
+      "settings": { "display_limit": 4, "show_past_events": false }
+    },
+    {
+      "type": "about",
+      "visible": true,
+      "order": 3,
+      "content": { "bio": "About us..." },
+      "settings": { "show_social_links": true }
+    }
+  ],
+  "single_post_layout": {
+    "show_featured_image": true,
+    "show_author": true,
+    "show_song_embed": true,
+    "show_comments": true,
+    "show_related_posts": false,
+    "show_navigation": true,
+    "content_layout": "wide"
+  }
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "background_color": "#1a1a1a",
+    "brand_color": "#ff6b35",
+    "sections": [...],
+    "draft_sections": [...],
+    "has_draft": true,
+    "...": "..."
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "validation_error",
+  "message": "Cannot have more than 12 sections, hero section can only appear once",
+  "details": [
+    "Cannot have more than 12 sections",
+    "hero section can only appear once"
+  ]
+}
+```
+
+**Notes:**
+- Global theme fields (colors, fonts) are updated immediately
+- Section changes go to `draft_sections` until published
+- `single_post_layout` changes go to `draft_single_post_layout` until published
+- Only include the fields you want to override in `single_post_layout` — omitted fields keep their current values
+- Color fields must be valid hex colors (e.g., `#FF5733`)
+- Fonts must be from the approved list
+
+---
+
+### POST /api/v1/profile_theme/publish
+
+Publish draft sections and/or draft single post layout to make them live on the public profile.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "sections": [...],
+    "draft_sections": null,
+    "has_draft": false,
+    "published_at": "2026-03-02T15:00:00Z",
+    "...": "..."
+  },
+  "message": "Theme published successfully"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "no_draft",
+  "message": "No draft to publish"
+}
+```
+
+---
+
+### POST /api/v1/profile_theme/discard_draft
+
+Discard unpublished draft sections and draft single post layout.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "sections": [...],
+    "draft_sections": null,
+    "has_draft": false,
+    "...": "..."
+  },
+  "message": "Draft discarded"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "no_draft",
+  "message": "No draft to discard"
+}
+```
+
+---
+
+### POST /api/v1/profile_theme/reset
+
+Reset the theme to role-based defaults (colors, fonts, and sections).
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "background_color": "#121212",
+    "brand_color": "#6366f1",
+    "font_color": "#f5f5f5",
+    "header_font": "Inter",
+    "body_font": "Inter",
+    "sections": [...],
+    "draft_sections": null,
+    "has_draft": false,
+    "published_at": null,
+    "...": "..."
+  },
+  "message": "Theme reset to defaults"
+}
+```
+
+---
+
+### GET /api/v1/profile_assets
+
+List the authenticated user's uploaded profile assets (background images, etc.).
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Response (200 OK):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "purpose": "background",
+      "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../image.jpg",
+      "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/representations/.../image.jpg",
+      "file_type": "image/jpeg",
+      "file_size": 245000,
+      "created_at": "2026-03-01T09:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "limit": 20
+  }
+}
+```
+
+---
+
+### POST /api/v1/profile_assets
+
+Upload a new profile asset image.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+
+- `image` (required): Image file (JPEG, PNG, or WebP, max 5MB)
+- `purpose` (optional): Asset purpose - `"background"`, `"header"`, or `"custom"` (default: `"background"`)
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "id": 2,
+    "purpose": "background",
+    "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../new-image.jpg",
+    "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/representations/.../new-image.jpg",
+    "file_type": "image/png",
+    "file_size": 180000,
+    "created_at": "2026-03-02T14:00:00Z"
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "validation_error",
+  "message": "Image must be less than 5MB, Image must be a JPEG, PNG, or WebP image",
+  "details": {
+    "image": ["must be less than 5MB", "must be a JPEG, PNG, or WebP image"]
+  }
+}
+```
+
+**Notes:**
+- Maximum 20 assets per user
+- Maximum file size: 5MB
+- Allowed types: JPEG, PNG, WebP
+
+---
+
+### DELETE /api/v1/profile_assets/:id
+
+Delete a profile asset.
+
+**Authentication:** Required + `can_customize_profile` ability
+
+**URL Parameters:**
+
+- `id` (required): The asset ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Asset deleted successfully"
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "error": "not_found",
+  "message": "Asset not found"
+}
+```
+
+---
+
+### GET /api/v1/profiles/:username
+
+Get a user's public profile with theme and hydrated section data. This is the public-facing profile endpoint.
+
+**Authentication:** None required
+
+**URL Parameters:**
+
+- `username` (required): The user's username
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "user": {
+      "id": 42,
+      "username": "midnightpines",
+      "email": "band@example.com",
+      "about_me": "We are a band from Portland.",
+      "profile_image_url": "https://...",
+      "reviews_count": 15,
+      "role": "band",
+      "display_name": "The Midnight Pines",
+      "location": "Portland, OR",
+      "followers_count": 1200,
+      "following_count": 50,
+      "primary_band": {
+        "id": 5,
+        "slug": "midnight-pines",
+        "name": "The Midnight Pines",
+        "location": "Portland, OR",
+        "profile_picture_url": "https://..."
+      }
+    },
+    "theme": {
+      "background_color": "#121212",
+      "brand_color": "#6366f1",
+      "font_color": "#f5f5f5",
+      "header_font": "Inter",
+      "body_font": "Inter"
+    },
+    "sections": [
+      {
+        "type": "hero",
+        "order": 0,
+        "content": {
+          "headline": "The Midnight Pines",
+          "subtitle": "Portland, OR"
+        },
+        "settings": {
+          "show_profile_image": true,
+          "visible_streaming_links": ["spotify", "bandcamp"],
+          "visible_social_links": ["instagram", "twitter"]
+        },
+        "data": {
+          "display_name": "The Midnight Pines",
+          "profile_image_url": "https://...",
+          "location": "Portland, OR",
+          "streaming_links": {
+            "spotify": "https://open.spotify.com/artist/...",
+            "bandcamp": "https://midnightpines.bandcamp.com"
+          },
+          "social_links": {
+            "instagram": "https://instagram.com/midnightpines",
+            "twitter": "https://twitter.com/midnightpines"
+          },
+          "band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" }
+        }
+      },
+      {
+        "type": "music",
+        "order": 1,
+        "content": {},
+        "settings": { "display_limit": 6 },
+        "data": {
+          "band": { "...": "..." },
+          "tracks": [{ "id": 1, "name": "Song Title", "...": "..." }],
+          "bandcamp_embed": "<iframe>...</iframe>",
+          "streaming_links": { "spotify": "...", "bandcamp": "..." }
+        }
+      },
+      {
+        "type": "events",
+        "order": 2,
+        "content": {},
+        "settings": { "display_limit": 6, "show_past_events": false },
+        "data": {
+          "events": [
+            { "id": 1, "name": "Live at The Fillmore", "event_date": "2026-04-15", "...": "..." }
+          ]
+        }
+      },
+      {
+        "type": "posts",
+        "order": 3,
+        "content": {},
+        "settings": { "display_limit": 6 },
+        "data": {
+          "posts": [
+            { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**Response (404 Not Found):**
+
+```json
+{
+  "error": "not_found",
+  "message": "User not found"
+}
+```
+
+**Notes:**
+- Returns only visible sections
+- Filters out sections the user's plan doesn't support (mailing_list, merch)
+- Each section includes hydrated `data` with pre-fetched content
+- Fan accounts return basic profile without customization
+- If no theme exists, returns default sections based on user role
+
+---
+
+### GET /api/v1/profiles/bands/:slug/posts/:post_slug
+
+Get a single blog post wrapped in the band's profile theme. Used for themed single post pages.
+
+**Authentication:** None required
+
+**URL Parameters:**
+
+- `slug` (required): The band's URL slug
+- `post_slug` (required): The post's URL slug
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "post": {
+      "id": 1,
+      "title": "New Album Announcement",
+      "slug": "new-album",
+      "body": "<p>Full post body...</p>",
+      "excerpt": "Short summary...",
+      "featured_image_url": "https://...",
+      "publish_date": "2026-03-01T12:00:00Z",
+      "song": { "name": "Track Name", "band_name": "Artist", "...": "..." },
+      "author": { "username": "midnightpines", "display_name": "The Midnight Pines", "...": "..." },
+      "likes_count": 12,
+      "comments_count": 5,
+      "...": "..."
+    },
+    "user": {
+      "id": 42,
+      "username": "midnightpines",
+      "display_name": "The Midnight Pines",
+      "role": "band",
+      "primary_band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" },
+      "...": "..."
+    },
+    "theme": {
+      "background_color": "#121212",
+      "brand_color": "#6366f1",
+      "font_color": "#f5f5f5",
+      "header_font": "Inter",
+      "body_font": "Inter",
+      "content_max_width": 1200,
+      "single_post_layout": {
+        "show_featured_image": true,
+        "show_author": true,
+        "show_song_embed": true,
+        "show_comments": true,
+        "show_related_posts": true,
+        "show_navigation": true,
+        "content_layout": "default",
+        "background_color": null,
+        "font_color": null,
+        "max_width": null
+      }
+    },
+    "comments": {
+      "data": [
+        {
+          "id": 1,
+          "body": "Great post!",
+          "anonymous": false,
+          "likes_count": 3,
+          "author": { "id": 99, "username": "fan1", "display_name": "Fan One", "profile_image_url": "https://..." },
+          "created_at": "2026-03-01T14:00:00Z",
+          "updated_at": "2026-03-01T14:00:00Z"
+        }
+      ],
+      "pagination": {
+        "current_page": 1,
+        "total_count": 42,
+        "total_pages": 3,
+        "per_page": 20
+      }
+    },
+    "related_posts": [
+      { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
+    ],
+    "navigation": {
+      "next_post": { "title": "Newer Post Title", "slug": "newer-post" },
+      "previous_post": { "title": "Older Post Title", "slug": "older-post" }
+    }
+  }
+}
+```
+
+**Response (404 Not Found):**
+
+```json
+{
+  "error": "not_found",
+  "message": "Post not found"
+}
+```
+
+**Notes:**
+- `comments`, `related_posts`, and `navigation` are conditionally included based on the `single_post_layout` toggles
+- If `show_comments` is `false`, `comments` is omitted from the response
+- If `show_related_posts` is `false`, `related_posts` is omitted
+- If `show_navigation` is `false`, `navigation` is omitted
+- If no theme exists, `theme` is `null` and all defaults are used (all toggles on)
+- Comments do not include `liked_by_current_user` (no auth on public endpoint)
+- Comments are paginated (20 per page, first page only)
+
+---
+
+### GET /api/v1/profiles/users/:username/posts/:post_slug
+
+Get a single blog post wrapped in the user's profile theme. Same response shape as the band post endpoint above.
+
+**Authentication:** None required
+
+**URL Parameters:**
+
+- `username` (required): The user's username
+- `post_slug` (required): The post's URL slug
+
+**Response:** Same as `GET /api/v1/profiles/bands/:slug/posts/:post_slug`
+
+---
+
+### Single Post Layout Reference
+
+The `single_post_layout` controls how individual blog post pages are rendered. It follows the same draft/publish workflow as sections.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `show_featured_image` | boolean | `true` | Show the post's featured image |
+| `show_author` | boolean | `true` | Show the post author info |
+| `show_song_embed` | boolean | `true` | Show the linked song embed |
+| `show_comments` | boolean | `true` | Show comments section |
+| `show_related_posts` | boolean | `true` | Show related posts from the same author |
+| `show_navigation` | boolean | `true` | Show prev/next post navigation |
+| `content_layout` | enum | `"default"` | `"default"`, `"wide"`, or `"narrow"` |
+| `background_color` | color/null | `null` | Override theme background (null = inherit) |
+| `font_color` | color/null | `null` | Override theme font color (null = inherit) |
+| `max_width` | integer/null | `null` | Override content max width, 600-1600 (null = inherit) |
+
+---
+
+### Section Types Reference
+
+| Section Type | Description | Plan Availability |
+|--------------|-------------|-------------------|
+| `hero` | Profile header with name, image, location | All paid plans |
+| `music` | Band's tracks and music embeds | All paid plans |
+| `events` | Upcoming events list | All paid plans |
+| `posts` | Blog posts list | All paid plans |
+| `about` | About text/bio section | All paid plans |
+| `recommendations` | User's song recommendations/reviews | All paid plans |
+| `custom_text` | Custom text blocks (up to 3) | All paid plans |
+| `mailing_list` | Newsletter signup form | Band Pro, Blogger Pro |
+| `merch` | Merchandise links | Band Pro only |
+
+---
+
+### Approved Fonts
+
+Inter, Space Grotesk, DM Sans, Plus Jakarta Sans, Outfit, Sora, Manrope, Rubik, Work Sans, Nunito Sans, Lora, Merriweather, Playfair Display, Source Serif 4, Libre Baskerville, IBM Plex Mono, JetBrains Mono
+
+---
+
+### Section Schemas Reference
+
+Each section type has defined `content` and `settings` fields. Content fields override profile-derived data, while settings control display behavior.
+
+#### Hero Section
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `headline` | 120 | Override display name (source: user display_name) |
+| `subtitle` | 200 | Override location text (source: user/band location) |
+| `cta_text` | 40 | Call-to-action button text |
+| `cta_url` | URL | Call-to-action button link |
+
+**Settings:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `background_color` | hex color | - | Section background color override |
+| `show_profile_image` | boolean | true | Show/hide profile image |
+| `visible_streaming_links` | array | `:configured` | Which streaming links to show (see Link Visibility) |
+| `visible_social_links` | array | `:configured` | Which social links to show (see Link Visibility) |
+
+#### Music Section
+
+**Content Fields:** None (data hydrated from band)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 6 | 1-24 | Number of tracks to display |
+
+#### Events Section
+
+**Content Fields:** None (data hydrated from user's events)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 6 | 1-24 | Number of events to display |
+| `show_past_events` | boolean | false | - | Include past events |
+
+#### Posts Section
+
+**Content Fields:** None (data hydrated from user)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 6 | 1-24 | Number of posts to display |
+
+#### About Section
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `bio` | 2000 | Override bio text (source: band about or user about_me) |
+
+**Settings:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `show_social_links` | boolean | true | Show social links in about section |
+| `visible_social_links` | array | `:configured` | Which social links to show |
+
+#### Recommendations Section
+
+**Content Fields:** None (data hydrated from user reviews)
+
+**Settings:**
+| Field | Type | Default | Range | Description |
+|-------|------|---------|-------|-------------|
+| `display_limit` | integer | 12 | 1-24 | Number of recommendations to display |
+
+#### Custom Text Section
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `title` | 120 | Section heading |
+| `body` | 5000 | Main text content |
+
+**Settings:**
+| Field | Type | Values | Description |
+|-------|------|--------|-------------|
+| `text_align` | enum | left, center, right | Text alignment |
+| `background_color` | hex color | - | Section background color |
+
+#### Mailing List Section (Pro Plans)
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `heading` | 120 | Section heading |
+| `description` | 500 | Signup prompt text |
+
+**Settings:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider_url` | URL | External mailing list provider URL |
+
+#### Merch Section (Band Pro)
+
+**Content Fields:**
+| Field | Max Length | Description |
+|-------|------------|-------------|
+| `heading` | 120 | Section heading |
+
+**Settings:**
+| Field | Type | Description |
+|-------|------|-------------|
+| `store_url` | URL | External merch store URL |
+
+---
+
+### Link Visibility Settings
+
+The `visible_streaming_links` and `visible_social_links` settings control which links are shown:
+
+| Value | Behavior |
+|-------|----------|
+| `null` or `:configured` | Show all configured links (default) |
+| `[]` (empty array) | Show no links |
+| `["spotify", "bandcamp"]` | Show only specified link types |
+
+**Streaming Link Types:** `spotify`, `appleMusic`, `bandcamp`, `soundcloud`, `youtubeMusic`
+
+**Social Link Types:** `instagram`, `threads`, `bluesky`, `twitter`, `tumblr`, `tiktok`, `facebook`, `youtube`
+
+**Example - Show only Spotify and Instagram:**
+```json
+{
+  "type": "hero",
+  "visible": true,
+  "order": 0,
+  "settings": {
+    "visible_streaming_links": ["spotify"],
+    "visible_social_links": ["instagram"]
+  }
+}
+```
+
+**Example - Hide all social links:**
+```json
+{
+  "type": "hero",
+  "visible": true,
+  "order": 0,
+  "settings": {
+    "visible_social_links": []
+  }
+}
+```
+
+**Note:** Links are only shown if the user/band has them configured. The visibility setting filters the configured links; it cannot add links that don't exist.
+
+---
+
+## Profile Links Endpoints
+
+Manage custom links displayed on a user's link page (Linktree-style). Requires `can_customize_profile` ability.
+
+### GET /api/v1/profile_links
+
+List all of the authenticated user's custom links, ordered by position.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "title": "My Website",
+      "url": "https://example.com",
+      "icon": "link",
+      "description": "My personal website and portfolio",
+      "position": 0,
+      "visible": true,
+      "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/blobs/...",
+      "created_at": "2026-03-16T00:00:00.000Z",
+      "updated_at": "2026-03-16T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/v1/profile_links
+
+Create a new custom link. Supports both JSON and multipart/form-data (for thumbnail upload).
+
+**Authentication:** Required
+
+**Request Body (JSON):**
+
+```json
+{
+  "title": "My Website",
+  "url": "https://example.com",
+  "icon": "link",
+  "position": 0,
+  "visible": true
+}
+```
+
+**Request Body (multipart/form-data for thumbnail upload):**
+
+```
+title: "My Website"
+url: "https://example.com"
+icon: "link"
+thumbnail: <file>
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | Yes | Link title (max 100 characters) |
+| `url` | string | Yes | Link URL (must start with http:// or https://) |
+| `icon` | string | No | Icon identifier (e.g., "music", "shop", "link") |
+| `description` | string | No | Short description of the link (max 200 characters) |
+| `position` | integer | No | Display order (auto-assigned if omitted) |
+| `visible` | boolean | No | Whether link is publicly visible (default: true) |
+| `thumbnail` | file | No | Link thumbnail image (JPEG, PNG, or WebP, max 2MB) |
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "title": "My Website",
+    "url": "https://example.com",
+    "icon": "link",
+    "position": 0,
+    "visible": true,
+    "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/blobs/...",
+    "created_at": "2026-03-16T00:00:00.000Z",
+    "updated_at": "2026-03-16T00:00:00.000Z"
+  }
+}
+```
+
+---
+
+### PUT /api/v1/profile_links/:id
+
+Update an existing custom link. Supports both JSON and multipart/form-data (for thumbnail upload).
+
+**Authentication:** Required
+
+**Request Body:** Same fields as POST (all optional). Additionally:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `thumbnail` | file | Replace thumbnail image (JPEG, PNG, or WebP, max 2MB) |
+| `remove_thumbnail` | boolean | Set to `true` to remove the existing thumbnail |
+
+**Response (200 OK):** Same shape as POST response.
+
+---
+
+### DELETE /api/v1/profile_links/:id
+
+Delete a custom link.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Link deleted"
+}
+```
+
+---
+
+### PUT /api/v1/profile_links/reorder
+
+Batch update positions for all links. The order of IDs in the array determines the new position values.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "link_ids": [3, 1, 2]
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "data": [
+    { "id": 3, "title": "Third Link", "position": 0, "..." : "..." },
+    { "id": 1, "title": "First Link", "position": 1, "..." : "..." },
+    { "id": 2, "title": "Second Link", "position": 2, "..." : "..." }
+  ]
+}
+```
+
+---
+
+## Profile Theme Pages
+
+The profile theme now supports a `pages` concept alongside `sections`. Pages follow the same draft/publish workflow. The first page type is `links` (a Linktree-style page).
+
+### Pages in Profile Theme Update
+
+When updating the profile theme via `PUT /api/v1/profile_theme`, you can include a `pages` array. Pages are saved to `draft_pages` and promoted to `pages` on publish.
+
+**Pages array format:**
+
+```json
+{
+  "pages": [
+    {
+      "type": "links",
+      "slug": "links",
+      "visible": true,
+      "settings": {
+        "heading": "My Links",
+        "description": "Find me everywhere",
+        "show_social_links": true,
+        "show_streaming_links": true,
+        "layout": "list"
+      }
+    }
+  ]
+}
+```
+
+**Page fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Page type (currently only `links`) |
+| `slug` | string | Yes | URL slug for the page |
+| `visible` | boolean | Yes | Whether the page is publicly accessible |
+| `settings` | object | No | Type-specific settings |
+
+**Links page settings:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `heading` | string | null | Page heading (max 120 characters) |
+| `description` | string | null | Page description (max 500 characters) |
+| `show_social_links` | boolean | true | Show social platform links |
+| `show_streaming_links` | boolean | true | Show streaming platform links |
+| `layout` | string | "list" | Layout style: `list` or `grid` |
+
+### Pages in Profile Theme Response
+
+The `GET /api/v1/profile_theme` response now includes:
+
+- `pages` — published pages array
+- `draft_pages` — draft pages array (when `include_draft` is true)
+- `config.page_types` — available page types
+- `config.page_schemas` — settings schema for each page type
+- `source_data.profile_links` — user's custom links for preview
+
+The public theme serializer (`ProfileThemeSerializer.public`) also includes `pages`.
+
+---
+
+## Public Link Page Endpoints
+
+Public endpoints to view a user's link page. No authentication required.
+
+### GET /api/v1/profiles/bands/:slug/links
+
+Get a band's public link page.
+
+**Authentication:** None
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "user": { "...": "standard public_profile shape" },
+    "theme": {
+      "background_color": "#121212",
+      "brand_color": "#6366f1",
+      "font_color": "#f5f5f5",
+      "header_font": "Inter",
+      "body_font": "Inter",
+      "content_max_width": 1200,
+      "card_background_color": null,
+      "card_background_opacity": 10,
+      "single_post_layout": { "..." : "..." },
+      "pages": [{ "type": "links", "slug": "links", "visible": true, "settings": {} }]
+    },
+    "page_settings": {
+      "heading": "My Links",
+      "description": "Find me everywhere",
+      "show_social_links": true,
+      "show_streaming_links": true,
+      "layout": "list"
+    },
+    "profile": {
+      "display_name": "Band Name",
+      "about": "About the band",
+      "profile_image_url": "https://...",
+      "location": "City, State"
+    },
+    "custom_links": [
+      {
+        "id": 1,
+        "title": "Our Merch Store",
+        "description": "T-shirts, vinyl, and more",
+        "url": "https://merch.example.com",
+        "icon": "shop",
+        "position": 0,
+        "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/blobs/..."
+      }
+    ],
+    "social_links": {
+      "instagram": "https://instagram.com/band",
+      "twitter": "https://twitter.com/band"
+    },
+    "streaming_links": {
+      "spotify": "https://open.spotify.com/artist/...",
+      "bandcamp": "https://band.bandcamp.com"
+    }
+  }
+}
+```
+
+**Error (404 Not Found):** Returned if the band doesn't exist or doesn't have a visible links page.
+
+---
+
+### GET /api/v1/profiles/users/:username/links
+
+Get a user's (blogger) public link page. Same response shape as the band link page endpoint, but `streaming_links` will be empty for non-band users.
+
+**Authentication:** None
+
+**Response:** Same shape as `GET /api/v1/profiles/bands/:slug/links`.
+
+**Error (404 Not Found):** Returned if the user doesn't exist or doesn't have a visible links page.
+
+---
+
 ## Review Endpoints
 
 ### GET /reviews
@@ -1021,8 +2394,8 @@ Returns array of reviews (same format as GET /reviews)
 
 Get paginated combined feed including:
 
-- Your own reviews
-- Reviews from users you follow
+- Your own reviews, posts, and events
+- Reviews, posts, and events from users you follow
 - Reviews about bands owned by users you follow
 
 **Authentication:** Required
@@ -1036,26 +2409,62 @@ Get paginated combined feed including:
 
 ```json
 {
-  "reviews": [
+  "feed_items": [
     {
-      "id": 1,
-      "song_link": "https://open.spotify.com/track/...",
-      "band_name": "Artist Name",
-      "song_name": "Song Title",
-      "artwork_url": "https://...",
-      "review_text": "Great song!",
-      "liked_aspects": ["melody", "lyrics"],
-      "band": { ... },
-      "author": {
-        "id": 2,
-        "username": "followeduser",
-        "profile_image_url": "https://..."
-      },
-      "likes_count": 3,
-      "liked_by_current_user": true,
-      "comments_count": 1,
-      "created_at": "2024-12-01T00:00:00.000Z",
-      "updated_at": "2024-12-01T00:00:00.000Z"
+      "type": "review",
+      "data": {
+        "id": 1,
+        "song_link": "https://open.spotify.com/track/...",
+        "band_name": "Artist Name",
+        "song_name": "Song Title",
+        "artwork_url": "https://...",
+        "review_text": "Great song!",
+        "liked_aspects": ["melody", "lyrics"],
+        "band": { ... },
+        "author": {
+          "id": 2,
+          "username": "followeduser",
+          "display_name": "Followed User",
+          "profile_image_url": "https://..."
+        },
+        "likes_count": 3,
+        "liked_by_current_user": true,
+        "comments_count": 1,
+        "created_at": "2024-12-01T00:00:00.000Z",
+        "updated_at": "2024-12-01T00:00:00.000Z"
+      }
+    },
+    {
+      "type": "post",
+      "data": {
+        "id": 5,
+        "title": "My Latest Album Review",
+        "slug": "my-latest-album-review",
+        "excerpt": "A deep dive into the new release...",
+        "author": {
+          "id": 3,
+          "username": "musicblogger",
+          "display_name": "Music Blogger",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2024-12-01T00:00:00.000Z"
+      }
+    },
+    {
+      "type": "event",
+      "data": {
+        "id": 10,
+        "title": "Live at the Roxy",
+        "start_date": "2024-12-15T20:00:00.000Z",
+        "venue": "The Roxy",
+        "author": {
+          "id": 4,
+          "username": "bandaccount",
+          "display_name": "Band Account",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2024-12-01T00:00:00.000Z"
+      }
     }
   ],
   "pagination": {
@@ -1478,6 +2887,955 @@ Unlike a comment.
 
 ---
 
+## Blog/Posts Endpoints
+
+Blog posts allow bands (starter+ plans) and bloggers to publish long-form content.
+
+### GET /blogs/:username
+
+Alias for `GET /users/:username`. Returns the full user profile with reviews and posts (for blogger users).
+
+This endpoint exists so frontend routes like `/blog/:username` can call `/blogs/:username` on the backend with matching semantics.
+
+**See:** [GET /users/:username](#get-usersusername) for full documentation.
+
+**Authentication:** Optional (if authenticated, includes `following` field and `liked_by_current_user` for reviews)
+
+**Query Parameters:**
+
+- `page` (optional): Page number for reviews (default: 1)
+- `per_page` (optional): Reviews per page (default: 20, max: 50)
+- `posts_page` (optional): Page number for posts (default: 1)
+- `posts_per_page` (optional): Posts per page (default: 10, max: 50)
+- `tag` (optional): Filter posts by tag
+- `category` (optional): Filter posts by category
+
+---
+
+### GET /blogs/:username/:slug
+
+Get a single blog post by slug.
+
+**Authentication:** Optional (owner can view drafts/scheduled posts)
+
+**URL Parameters:**
+
+- `username` (required): The username of the blog owner
+- `slug` (required): The post slug
+
+**Response (200 OK):**
+
+```json
+{
+  "id": 1,
+  "title": "My First Post",
+  "slug": "my-first-post",
+  "excerpt": "A brief introduction...",
+  "body": "<p>Full HTML content from Tiptap editor...</p>",
+  "featured": false,
+  "status": "published",
+  "publish_date": "2026-02-25T10:00:00Z",
+  "featured_image_url": "https://...",
+  "tags": ["music", "reviews"],
+  "categories": ["tutorials"],
+  "authors": [
+    { "name": "John Doe", "url": null }
+  ],
+  "author": {
+    "id": 123,
+    "username": "johndoe",
+    "display_name": "John Doe",
+    "profile_image_url": "https://...",
+    "allow_anonymous_comments": true
+  },
+  "song": {
+    "song_name": "Bohemian Rhapsody",
+    "band_name": "Queen",
+    "album_name": "A Night at the Opera",
+    "artwork_url": "https://...",
+    "song_link": "https://song.link/...",
+    "streaming_links": {
+      "spotify": "https://open.spotify.com/track/...",
+      "appleMusic": "https://music.apple.com/...",
+      "youtubeMusic": "https://music.youtube.com/...",
+      "tidal": "https://tidal.com/...",
+      "amazonMusic": "https://music.amazon.com/...",
+      "deezer": "https://deezer.com/...",
+      "soundcloud": "https://soundcloud.com/...",
+      "bandcamp": "https://....bandcamp.com/..."
+    },
+    "preferred_link": "https://open.spotify.com/track/...",
+    "songlink_url": "https://song.link/...",
+    "songlink_search_url": "https://www.google.com/search?q=Queen%20Bohemian%20Rhapsody%20spotify%20OR%20apple%20music",
+    "band_links": {
+      "spotify": "https://open.spotify.com/artist/...",
+      "apple_music": "https://music.apple.com/artist/...",
+      "youtube_music": "https://music.youtube.com/channel/...",
+      "bandcamp": "https://queen.bandcamp.com",
+      "soundcloud": null,
+      "preferred_link": "https://open.spotify.com/artist/..."
+    }
+  },
+  "likes_count": 42,
+  "liked_by_current_user": false,
+  "comments_count": 5,
+  "can_edit": false,
+  "created_at": "2026-02-25T09:00:00Z",
+  "updated_at": "2026-02-25T10:00:00Z"
+}
+```
+
+**Notes:**
+
+- Non-published posts return 404 unless viewed by the owner
+- `can_edit` is true only when the authenticated user is the post owner
+- `song` is `null` if no song is attached to the post
+- `song.streaming_links` contains platform-specific URLs fetched via Track enrichment
+- `song.preferred_link` returns the streaming link matching the user's `preferred_streaming_platform` setting
+- `song.songlink_search_url` is a fallback Google search URL when streaming links aren't available yet
+- `song.band_links` contains the artist's streaming platform profile URLs
+- `likes_count` shows the total number of likes on the post
+- `liked_by_current_user` indicates whether the authenticated user has liked this post
+- `comments_count` shows the total number of comments on the post
+
+---
+
+### GET /posts/:id
+
+Get a post by ID (owner only). Used for editing posts.
+
+**Authentication:** Required (owner only)
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (200 OK):**
+
+Returns the full post object (same as GET /blogs/:username/:slug).
+
+**Response (401 Unauthorized):**
+
+```json
+{
+  "error": "You can only modify resources you own"
+}
+```
+
+**Notes:**
+
+- Only the post owner can access this endpoint
+- Returns full post data including body for editing
+- Use this endpoint when you have the post ID (e.g., from the management list)
+
+---
+
+### POST /posts
+
+Create a new blog post.
+
+**Authentication:** Required
+
+**Required Ability:** `create_blog_post`
+
+**Request Body:**
+
+```json
+{
+  "post": {
+    "title": "My New Post",
+    "slug": "my-new-post",
+    "excerpt": "Optional excerpt for previews",
+    "body": "<p>HTML content</p>",
+    "status": "draft",
+    "featured": false,
+    "publish_date": "2026-03-01T12:00:00Z",
+    "tags": ["music", "news"],
+    "categories": ["announcements"],
+    "authors": [
+      { "name": "Guest Author", "url": "https://guest.com" }
+    ],
+    "song_name": "Bohemian Rhapsody",
+    "band_name": "Queen",
+    "album_name": "A Night at the Opera",
+    "artwork_url": "https://example.com/artwork.jpg",
+    "song_link": "https://song.link/example"
+  }
+}
+```
+
+**Response (201 Created):**
+
+Returns the full post object (same as GET /blogs/:username/:slug).
+
+**Field Notes:**
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `title` | Yes | Post title |
+| `slug` | No | Auto-generated from title if not provided |
+| `body` | Yes (if published) | HTML content from Tiptap |
+| `status` | No | `draft` (default), `published`, or `scheduled` |
+| `featured` | No | Default false |
+| `publish_date` | Yes (if scheduled) | Must be in the future for scheduled posts |
+| `tags` | No | Array of strings |
+| `categories` | No | Array of strings |
+| `authors` | No | Array of {name, url} objects; defaults to owner |
+| `featured_image` | No | File upload for featured image |
+| `song_name` | No | Name of the attached song |
+| `band_name` | No | Artist/band name for the song |
+| `album_name` | No | Album name (optional) |
+| `artwork_url` | No | URL to album/song artwork (also accepts `song_artwork_url`) |
+| `song_link` | No | Generic song link (e.g., song.link URL) |
+
+**Song Attachment Notes:**
+
+- When `song_name` and `band_name` are provided, the system automatically finds or creates a Track record
+- Streaming links (Spotify, Apple Music, etc.) are enriched asynchronously via background jobs
+- Use `GET /api/v1/scrobbles/recent` to fetch recently played songs for a song picker UI
+- Use `GET /api/v1/search` to search for songs by name
+
+**Required Abilities by Feature:**
+
+| Feature | Required Ability |
+|---------|------------------|
+| Create post | `create_blog_post` |
+| Save as draft | `draft_posts` |
+| Schedule post | `schedule_post` |
+| Attach featured image | `attach_images` |
+| Add tags/categories | `manage_tags` |
+
+**Response (403 Forbidden) - Upgrade Required:**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "create_blog_post",
+  "upgrade_plan": "band_starter"
+}
+```
+
+---
+
+### PATCH /posts/:id
+
+Update an existing post.
+
+**Authentication:** Required (owner only)
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Request Body:**
+
+Same fields as POST /posts (all optional).
+
+**Response (200 OK):**
+
+Returns the updated full post object.
+
+**Notes:**
+
+- Only the post owner can update
+- Same ability checks as create for specific features
+- Song attachment can be added, updated, or removed (set fields to `null` to remove)
+
+---
+
+### DELETE /posts/:id
+
+Delete a post.
+
+**Authentication:** Required (owner only)
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (204 No Content):**
+
+Empty response body.
+
+---
+
+### GET /posts/my
+
+Get the current user's posts for management (all statuses including drafts). Paginated with a lightweight response format.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `status` (optional): Filter by status (`draft`, `published`, `scheduled`)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 100)
+
+**Response (200 OK):**
+
+```json
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "My Draft Post",
+      "slug": "my-draft-post",
+      "status": "draft",
+      "featured": false,
+      "authors": [{ "name": "johndoe", "url": null }],
+      "publish_date": null,
+      "created_at": "2026-02-25T09:00:00Z",
+      "updated_at": "2026-02-25T09:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "Published Article",
+      "slug": "published-article",
+      "status": "published",
+      "featured": true,
+      "authors": [{ "name": "johndoe", "url": null }],
+      "publish_date": "2026-02-24T10:00:00Z",
+      "created_at": "2026-02-24T08:00:00Z",
+      "updated_at": "2026-02-24T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 45,
+    "total_pages": 3,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
+}
+```
+
+**Notes:**
+
+- Returns all posts for the current user, including drafts and scheduled
+- Ordered by creation date (newest first)
+- Lightweight response format optimized for management lists (no body, excerpt, tags, categories, or images)
+- Use GET /blogs/:username/:slug to fetch full post details for editing
+
+---
+
+### POST /blog_images
+
+Upload an image for use in blog post content.
+
+**Authentication:** Required
+
+**Required Ability:** `attach_images`
+
+**Content-Type:** `multipart/form-data`
+
+**Request Body:**
+
+- `image` (required): Image file (JPEG, PNG, WebP, or GIF)
+
+**Constraints:**
+
+- Maximum file size: 5MB
+- Allowed formats: JPEG, PNG, WebP, GIF
+
+**Response (201 Created):**
+
+```json
+{
+  "id": 123,
+  "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../image.jpg",
+  "filename": "my-image.jpg",
+  "content_type": "image/jpeg",
+  "byte_size": 245000
+}
+```
+
+**Response (422 Unprocessable Entity) - Invalid file type:**
+
+```json
+{
+  "error": "Invalid file type. Allowed: JPEG, PNG, WebP, GIF"
+}
+```
+
+**Response (422 Unprocessable Entity) - File too large:**
+
+```json
+{
+  "error": "File too large. Maximum size: 5MB"
+}
+```
+
+**Response (403 Forbidden) - Upgrade required:**
+
+```json
+{
+  "error": "upgrade_required",
+  "message": "This feature requires an upgrade.",
+  "required_ability": "attach_images",
+  "upgrade_plan": "band_starter"
+}
+```
+
+**Notes:**
+
+- Use the returned `url` in your Tiptap editor to embed the image in post content
+- Images are stored permanently and associated with the uploading user
+- The URL can be used directly in `<img>` tags within the post body HTML
+
+---
+
+### Plan Access Matrix for Blog Posts
+
+| Plan | Create Posts | Draft | Schedule | Attach Images | Manage Tags |
+|------|-------------|-------|----------|---------------|-------------|
+| fan_free | No | No | No | No | No |
+| band_free | No | No | No | No | No |
+| band_starter | **Yes** | **Yes** | No | **Yes** | **Yes** |
+| band_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+| blogger | **Yes** | **Yes** | No | **Yes** | **Yes** |
+| blogger_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+
+---
+
+## Post Likes Endpoints
+
+### POST /posts/:id/like
+
+Like a blog post.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Post liked successfully",
+  "liked": true,
+  "likes_count": 43
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this post"
+}
+```
+
+---
+
+### DELETE /posts/:id/like
+
+Unlike a blog post.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `id` (required): The post ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Post unliked successfully",
+  "liked": false,
+  "likes_count": 42
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this post"
+}
+```
+
+---
+
+### GET /posts/liked
+
+Get paginated list of blog posts the current user has liked.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "posts": [
+    {
+      "id": 1,
+      "title": "My First Post",
+      "slug": "my-first-post",
+      "excerpt": "A brief introduction...",
+      "featured": false,
+      "status": "published",
+      "publish_date": "2026-02-25T10:00:00Z",
+      "featured_image_url": "https://...",
+      "tags": ["music", "reviews"],
+      "categories": ["tutorials"],
+      "authors": [
+        { "name": "John Doe", "url": null }
+      ],
+      "author": {
+        "id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe",
+        "profile_image_url": "https://...",
+        "allow_anonymous_comments": true
+      },
+      "song": null,
+      "likes_count": 42,
+      "liked_by_current_user": true,
+      "comments_count": 5,
+      "created_at": "2026-02-25T09:00:00Z",
+      "updated_at": "2026-02-25T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 15,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+## Post Comments Endpoints
+
+Post comments support both authenticated and anonymous commenting. Anonymous comments require the post author to have `allow_anonymous_comments: true` in their profile settings.
+
+### GET /posts/:post_id/comments
+
+Get paginated list of comments for a post.
+
+**Authentication:** Optional (affects `liked_by_current_user` field)
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "body": "Great post!",
+      "formatted_body": "Great post!",
+      "mentions": [],
+      "anonymous": false,
+      "author": {
+        "id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe",
+        "profile_image_url": "https://..."
+      },
+      "likes_count": 5,
+      "liked_by_current_user": false,
+      "created_at": "2026-02-26T10:00:00Z",
+      "updated_at": "2026-02-26T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "body": "Thanks for sharing!",
+      "anonymous": true,
+      "guest_name": "Anonymous Reader",
+      "likes_count": 2,
+      "liked_by_current_user": false,
+      "created_at": "2026-02-26T11:00:00Z",
+      "updated_at": "2026-02-26T11:00:00Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 2,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+**Notes:**
+
+- Anonymous comments show `guest_name` but never expose `guest_email`
+- Anonymous comments don't have `formatted_body`, `mentions`, or `author` fields
+- Authenticated comments support @mentions with `formatted_body` containing clickable links
+
+---
+
+### POST /posts/:post_id/comments
+
+Create a new comment on a post. Supports both authenticated and anonymous comments.
+
+**Authentication:** Optional (anonymous requires post author's `allow_anonymous_comments: true`)
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+
+**Request Body (Authenticated):**
+
+```json
+{
+  "comment": {
+    "body": "Great post! @johndoe what do you think?"
+  }
+}
+```
+
+**Request Body (Anonymous):**
+
+```json
+{
+  "comment": {
+    "body": "Thanks for sharing!",
+    "guest_name": "Anonymous Reader",
+    "guest_email": "reader@example.com"
+  }
+}
+```
+
+**Response (201 Created) - Authenticated:**
+
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 1,
+    "body": "Great post! @johndoe what do you think?",
+    "formatted_body": "Great post! <a href=\"/users/johndoe\">@johndoe</a> what do you think?",
+    "mentions": [
+      {
+        "user_id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe"
+      }
+    ],
+    "anonymous": false,
+    "author": {
+      "id": 456,
+      "username": "commenter",
+      "display_name": "Commenter Name",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T10:00:00Z",
+    "updated_at": "2026-02-26T10:00:00Z"
+  },
+  "comments_count": 5
+}
+```
+
+**Response (201 Created) - Anonymous:**
+
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 2,
+    "body": "Thanks for sharing!",
+    "anonymous": true,
+    "guest_name": "Anonymous Reader",
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T11:00:00Z",
+    "updated_at": "2026-02-26T11:00:00Z"
+  },
+  "claim_token": "abc123xyz...",
+  "comments_count": 6
+}
+```
+
+**Error Response (403 Forbidden) - Anonymous not allowed:**
+
+```json
+{
+  "error": "Anonymous comments are not allowed on this post"
+}
+```
+
+**Notes:**
+
+- Anonymous comments return a `claim_token` that can be used to link the comment to a user account after signup
+- Anonymous comments do not support @mentions
+- Store the `claim_token` in localStorage and call `/post_comments/claim` after user signup
+
+---
+
+### PATCH /posts/:post_id/comments/:id
+
+Update an existing comment (owner only).
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+- `id` (required): The comment ID
+
+**Request Body:**
+
+```json
+{
+  "comment": {
+    "body": "Updated comment text"
+  }
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment updated successfully",
+  "comment": {
+    "id": 1,
+    "body": "Updated comment text",
+    "formatted_body": "Updated comment text",
+    "mentions": [],
+    "anonymous": false,
+    "author": {
+      "id": 456,
+      "username": "commenter",
+      "display_name": "Commenter Name",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 5,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T10:00:00Z",
+    "updated_at": "2026-02-26T12:00:00Z"
+  }
+}
+```
+
+**Error Response (403 Forbidden) - Not owner:**
+
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+**Error Response (403 Forbidden) - Anonymous comment:**
+
+```json
+{
+  "error": "Anonymous comments cannot be edited"
+}
+```
+
+**Notes:**
+
+- Only the comment owner or admin can update comments
+- Anonymous comments cannot be edited (they must be claimed first)
+
+---
+
+### DELETE /posts/:post_id/comments/:id
+
+Delete a comment (owner or admin only).
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `post_id` (required): The post ID
+- `id` (required): The comment ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment deleted successfully",
+  "comments_count": 4
+}
+```
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+**Notes:**
+
+- Comment owner or admin can delete comments
+- For anonymous comments, only admin can delete
+
+---
+
+### POST /post_comments/claim
+
+Claim an anonymous comment by linking it to the authenticated user's account.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "claim_token": "abc123xyz..."
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment claimed successfully",
+  "comment": {
+    "id": 2,
+    "body": "Thanks for sharing!",
+    "formatted_body": "Thanks for sharing!",
+    "mentions": [],
+    "anonymous": false,
+    "author": {
+      "id": 789,
+      "username": "newuser",
+      "display_name": "New User",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 2,
+    "liked_by_current_user": false,
+    "created_at": "2026-02-26T11:00:00Z",
+    "updated_at": "2026-02-26T14:00:00Z"
+  }
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "Claim token is required"
+}
+```
+
+**Error Response (404 Not Found):**
+
+```json
+{
+  "error": "Invalid or expired claim token"
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "Comment has already been claimed"
+}
+```
+
+**Notes:**
+
+- Claim tokens are single-use and cleared after claiming
+- After claiming, the comment becomes a regular authenticated comment
+- The `guest_name` and `guest_email` fields are cleared upon claiming
+
+---
+
+### POST /post_comments/:comment_id/like
+
+Like a post comment.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `comment_id` (required): The comment ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment liked successfully",
+  "liked": true,
+  "likes_count": 6
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this comment"
+}
+```
+
+---
+
+### DELETE /post_comments/:comment_id/like
+
+Unlike a post comment.
+
+**Authentication:** Required
+
+**URL Parameters:**
+
+- `comment_id` (required): The comment ID
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment unliked successfully",
+  "liked": false,
+  "likes_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this comment"
+}
+```
+
+---
+
+### Anonymous Comments Flow
+
+1. **Guest posts comment** with `guest_name` and `guest_email` (if `allow_anonymous_comments` is enabled)
+2. **Server returns `claim_token`** in the response
+3. **Frontend stores `claim_token`** in localStorage
+4. **Frontend shows "Create account?" prompt** to encourage signup
+5. **After signup**, frontend calls `POST /post_comments/claim` with the stored token
+6. **Comment is linked** to the new user account, guest fields cleared
+
+---
+
 ## Band Endpoints
 
 ### GET /bands
@@ -1693,6 +4051,9 @@ Events can be created either as standalone events (by any user with `manage_even
     "user_owned": true
   },
   "user_id": 1,
+  "likes_count": 12,
+  "liked_by_current_user": false,
+  "comments_count": 3,
   "created_at": "2025-01-01T00:00:00.000Z",
   "updated_at": "2025-01-01T00:00:00.000Z"
 }
@@ -1701,6 +4062,7 @@ Events can be created either as standalone events (by any user with `manage_even
 **Notes:**
 - `band` is `null` when the event is not associated with a band
 - `user_id` is always present and identifies the event creator
+- `likes_count`, `liked_by_current_user`, and `comments_count` are included in event responses
 
 ---
 
@@ -1903,7 +4265,7 @@ Get a single event by ID.
 **Authentication:** None
 
 **Response (200 OK):**
-Returns event object (same format as Event Object above)
+Returns event object (same format as Event Object above, including `likes_count`, `liked_by_current_user`, and `comments_count`)
 
 ---
 
@@ -1993,6 +4355,407 @@ Get upcoming events created by a specific user.
 
 ---
 
+## Event Likes Endpoints
+
+### POST /events/:id/like
+
+Like an event.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Event liked successfully",
+  "liked": true,
+  "likes_count": 13
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this event"
+}
+```
+
+---
+
+### DELETE /events/:id/like
+
+Unlike an event.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Event unliked successfully",
+  "liked": false,
+  "likes_count": 12
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this event"
+}
+```
+
+---
+
+### GET /events/liked
+
+Get paginated list of events the current user has liked.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "events": [
+    {
+      "id": 1,
+      "name": "Summer Tour Kickoff",
+      "description": "Join us for the first show of our summer tour!",
+      "event_date": "2025-07-15T20:00:00.000Z",
+      "ticket_link": "https://tickets.example.com/event/123",
+      "image_url": "https://...",
+      "price": "$25",
+      "age_restriction": "21+",
+      "venue": {
+        "id": 1,
+        "name": "The Roxy",
+        "address": "9009 Sunset Blvd",
+        "city": "West Hollywood",
+        "region": "California",
+        "latitude": 34.0901,
+        "longitude": -118.3868
+      },
+      "band": {
+        "id": 1,
+        "slug": "band-name",
+        "name": "Band Name",
+        "location": "Los Angeles, California",
+        "profile_picture_url": "https://...",
+        "reviews_count": 5,
+        "user_owned": true
+      },
+      "user_id": 1,
+      "likes_count": 12,
+      "liked_by_current_user": true,
+      "comments_count": 3,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 8,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+## Event Comments Endpoints
+
+### GET /events/:event_id/comments
+
+Get paginated list of comments for an event.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Items per page (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "body": "Can't wait for this show!",
+      "formatted_body": "Can't wait for this show!",
+      "mentions": [],
+      "author": {
+        "id": 2,
+        "username": "musicfan",
+        "display_name": "musicfan",
+        "profile_image_url": "https://..."
+      },
+      "likes_count": 3,
+      "liked_by_current_user": false,
+      "created_at": "2025-01-01T00:00:00.000Z",
+      "updated_at": "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "total_count": 5,
+    "total_pages": 1,
+    "has_next_page": false,
+    "has_previous_page": false
+  }
+}
+```
+
+---
+
+### POST /events/:event_id/comments
+
+Add a comment to an event.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "comment": {
+    "body": "Can't wait for this show!"
+  }
+}
+```
+
+Note: Comment body is limited to 300 characters.
+
+**Response (201 Created):**
+
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 1,
+    "body": "Can't wait for this show!",
+    "formatted_body": "Can't wait for this show!",
+    "mentions": [],
+    "author": {
+      "id": 2,
+      "username": "musicfan",
+      "display_name": "musicfan",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  "comments_count": 5
+}
+```
+
+**Example with User Mention:**
+
+Request:
+```json
+{
+  "comment": {
+    "body": "Hey @johndoe you should come to this!"
+  }
+}
+```
+
+Response:
+```json
+{
+  "message": "Comment added successfully",
+  "comment": {
+    "id": 2,
+    "body": "Hey @johndoe you should come to this!",
+    "formatted_body": "Hey [@johndoe](user:123) you should come to this!",
+    "mentions": [
+      {
+        "user_id": 123,
+        "username": "johndoe",
+        "display_name": "John Doe"
+      }
+    ],
+    "author": {
+      "id": 2,
+      "username": "musicfan",
+      "display_name": "musicfan",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 0,
+    "liked_by_current_user": false,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  },
+  "comments_count": 6
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "errors": ["Body can't be blank"]
+}
+```
+
+or
+
+```json
+{
+  "errors": ["Body is too long (maximum is 300 characters)"]
+}
+```
+
+or (invalid mention):
+
+```json
+{
+  "error": "Looks like you tagged a user that doesn't exist: @fakeuser"
+}
+```
+
+---
+
+### PATCH /events/:event_id/comments/:id
+
+Update a comment (owner or admin only).
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "comment": {
+    "body": "Updated comment text."
+  }
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment updated successfully",
+  "comment": {
+    "id": 1,
+    "body": "Updated comment text.",
+    "author": {
+      "id": 2,
+      "username": "musicfan",
+      "display_name": "musicfan",
+      "profile_image_url": "https://..."
+    },
+    "likes_count": 3,
+    "liked_by_current_user": true,
+    "created_at": "2025-01-01T00:00:00.000Z",
+    "updated_at": "2025-01-01T00:00:00.000Z"
+  }
+}
+```
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+---
+
+### DELETE /events/:event_id/comments/:id
+
+Delete a comment (owner or admin only).
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment deleted successfully",
+  "comments_count": 4
+}
+```
+
+**Error Response (403 Forbidden):**
+
+```json
+{
+  "error": "You are not authorized to modify this comment"
+}
+```
+
+---
+
+### POST /event_comments/:comment_id/like
+
+Like an event comment.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment liked successfully",
+  "liked": true,
+  "likes_count": 5
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have already liked this comment"
+}
+```
+
+---
+
+### DELETE /event_comments/:comment_id/like
+
+Unlike an event comment.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Comment unliked successfully",
+  "liked": false,
+  "likes_count": 4
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": "You have not liked this comment"
+}
+```
+
+---
+
 ## Venue Endpoints
 
 ### GET /venues
@@ -2059,128 +4822,6 @@ Note: Latitude and longitude are automatically calculated via geocoding.
 
 **Response (201 Created):**
 Returns created venue object
-
----
-
-## Follow Endpoints
-
-### POST /users/:user_id/follow
-
-Follow a user.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Successfully followed johndoe",
-  "following": true,
-  "followers_count": 10,
-  "following_count": 5
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "You are already following this user"
-}
-```
-
----
-
-### DELETE /users/:user_id/follow
-
-Unfollow a user.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Successfully unfollowed johndoe",
-  "following": false,
-  "followers_count": 9,
-  "following_count": 5
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "You are not following this user"
-}
-```
-
----
-
-### GET /following
-
-Get list of users the current user is following.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-
-```json
-[
-  {
-    "id": 2,
-    "username": "janedoe",
-    "display_name": "janedoe",
-    "role": "fan",
-    "profile_image_url": "https://...",
-    "location": "Los Angeles, California",
-    "following": true
-  },
-  {
-    "id": 3,
-    "username": null,
-    "display_name": "The Band Name",
-    "role": "band",
-    "profile_image_url": "https://...",
-    "location": "New York, New York",
-    "following": true
-  }
-]
-```
-
----
-
-### GET /followers
-
-Get list of users following the current user.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-Returns array of users (same format as GET /following)
-
----
-
-### GET /users/:user_id/following
-
-Get list of users a specific user is following.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-Returns array of users (same format as GET /following)
-
----
-
-### GET /users/:user_id/followers
-
-Get list of users following a specific user.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-Returns array of users (same format as GET /following)
 
 ---
 
@@ -2480,6 +5121,47 @@ When in-app notifications are created, push notifications are automatically sent
 }
 ```
 
+**event_like:**
+```json
+{
+  "title": "New Like",
+  "body": "username liked your event Event Name",
+  "data": {
+    "type": "event_like",
+    "notification_id": "123",
+    "event_id": "789"
+  }
+}
+```
+
+**event_comment:**
+```json
+{
+  "title": "New Comment",
+  "body": "username: \"Comment preview...\"",
+  "data": {
+    "type": "event_comment",
+    "notification_id": "123",
+    "event_id": "789",
+    "comment_id": "101"
+  }
+}
+```
+
+**event_comment_like:**
+```json
+{
+  "title": "New Like",
+  "body": "username liked your comment on Event Name",
+  "data": {
+    "type": "event_comment_like",
+    "notification_id": "123",
+    "event_id": "789",
+    "comment_id": "101"
+  }
+}
+```
+
 ---
 
 ## Discover Endpoints
@@ -2741,6 +5423,884 @@ Unified search across bands, users, reviews, and events.
 - Users: searched by username (active fan users only)
 - Reviews: searched by band name or song name
 - Events: searched by band name (band-less events excluded from search results)
+
+---
+
+## Dashboard Endpoints
+
+Dashboard endpoints provide combined data for efficient page loading.
+
+### GET /api/v1/fan_dashboard
+
+Get all fan dashboard data in a single optimized request. Reduces 17+ API calls to 1.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "profile": {
+    "id": 1,
+    "username": "johndoe",
+    "email": "user@example.com",
+    "about_me": "Music lover",
+    "profile_image_url": "https://...",
+    "role": "fan",
+    "display_name": "johndoe",
+    "location": "Los Angeles, California",
+    "followers_count": 25,
+    "following_count": 12,
+    "reviews_count": 10,
+    "lastfm_connected": true,
+    "lastfm_username": "johndoe_lastfm",
+    "email_confirmed": true,
+    "admin": false
+  },
+  "unread_notifications_count": 3,
+  "recent_reviews": [
+    {
+      "id": 1,
+      "song_name": "Song Title",
+      "band_name": "Artist Name",
+      "artwork_url": "https://...",
+      "created_at": "2024-12-01T00:00:00Z",
+      "likes_count": 5,
+      "comments_count": 2
+    }
+  ],
+  "recently_played": [
+    {
+      "name": "Song Name",
+      "artist": "Artist Name",
+      "album": "Album Name",
+      "played_at": "2024-12-01T00:00:00Z",
+      "now_playing": false,
+      "source": "lastfm",
+      "album_art_url": "https://..."
+    }
+  ],
+  "following_feed_preview": [
+    {
+      "type": "review",
+      "data": {
+        "id": 1,
+        "song_name": "Song Title",
+        "band_name": "Artist Name",
+        "artwork_url": "https://...",
+        "review_text": "Great song! This is a truncated preview...",
+        "author": {
+          "id": 2,
+          "username": "followeduser",
+          "display_name": "Followed User",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2024-12-01T00:00:00Z",
+        "likes_count": 3
+      }
+    },
+    {
+      "type": "post",
+      "data": {
+        "id": 5,
+        "title": "My Latest Album Review",
+        "slug": "my-latest-album-review",
+        "excerpt": "A deep dive into the new release...",
+        "author": {
+          "id": 3,
+          "username": "musicblogger",
+          "display_name": "Music Blogger",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2024-12-01T00:00:00Z"
+      }
+    },
+    {
+      "type": "event",
+      "data": {
+        "id": 10,
+        "title": "Live at the Roxy",
+        "start_date": "2024-12-15T20:00:00Z",
+        "venue": "The Roxy",
+        "author": {
+          "id": 4,
+          "username": "bandaccount",
+          "display_name": "Band Account",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2024-12-01T00:00:00Z"
+      }
+    }
+  ],
+  "favorite_bands": [
+    {
+      "id": 1,
+      "name": "Band Name",
+      "slug": "band-name",
+      "image_url": "https://...",
+      "position": 1
+    }
+  ],
+  "stats": {
+    "total_scrobbles": 1234,
+    "scrobbles_this_week": 45
+  }
+}
+```
+
+**Response Fields:**
+
+- `profile` - Current user profile data (uses counter caches for counts)
+- `unread_notifications_count` - Number of unread notifications
+- `recent_reviews` - User's 5 most recent reviews
+- `recently_played` - Last 10 tracks from all connected sources (Last.fm, scrobbles)
+- `following_feed_preview` - First 5 items from combined feed: user's own reviews, posts, and events + content from followed users + reviews about bands owned by followed users. Each item is a `{ type, data }` object where type is `"review"`, `"post"`, or `"event"` (review text truncated to 150 chars)
+- `favorite_bands` - User's top 5 favorite bands (if feature enabled)
+- `stats` - Scrobble statistics (total and this week)
+
+**Notes:**
+
+- This endpoint is optimized for the fan dashboard page
+- Uses counter caches instead of COUNT queries for followers/following/reviews
+- All sub-queries use eager loading to minimize database calls
+- `recently_played` returns empty array if Last.fm is not connected and no local scrobbles exist
+- `favorite_bands` returns empty array if the feature is not yet enabled
+
+---
+
+### GET /api/v1/blogger_dashboard
+
+Get all blogger dashboard data in a single optimized request.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "profile": {
+    "id": 1,
+    "username": "musicblogger",
+    "email": "blogger@example.com",
+    "about_me": "Music writer and critic",
+    "profile_image_url": "https://...",
+    "role": "blogger",
+    "plan": {
+      "key": "blogger",
+      "name": "Blogger"
+    },
+    "abilities": ["create_blog_post", "attach_images", "draft_posts", "manage_tags", "..."],
+    "display_name": "musicblogger",
+    "location": "New York, NY",
+    "followers_count": 150,
+    "following_count": 45,
+    "reviews_count": 25,
+    "posts_count": 12,
+    "lastfm_connected": false,
+    "lastfm_username": null,
+    "email_confirmed": true,
+    "admin": false,
+    "preferred_streaming_platform": "spotify"
+  },
+  "unread_notifications_count": 5,
+  "recent_reviews": [
+    {
+      "id": 1,
+      "song_name": "Song Title",
+      "band_name": "Artist Name",
+      "artwork_url": "https://...",
+      "created_at": "2026-02-25T00:00:00Z",
+      "likes_count": 8,
+      "comments_count": 3
+    }
+  ],
+  "recently_played": [],
+  "following_feed_preview": [
+    {
+      "type": "review",
+      "data": {
+        "id": 1,
+        "song_name": "Song Title",
+        "band_name": "Artist Name",
+        "artwork_url": "https://...",
+        "review_text": "Great song! This is a truncated preview...",
+        "author": {
+          "id": 2,
+          "username": "followeduser",
+          "display_name": "Followed User",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2026-02-25T00:00:00Z",
+        "likes_count": 3,
+        "comments_count": 1,
+        "liked_by_current_user": false
+      }
+    },
+    {
+      "type": "post",
+      "data": {
+        "id": 5,
+        "title": "My Latest Album Review",
+        "slug": "my-latest-album-review",
+        "excerpt": "A deep dive into the new release...",
+        "author": {
+          "id": 3,
+          "username": "musicblogger",
+          "display_name": "Music Blogger",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2026-02-25T00:00:00Z"
+      }
+    },
+    {
+      "type": "event",
+      "data": {
+        "id": 10,
+        "title": "Live at the Roxy",
+        "start_date": "2026-03-15T20:00:00Z",
+        "venue": "The Roxy",
+        "author": {
+          "id": 4,
+          "username": "bandaccount",
+          "display_name": "Band Account",
+          "profile_image_url": "https://..."
+        },
+        "created_at": "2026-02-25T00:00:00Z"
+      }
+    }
+  ],
+  "recent_posts": [
+    {
+      "id": 1,
+      "title": "My Latest Album Review",
+      "slug": "my-latest-album-review",
+      "excerpt": "A deep dive into the new release...",
+      "status": "published",
+      "featured": true,
+      "publish_date": "2026-02-25T10:00:00Z",
+      "created_at": "2026-02-24T15:00:00Z",
+      "updated_at": "2026-02-25T09:00:00Z"
+    },
+    {
+      "id": 2,
+      "title": "Draft: Upcoming Concert Preview",
+      "slug": "draft-upcoming-concert-preview",
+      "excerpt": null,
+      "status": "draft",
+      "featured": false,
+      "publish_date": null,
+      "created_at": "2026-02-25T08:00:00Z",
+      "updated_at": "2026-02-25T08:00:00Z"
+    }
+  ],
+  "posts_stats": {
+    "total_posts": 12,
+    "published_posts": 8,
+    "draft_posts": 3,
+    "scheduled_posts": 1
+  }
+}
+```
+
+**Response Fields:**
+
+- `profile` - Current user profile data including `posts_count`
+- `unread_notifications_count` - Number of unread notifications
+- `recent_reviews` - User's 5 most recent song reviews
+- `recently_played` - Always empty array for bloggers (they don't use scrobbling)
+- `following_feed_preview` - First 5 items from combined feed (user's own + followed users' reviews, posts, and events). Each item is a `{ type, data }` object where type is `"review"`, `"post"`, or `"event"`
+- `recent_posts` - User's 5 most recent blog posts (all statuses)
+- `posts_stats` - Post counts by status (total, published, draft, scheduled)
+
+**Notes:**
+
+- This endpoint is optimized for the blogger dashboard page
+- Returns the same base format as fan_dashboard for frontend compatibility
+- `recently_played` is always empty (bloggers focus on posts, not scrobbling)
+- `recent_posts` includes drafts and scheduled posts (only visible to the owner)
+
+---
+
+## Last.fm Integration Endpoints
+
+### POST /lastfm/connect
+
+Connect a Last.fm account by username.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "username": "lastfm_username"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Last.fm account connected successfully",
+  "username": "lastfm_username",
+  "profile": {
+    "name": "lastfm_username",
+    "realname": "John Doe",
+    "url": "https://www.last.fm/user/lastfm_username",
+    "playcount": "12345",
+    "image": "https://..."
+  }
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "Last.fm username is required"
+}
+```
+
+or
+
+```json
+{
+  "error": "Last.fm user not found"
+}
+```
+
+---
+
+### DELETE /lastfm/disconnect
+
+Disconnect Last.fm account.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Last.fm account disconnected successfully"
+}
+```
+
+---
+
+### GET /lastfm/status
+
+Check Last.fm connection status.
+
+**Authentication:** Required
+
+**Response (200 OK) - When connected:**
+
+```json
+{
+  "connected": true,
+  "username": "lastfm_username",
+  "profile": {
+    "name": "lastfm_username",
+    "realname": "John Doe",
+    "url": "https://www.last.fm/user/lastfm_username",
+    "playcount": "12345",
+    "image": "https://..."
+  }
+}
+```
+
+**Response (200 OK) - When not connected:**
+
+```json
+{
+  "connected": false,
+  "username": null
+}
+```
+
+---
+
+### GET /lastfm/search-artist
+
+Search for artists on Last.fm.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `query` (required): Artist name to search for
+- `limit` (optional): Number of results to return (default: 10)
+
+**Response (200 OK):**
+
+```json
+{
+  "artists": [
+    {
+      "name": "Artist Name",
+      "mbid": "musicbrainz-id",
+      "url": "https://www.last.fm/music/Artist+Name",
+      "image": "https://..."
+    }
+  ]
+}
+```
+
+**Error Response (400 Bad Request):**
+
+```json
+{
+  "error": "Search query is required"
+}
+```
+
+---
+
+## Scrobble Endpoints
+
+All scrobble endpoints are namespaced under `/api/v1`. Scrobbles represent track listening history.
+
+### POST /api/v1/scrobbles
+
+Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seconds) are silently skipped.
+
+**Authentication:** Required
+
+**Rate Limit:** 100 submissions per hour per user
+
+**Request Body:**
+
+```json
+{
+  "scrobbles": [
+    {
+      "track_name": "Song Title",
+      "artist_name": "Artist Name",
+      "album_name": "Album Name",
+      "duration_ms": 240000,
+      "played_at": "2025-01-15T20:30:00Z",
+      "source_app": "goodsongs-android",
+      "source_device": "Pixel 8",
+      "album_artist": "Various Artists",
+      "genre": "Rock",
+      "year": 2024,
+      "release_date": "2024-03-15",
+      "artwork_uri": "https://i.scdn.co/image/abc123",
+      "album_art": "data:image/jpeg;base64,/9j/4AAQ..."
+    }
+  ]
+}
+```
+
+**Fields:**
+
+- `track_name` (required): Track name (max 500 chars)
+- `artist_name` (required): Artist name (max 500 chars)
+- `album_name` (optional): Album name (max 500 chars)
+- `duration_ms` (required): Track duration in milliseconds (minimum 30000)
+- `played_at` (required): ISO 8601 timestamp, must be within the last 14 days and not in the future
+- `source_app` (required): Submitting application identifier (max 100 chars)
+- `source_device` (optional): Device identifier (max 100 chars)
+- `album_artist` (optional): Album artist, useful for compilation albums (max 500 chars)
+- `genre` (optional): Track/album genre from METADATA_KEY_GENRE (max 100 chars)
+- `year` (optional): 4-digit release year (1800-2100)
+- `release_date` (optional): Full release date in YYYY-MM-DD format
+- `artwork_uri` (optional): External artwork URL (e.g., Spotify CDN URL, max 2000 chars) - highest priority for artwork display
+- `album_art` (optional): Base64-encoded album artwork image (JPEG/PNG/WebP, max 5MB). Supports both raw base64 and data URI format (`data:image/jpeg;base64,...`)
+
+**Artwork Priority (highest to lowest):**
+
+1. `artwork_uri` - External URL from Android (e.g., Spotify CDN)
+2. `album_art` - Base64-encoded bitmap uploaded to Active Storage
+3. `preferred_artwork_url` - User-selected override (set via PATCH endpoint)
+4. `track.album.cover_art_url` - Enrichment fallback from MusicBrainz/Cover Art Archive
+
+Maximum 50 scrobbles per request.
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "accepted": 1,
+    "rejected": 0,
+    "scrobbles": [
+      {
+        "id": 1,
+        "track_name": "Song Title",
+        "artist_name": "Artist Name",
+        "album_name": "Album Name",
+        "played_at": "2025-01-15T20:30:00Z",
+        "metadata_status": "pending",
+        "artwork_url": "https://i.scdn.co/image/abc123",
+        "genre": "Rock",
+        "year": 2024,
+        "album_artist": "Various Artists"
+      }
+    ]
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "One or more scrobbles failed validation",
+    "details": [
+      {
+        "index": 0,
+        "errors": [{ "field": "track_name", "message": "can't be blank" }]
+      }
+    ]
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity) - Batch too large:**
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "Maximum 50 scrobbles per request"
+  }
+}
+```
+
+**Error Response (429 Too Many Requests):**
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Too many scrobble submissions. Maximum 100 per hour.",
+    "details": {
+      "retry_after": 1705363200
+    }
+  }
+}
+```
+
+---
+
+### POST /api/v1/scrobbles/from_lastfm
+
+Convert a Last.fm track to a scrobble with preferred artwork. Use this when a user selects alternative artwork for a Last.fm track in their recently played feed.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "scrobble": {
+    "track_name": "Karma Police",
+    "artist_name": "Radiohead",
+    "album_name": "OK Computer",
+    "played_at": "2026-02-19T10:30:00Z",
+    "preferred_artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+    "artwork_uri": "https://lastfm.freetls.fastly.net/i/u/300x300/abc123.png",
+    "lastfm_url": "https://www.last.fm/music/Radiohead/_/Karma+Police",
+    "lastfm_loved": true,
+    "musicbrainz_recording_id": "uuid-here",
+    "artist_mbid": "artist-uuid",
+    "album_mbid": "album-uuid"
+  }
+}
+```
+
+**Fields:**
+
+- `track_name` (required): Track name from Last.fm
+- `artist_name` (required): Artist name from Last.fm
+- `album_name` (optional): Album name from Last.fm
+- `played_at` (required): ISO 8601 timestamp when the track was played
+- `preferred_artwork_url` (optional): User-selected artwork URL (from artwork search)
+- `artwork_uri` (optional): Original Last.fm artwork URL (as fallback)
+- `lastfm_url` (optional): Last.fm track URL
+- `lastfm_loved` (optional): Whether the track is loved on Last.fm
+- `musicbrainz_recording_id` (optional): MusicBrainz recording ID from Last.fm
+- `artist_mbid` (optional): MusicBrainz artist ID from Last.fm
+- `album_mbid` (optional): MusicBrainz album ID from Last.fm
+
+**Notes:**
+
+- `duration_ms` is not required (Last.fm doesn't provide it)
+- `played_at` can be older than 14 days (unlike regular scrobbles)
+- If a duplicate scrobble exists (same track/artist within 30 seconds), the existing scrobble is updated with the new preferred artwork
+
+**Response (201 Created):**
+
+```json
+{
+  "data": {
+    "message": "Last.fm track converted to scrobble",
+    "scrobble": {
+      "id": "uuid-here",
+      "track_name": "Karma Police",
+      "artist_name": "Radiohead",
+      "album_name": "OK Computer",
+      "played_at": "2026-02-19T10:30:00Z",
+      "artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+      "preferred_artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+      "has_preferred_artwork": true,
+      "metadata_status": "pending"
+    }
+  }
+}
+```
+
+**Response (200 OK) - Duplicate updated:**
+
+```json
+{
+  "data": {
+    "message": "Scrobble already exists, updated artwork",
+    "scrobble": {
+      "id": "existing-uuid",
+      "track_name": "Karma Police",
+      "artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
+      "has_preferred_artwork": true
+    }
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "track_name and artist_name are required"
+  }
+}
+```
+
+---
+
+### GET /api/v1/scrobbles
+
+Get the current user's scrobbles with cursor-based pagination.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `since` (optional): ISO 8601 timestamp, return scrobbles after this time
+- `until` (optional): ISO 8601 timestamp, return scrobbles before this time
+- `cursor` (optional): ISO 8601 timestamp cursor for pagination
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "scrobbles": [
+      {
+        "id": 1,
+        "track_name": "Song Title",
+        "artist_name": "Artist Name",
+        "album_name": "Album Name",
+        "played_at": "2025-01-15T20:30:00Z",
+        "source_app": "goodsongs-ios",
+        "artwork_url": "https://i.scdn.co/image/abc123",
+        "genre": "Rock",
+        "year": 2024,
+        "album_artist": "Various Artists",
+        "track": {
+          "id": 10,
+          "name": "Song Title",
+          "duration_ms": 240000,
+          "artist": {
+            "id": 5,
+            "name": "Artist Name",
+            "image_url": "https://..."
+          },
+          "album": {
+            "id": 3,
+            "name": "Album Name",
+            "cover_art_url": "https://..."
+          },
+          "streaming_links": {
+            "spotify": "https://open.spotify.com/track/...",
+            "appleMusic": "https://music.apple.com/us/album/...",
+            "youtubeMusic": "https://music.youtube.com/watch?v=...",
+            "tidal": "https://tidal.com/track/...",
+            "amazonMusic": "https://music.amazon.com/albums/...",
+            "deezer": "https://www.deezer.com/track/...",
+            "soundcloud": "https://soundcloud.com/...",
+            "bandcamp": "https://artist.bandcamp.com/track/..."
+          },
+          "songlink_url": "https://song.link/..."
+        }
+      }
+    ],
+    "pagination": {
+      "next_cursor": "2025-01-15T20:30:00Z",
+      "has_more": true
+    }
+  }
+}
+```
+
+**Response Fields:**
+
+- `artwork_url` - Resolved artwork URL using the priority system (artwork_uri > album_art > preferred_artwork_url > track.album.cover_art_url)
+- `genre` - Genre metadata from Android client (if provided)
+- `year` - Release year metadata from Android client (if provided)
+- `album_artist` - Album artist metadata from Android client (if provided)
+- `track.streaming_links` - Object containing streaming platform URLs (spotify, appleMusic, youtubeMusic, tidal, amazonMusic, deezer, soundcloud, bandcamp). Only platforms where the track is available are included. Empty object `{}` if not yet fetched or track not found on any platform.
+- `track.songlink_url` - Universal song.link URL that redirects users to their preferred streaming platform
+
+Note: The `track` field is `null` when metadata enrichment has not yet completed. Streaming links are fetched asynchronously after the track's ISRC code is obtained.
+
+---
+
+### GET /api/v1/scrobbles/recent
+
+Get the current user's recent scrobbles. Cached for 60 seconds.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `limit` (optional): Number of results (default: 20, max: 50)
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "scrobbles": [
+      {
+        "id": 1,
+        "track_name": "Song Title",
+        "artist_name": "Artist Name",
+        "album_name": "Album Name",
+        "played_at": "2025-01-15T20:30:00Z",
+        "source_app": "goodsongs-ios",
+        "track": null
+      }
+    ]
+  }
+}
+```
+
+---
+
+### GET /api/v1/users/:user_id/scrobbles
+
+Get scrobbles for a specific user with cursor-based pagination.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+- `since` (optional): ISO 8601 timestamp, return scrobbles after this time
+- `until` (optional): ISO 8601 timestamp, return scrobbles before this time
+- `cursor` (optional): ISO 8601 timestamp cursor for pagination
+- `limit` (optional): Number of results (default: 20, max: 100)
+
+**Response (200 OK):**
+Same format as `GET /api/v1/scrobbles`.
+
+---
+
+### DELETE /api/v1/scrobbles/:id
+
+Delete a scrobble (owner only).
+
+**Authentication:** Required
+
+**Response (204 No Content)**
+
+---
+
+### PATCH /api/v1/scrobbles/:id/artwork
+
+Set preferred artwork for a scrobble. This overrides the automatically fetched album artwork.
+
+**Authentication:** Required (owner only)
+
+**Request Body:**
+
+```json
+{
+  "artwork_url": "https://example.com/preferred-artwork.jpg"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "message": "Preferred artwork set successfully",
+    "scrobble": {
+      "id": "uuid",
+      "track_name": "Song Title",
+      "artist_name": "Artist Name",
+      "album_name": "Album Name",
+      "played_at": "2025-01-15T20:30:00Z",
+      "artwork_url": "https://example.com/preferred-artwork.jpg",
+      "preferred_artwork_url": "https://example.com/preferred-artwork.jpg",
+      "has_preferred_artwork": true,
+      "metadata_status": "enriched"
+    }
+  }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "artwork_url is required"
+  }
+}
+```
+
+**Notes:**
+
+- Use with `GET /artwork/search` to let users choose from available artwork options
+- The `artwork_url` should be a valid image URL from one of the artwork sources
+- This overrides the album's cover art for this specific scrobble only
+
+---
+
+### DELETE /api/v1/scrobbles/:id/artwork
+
+Clear the preferred artwork for a scrobble, reverting to the album's cover art.
+
+**Authentication:** Required (owner only)
+
+**Response (200 OK):**
+
+```json
+{
+  "data": {
+    "message": "Preferred artwork cleared",
+    "scrobble": {
+      "id": "uuid",
+      "track_name": "Song Title",
+      "artist_name": "Artist Name",
+      "album_name": "Album Name",
+      "played_at": "2025-01-15T20:30:00Z",
+      "artwork_url": "https://coverartarchive.org/...",
+      "preferred_artwork_url": null,
+      "has_preferred_artwork": false,
+      "metadata_status": "enriched"
+    }
+  }
+}
+```
 
 ---
 
@@ -3863,812 +7423,6 @@ If the ability is used by any plans, it cannot be deleted:
 
 ---
 
-## Last.fm Integration Endpoints
-
-### POST /lastfm/connect
-
-Connect a Last.fm account by username.
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "username": "lastfm_username"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Last.fm account connected successfully",
-  "username": "lastfm_username",
-  "profile": {
-    "name": "lastfm_username",
-    "realname": "John Doe",
-    "url": "https://www.last.fm/user/lastfm_username",
-    "playcount": "12345",
-    "image": "https://..."
-  }
-}
-```
-
-**Error Response (400 Bad Request):**
-
-```json
-{
-  "error": "Last.fm username is required"
-}
-```
-
-or
-
-```json
-{
-  "error": "Last.fm user not found"
-}
-```
-
----
-
-### DELETE /lastfm/disconnect
-
-Disconnect Last.fm account.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Last.fm account disconnected successfully"
-}
-```
-
----
-
-### GET /lastfm/status
-
-Check Last.fm connection status.
-
-**Authentication:** Required
-
-**Response (200 OK) - When connected:**
-
-```json
-{
-  "connected": true,
-  "username": "lastfm_username",
-  "profile": {
-    "name": "lastfm_username",
-    "realname": "John Doe",
-    "url": "https://www.last.fm/user/lastfm_username",
-    "playcount": "12345",
-    "image": "https://..."
-  }
-}
-```
-
-**Response (200 OK) - When not connected:**
-
-```json
-{
-  "connected": false,
-  "username": null
-}
-```
-
----
-
-### GET /lastfm/search-artist
-
-Search for artists on Last.fm.
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `query` (required): Artist name to search for
-- `limit` (optional): Number of results to return (default: 10)
-
-**Response (200 OK):**
-
-```json
-{
-  "artists": [
-    {
-      "name": "Artist Name",
-      "mbid": "musicbrainz-id",
-      "url": "https://www.last.fm/music/Artist+Name",
-      "image": "https://..."
-    }
-  ]
-}
-```
-
-**Error Response (400 Bad Request):**
-
-```json
-{
-  "error": "Search query is required"
-}
-```
-
----
-
-## Dashboard Endpoints
-
-Dashboard endpoints provide combined data for efficient page loading.
-
-### GET /api/v1/fan_dashboard
-
-Get all fan dashboard data in a single optimized request. Reduces 17+ API calls to 1.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-
-```json
-{
-  "profile": {
-    "id": 1,
-    "username": "johndoe",
-    "email": "user@example.com",
-    "about_me": "Music lover",
-    "profile_image_url": "https://...",
-    "role": "fan",
-    "display_name": "johndoe",
-    "location": "Los Angeles, California",
-    "followers_count": 25,
-    "following_count": 12,
-    "reviews_count": 10,
-    "lastfm_connected": true,
-    "lastfm_username": "johndoe_lastfm",
-    "email_confirmed": true,
-    "admin": false
-  },
-  "unread_notifications_count": 3,
-  "recent_reviews": [
-    {
-      "id": 1,
-      "song_name": "Song Title",
-      "band_name": "Artist Name",
-      "artwork_url": "https://...",
-      "created_at": "2024-12-01T00:00:00Z",
-      "likes_count": 5,
-      "comments_count": 2
-    }
-  ],
-  "recently_played": [
-    {
-      "name": "Song Name",
-      "artist": "Artist Name",
-      "album": "Album Name",
-      "played_at": "2024-12-01T00:00:00Z",
-      "now_playing": false,
-      "source": "lastfm",
-      "album_art_url": "https://..."
-    }
-  ],
-  "following_feed_preview": [
-    {
-      "id": 1,
-      "song_name": "Song Title",
-      "band_name": "Artist Name",
-      "artwork_url": "https://...",
-      "review_text": "Great song! This is a truncated preview...",
-      "author": {
-        "id": 2,
-        "username": "followeduser",
-        "profile_image_url": "https://..."
-      },
-      "created_at": "2024-12-01T00:00:00Z",
-      "likes_count": 3
-    }
-  ],
-  "favorite_bands": [
-    {
-      "id": 1,
-      "name": "Band Name",
-      "slug": "band-name",
-      "image_url": "https://...",
-      "position": 1
-    }
-  ],
-  "stats": {
-    "total_scrobbles": 1234,
-    "scrobbles_this_week": 45
-  }
-}
-```
-
-**Response Fields:**
-
-- `profile` - Current user profile data (uses counter caches for counts)
-- `unread_notifications_count` - Number of unread notifications
-- `recent_reviews` - User's 5 most recent reviews
-- `recently_played` - Last 10 tracks from all connected sources (Last.fm, scrobbles)
-- `following_feed_preview` - First 5 items from combined feed: user's own reviews + reviews from followed users + reviews about bands owned by followed users (review text truncated to 150 chars)
-- `favorite_bands` - User's top 5 favorite bands (if feature enabled)
-- `stats` - Scrobble statistics (total and this week)
-
-**Notes:**
-
-- This endpoint is optimized for the fan dashboard page
-- Uses counter caches instead of COUNT queries for followers/following/reviews
-- All sub-queries use eager loading to minimize database calls
-- `recently_played` returns empty array if Last.fm is not connected and no local scrobbles exist
-- `favorite_bands` returns empty array if the feature is not yet enabled
-
----
-
-### GET /api/v1/blogger_dashboard
-
-Get all blogger dashboard data in a single optimized request.
-
-**Authentication:** Required
-
-**Response (200 OK):**
-
-```json
-{
-  "profile": {
-    "id": 1,
-    "username": "musicblogger",
-    "email": "blogger@example.com",
-    "about_me": "Music writer and critic",
-    "profile_image_url": "https://...",
-    "role": "blogger",
-    "plan": {
-      "key": "blogger",
-      "name": "Blogger"
-    },
-    "abilities": ["create_blog_post", "attach_images", "draft_posts", "manage_tags", "..."],
-    "display_name": "musicblogger",
-    "location": "New York, NY",
-    "followers_count": 150,
-    "following_count": 45,
-    "reviews_count": 25,
-    "posts_count": 12,
-    "lastfm_connected": false,
-    "lastfm_username": null,
-    "email_confirmed": true,
-    "admin": false,
-    "preferred_streaming_platform": "spotify"
-  },
-  "unread_notifications_count": 5,
-  "recent_reviews": [
-    {
-      "id": 1,
-      "song_name": "Song Title",
-      "band_name": "Artist Name",
-      "artwork_url": "https://...",
-      "created_at": "2026-02-25T00:00:00Z",
-      "likes_count": 8,
-      "comments_count": 3
-    }
-  ],
-  "recently_played": [],
-  "following_feed_preview": [
-    {
-      "id": 1,
-      "song_name": "Song Title",
-      "band_name": "Artist Name",
-      "artwork_url": "https://...",
-      "review_text": "Great song! This is a truncated preview...",
-      "author": {
-        "id": 2,
-        "username": "followeduser",
-        "profile_image_url": "https://..."
-      },
-      "created_at": "2026-02-25T00:00:00Z",
-      "likes_count": 3,
-      "comments_count": 1,
-      "liked_by_current_user": false
-    }
-  ],
-  "recent_posts": [
-    {
-      "id": 1,
-      "title": "My Latest Album Review",
-      "slug": "my-latest-album-review",
-      "excerpt": "A deep dive into the new release...",
-      "status": "published",
-      "featured": true,
-      "publish_date": "2026-02-25T10:00:00Z",
-      "created_at": "2026-02-24T15:00:00Z",
-      "updated_at": "2026-02-25T09:00:00Z"
-    },
-    {
-      "id": 2,
-      "title": "Draft: Upcoming Concert Preview",
-      "slug": "draft-upcoming-concert-preview",
-      "excerpt": null,
-      "status": "draft",
-      "featured": false,
-      "publish_date": null,
-      "created_at": "2026-02-25T08:00:00Z",
-      "updated_at": "2026-02-25T08:00:00Z"
-    }
-  ],
-  "posts_stats": {
-    "total_posts": 12,
-    "published_posts": 8,
-    "draft_posts": 3,
-    "scheduled_posts": 1
-  }
-}
-```
-
-**Response Fields:**
-
-- `profile` - Current user profile data including `posts_count`
-- `unread_notifications_count` - Number of unread notifications
-- `recent_reviews` - User's 5 most recent song reviews
-- `recently_played` - Always empty array for bloggers (they don't use scrobbling)
-- `following_feed_preview` - First 5 items from combined feed (user's own + followed users' reviews)
-- `recent_posts` - User's 5 most recent blog posts (all statuses)
-- `posts_stats` - Post counts by status (total, published, draft, scheduled)
-
-**Notes:**
-
-- This endpoint is optimized for the blogger dashboard page
-- Returns the same base format as fan_dashboard for frontend compatibility
-- `recently_played` is always empty (bloggers focus on posts, not scrobbling)
-- `recent_posts` includes drafts and scheduled posts (only visible to the owner)
-
----
-
-## Scrobble Endpoints
-
-All scrobble endpoints are namespaced under `/api/v1`. Scrobbles represent track listening history.
-
-### POST /api/v1/scrobbles
-
-Submit scrobbles (batch). Duplicates (same track/artist/played_at within 30 seconds) are silently skipped.
-
-**Authentication:** Required
-
-**Rate Limit:** 100 submissions per hour per user
-
-**Request Body:**
-
-```json
-{
-  "scrobbles": [
-    {
-      "track_name": "Song Title",
-      "artist_name": "Artist Name",
-      "album_name": "Album Name",
-      "duration_ms": 240000,
-      "played_at": "2025-01-15T20:30:00Z",
-      "source_app": "goodsongs-android",
-      "source_device": "Pixel 8",
-      "album_artist": "Various Artists",
-      "genre": "Rock",
-      "year": 2024,
-      "release_date": "2024-03-15",
-      "artwork_uri": "https://i.scdn.co/image/abc123",
-      "album_art": "data:image/jpeg;base64,/9j/4AAQ..."
-    }
-  ]
-}
-```
-
-**Fields:**
-
-- `track_name` (required): Track name (max 500 chars)
-- `artist_name` (required): Artist name (max 500 chars)
-- `album_name` (optional): Album name (max 500 chars)
-- `duration_ms` (required): Track duration in milliseconds (minimum 30000)
-- `played_at` (required): ISO 8601 timestamp, must be within the last 14 days and not in the future
-- `source_app` (required): Submitting application identifier (max 100 chars)
-- `source_device` (optional): Device identifier (max 100 chars)
-- `album_artist` (optional): Album artist, useful for compilation albums (max 500 chars)
-- `genre` (optional): Track/album genre from METADATA_KEY_GENRE (max 100 chars)
-- `year` (optional): 4-digit release year (1800-2100)
-- `release_date` (optional): Full release date in YYYY-MM-DD format
-- `artwork_uri` (optional): External artwork URL (e.g., Spotify CDN URL, max 2000 chars) - highest priority for artwork display
-- `album_art` (optional): Base64-encoded album artwork image (JPEG/PNG/WebP, max 5MB). Supports both raw base64 and data URI format (`data:image/jpeg;base64,...`)
-
-**Artwork Priority (highest to lowest):**
-
-1. `artwork_uri` - External URL from Android (e.g., Spotify CDN)
-2. `album_art` - Base64-encoded bitmap uploaded to Active Storage
-3. `preferred_artwork_url` - User-selected override (set via PATCH endpoint)
-4. `track.album.cover_art_url` - Enrichment fallback from MusicBrainz/Cover Art Archive
-
-Maximum 50 scrobbles per request.
-
-**Response (201 Created):**
-
-```json
-{
-  "data": {
-    "accepted": 1,
-    "rejected": 0,
-    "scrobbles": [
-      {
-        "id": 1,
-        "track_name": "Song Title",
-        "artist_name": "Artist Name",
-        "album_name": "Album Name",
-        "played_at": "2025-01-15T20:30:00Z",
-        "metadata_status": "pending",
-        "artwork_url": "https://i.scdn.co/image/abc123",
-        "genre": "Rock",
-        "year": 2024,
-        "album_artist": "Various Artists"
-      }
-    ]
-  }
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": {
-    "code": "validation_failed",
-    "message": "One or more scrobbles failed validation",
-    "details": [
-      {
-        "index": 0,
-        "errors": [{ "field": "track_name", "message": "can't be blank" }]
-      }
-    ]
-  }
-}
-```
-
-**Error Response (422 Unprocessable Entity) - Batch too large:**
-
-```json
-{
-  "error": {
-    "code": "validation_failed",
-    "message": "Maximum 50 scrobbles per request"
-  }
-}
-```
-
-**Error Response (429 Too Many Requests):**
-
-```json
-{
-  "error": {
-    "code": "rate_limited",
-    "message": "Too many scrobble submissions. Maximum 100 per hour.",
-    "details": {
-      "retry_after": 1705363200
-    }
-  }
-}
-```
-
----
-
-### POST /api/v1/scrobbles/from_lastfm
-
-Convert a Last.fm track to a scrobble with preferred artwork. Use this when a user selects alternative artwork for a Last.fm track in their recently played feed.
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "scrobble": {
-    "track_name": "Karma Police",
-    "artist_name": "Radiohead",
-    "album_name": "OK Computer",
-    "played_at": "2026-02-19T10:30:00Z",
-    "preferred_artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
-    "artwork_uri": "https://lastfm.freetls.fastly.net/i/u/300x300/abc123.png",
-    "lastfm_url": "https://www.last.fm/music/Radiohead/_/Karma+Police",
-    "lastfm_loved": true,
-    "musicbrainz_recording_id": "uuid-here",
-    "artist_mbid": "artist-uuid",
-    "album_mbid": "album-uuid"
-  }
-}
-```
-
-**Fields:**
-
-- `track_name` (required): Track name from Last.fm
-- `artist_name` (required): Artist name from Last.fm
-- `album_name` (optional): Album name from Last.fm
-- `played_at` (required): ISO 8601 timestamp when the track was played
-- `preferred_artwork_url` (optional): User-selected artwork URL (from artwork search)
-- `artwork_uri` (optional): Original Last.fm artwork URL (as fallback)
-- `lastfm_url` (optional): Last.fm track URL
-- `lastfm_loved` (optional): Whether the track is loved on Last.fm
-- `musicbrainz_recording_id` (optional): MusicBrainz recording ID from Last.fm
-- `artist_mbid` (optional): MusicBrainz artist ID from Last.fm
-- `album_mbid` (optional): MusicBrainz album ID from Last.fm
-
-**Notes:**
-
-- `duration_ms` is not required (Last.fm doesn't provide it)
-- `played_at` can be older than 14 days (unlike regular scrobbles)
-- If a duplicate scrobble exists (same track/artist within 30 seconds), the existing scrobble is updated with the new preferred artwork
-
-**Response (201 Created):**
-
-```json
-{
-  "data": {
-    "message": "Last.fm track converted to scrobble",
-    "scrobble": {
-      "id": "uuid-here",
-      "track_name": "Karma Police",
-      "artist_name": "Radiohead",
-      "album_name": "OK Computer",
-      "played_at": "2026-02-19T10:30:00Z",
-      "artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
-      "preferred_artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
-      "has_preferred_artwork": true,
-      "metadata_status": "pending"
-    }
-  }
-}
-```
-
-**Response (200 OK) - Duplicate updated:**
-
-```json
-{
-  "data": {
-    "message": "Scrobble already exists, updated artwork",
-    "scrobble": {
-      "id": "existing-uuid",
-      "track_name": "Karma Police",
-      "artwork_url": "https://coverartarchive.org/release/abc123/front.jpg",
-      "has_preferred_artwork": true
-    }
-  }
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": {
-    "code": "validation_failed",
-    "message": "track_name and artist_name are required"
-  }
-}
-```
-
----
-
-### GET /api/v1/scrobbles
-
-Get the current user's scrobbles with cursor-based pagination.
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `since` (optional): ISO 8601 timestamp, return scrobbles after this time
-- `until` (optional): ISO 8601 timestamp, return scrobbles before this time
-- `cursor` (optional): ISO 8601 timestamp cursor for pagination
-- `limit` (optional): Number of results (default: 20, max: 100)
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "scrobbles": [
-      {
-        "id": 1,
-        "track_name": "Song Title",
-        "artist_name": "Artist Name",
-        "album_name": "Album Name",
-        "played_at": "2025-01-15T20:30:00Z",
-        "source_app": "goodsongs-ios",
-        "artwork_url": "https://i.scdn.co/image/abc123",
-        "genre": "Rock",
-        "year": 2024,
-        "album_artist": "Various Artists",
-        "track": {
-          "id": 10,
-          "name": "Song Title",
-          "duration_ms": 240000,
-          "artist": {
-            "id": 5,
-            "name": "Artist Name",
-            "image_url": "https://..."
-          },
-          "album": {
-            "id": 3,
-            "name": "Album Name",
-            "cover_art_url": "https://..."
-          },
-          "streaming_links": {
-            "spotify": "https://open.spotify.com/track/...",
-            "appleMusic": "https://music.apple.com/us/album/...",
-            "youtubeMusic": "https://music.youtube.com/watch?v=...",
-            "tidal": "https://tidal.com/track/...",
-            "amazonMusic": "https://music.amazon.com/albums/...",
-            "deezer": "https://www.deezer.com/track/...",
-            "soundcloud": "https://soundcloud.com/...",
-            "bandcamp": "https://artist.bandcamp.com/track/..."
-          },
-          "songlink_url": "https://song.link/..."
-        }
-      }
-    ],
-    "pagination": {
-      "next_cursor": "2025-01-15T20:30:00Z",
-      "has_more": true
-    }
-  }
-}
-```
-
-**Response Fields:**
-
-- `artwork_url` - Resolved artwork URL using the priority system (artwork_uri > album_art > preferred_artwork_url > track.album.cover_art_url)
-- `genre` - Genre metadata from Android client (if provided)
-- `year` - Release year metadata from Android client (if provided)
-- `album_artist` - Album artist metadata from Android client (if provided)
-- `track.streaming_links` - Object containing streaming platform URLs (spotify, appleMusic, youtubeMusic, tidal, amazonMusic, deezer, soundcloud, bandcamp). Only platforms where the track is available are included. Empty object `{}` if not yet fetched or track not found on any platform.
-- `track.songlink_url` - Universal song.link URL that redirects users to their preferred streaming platform
-
-Note: The `track` field is `null` when metadata enrichment has not yet completed. Streaming links are fetched asynchronously after the track's ISRC code is obtained.
-
----
-
-### GET /api/v1/scrobbles/recent
-
-Get the current user's recent scrobbles. Cached for 60 seconds.
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `limit` (optional): Number of results (default: 20, max: 50)
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "scrobbles": [
-      {
-        "id": 1,
-        "track_name": "Song Title",
-        "artist_name": "Artist Name",
-        "album_name": "Album Name",
-        "played_at": "2025-01-15T20:30:00Z",
-        "source_app": "goodsongs-ios",
-        "track": null
-      }
-    ]
-  }
-}
-```
-
----
-
-### GET /api/v1/users/:user_id/scrobbles
-
-Get scrobbles for a specific user with cursor-based pagination.
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `since` (optional): ISO 8601 timestamp, return scrobbles after this time
-- `until` (optional): ISO 8601 timestamp, return scrobbles before this time
-- `cursor` (optional): ISO 8601 timestamp cursor for pagination
-- `limit` (optional): Number of results (default: 20, max: 100)
-
-**Response (200 OK):**
-Same format as `GET /api/v1/scrobbles`.
-
----
-
-### DELETE /api/v1/scrobbles/:id
-
-Delete a scrobble (owner only).
-
-**Authentication:** Required
-
-**Response (204 No Content)**
-
----
-
-### PATCH /api/v1/scrobbles/:id/artwork
-
-Set preferred artwork for a scrobble. This overrides the automatically fetched album artwork.
-
-**Authentication:** Required (owner only)
-
-**Request Body:**
-
-```json
-{
-  "artwork_url": "https://example.com/preferred-artwork.jpg"
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "message": "Preferred artwork set successfully",
-    "scrobble": {
-      "id": "uuid",
-      "track_name": "Song Title",
-      "artist_name": "Artist Name",
-      "album_name": "Album Name",
-      "played_at": "2025-01-15T20:30:00Z",
-      "artwork_url": "https://example.com/preferred-artwork.jpg",
-      "preferred_artwork_url": "https://example.com/preferred-artwork.jpg",
-      "has_preferred_artwork": true,
-      "metadata_status": "enriched"
-    }
-  }
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": {
-    "code": "validation_failed",
-    "message": "artwork_url is required"
-  }
-}
-```
-
-**Notes:**
-
-- Use with `GET /artwork/search` to let users choose from available artwork options
-- The `artwork_url` should be a valid image URL from one of the artwork sources
-- This overrides the album's cover art for this specific scrobble only
-
----
-
-### DELETE /api/v1/scrobbles/:id/artwork
-
-Clear the preferred artwork for a scrobble, reverting to the album's cover art.
-
-**Authentication:** Required (owner only)
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "message": "Preferred artwork cleared",
-    "scrobble": {
-      "id": "uuid",
-      "track_name": "Song Title",
-      "artist_name": "Artist Name",
-      "album_name": "Album Name",
-      "played_at": "2025-01-15T20:30:00Z",
-      "artwork_url": "https://coverartarchive.org/...",
-      "preferred_artwork_url": null,
-      "has_preferred_artwork": false,
-      "metadata_status": "enriched"
-    }
-  }
-}
-```
-
----
-
 ## Health Check Endpoints
 
 ### GET /health
@@ -4832,11 +7586,14 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
 
 7. **Follow System:**
    - Users (both fans and bands) can follow other users (including themselves)
-   - Following feed (`GET /feed/following`) shows:
-     - Your own reviews
-     - Reviews written by users you follow
+   - Following feed (`GET /feed/following`) returns a unified `feed_items` array of `{ type, data }` objects showing:
+     - Your own reviews, posts, and events
+     - Reviews, posts, and events from users you follow
      - Reviews written about bands owned by users you follow
+   - Each feed item has a `type` field (`"review"`, `"post"`, or `"event"`) and a `data` field with the item details
+   - Review and event author objects include `display_name`
    - Following feed is paginated for performance
+   - Dashboard previews (`following_feed_preview`) use the same `{ type, data }` format
    - Public profiles include `followers_count` and `following_count`
    - When viewing a profile while authenticated, `following` boolean indicates if you follow that user
 
@@ -4856,7 +7613,10 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
    - Band owners receive notifications when someone reviews their band
    - Review authors receive notifications when someone likes their review
    - Review authors receive notifications when someone comments on their review
-   - Notification types: `new_follower`, `new_review`, `review_like`, `review_comment`
+   - Event creators receive notifications when someone likes their event
+   - Event creators receive notifications when someone comments on their event
+   - Event comment authors receive notifications when someone likes their comment
+   - Notification types: `new_follower`, `new_review`, `review_like`, `review_comment`, `event_like`, `event_comment`, `event_comment_like`
    - Notifications are paginated and include unread count
    - Users can mark individual notifications or all notifications as read
    - Users do not receive notifications for their own actions (e.g., liking their own review)
@@ -4909,1908 +7669,3 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - **Combined notifications**: If someone comments on your review AND mentions you in that comment, you receive a single combined notification (not two separate ones). The notification will have `mentioned: true` and the message will say "mentioned you in a comment on your review"
 
 ---
-
-## Blog/Posts Endpoints
-
-Blog posts allow bands (starter+ plans) and bloggers to publish long-form content.
-
-### GET /blogs/:username
-
-Alias for `GET /users/:username`. Returns the full user profile with reviews and posts (for blogger users).
-
-This endpoint exists so frontend routes like `/blog/:username` can call `/blogs/:username` on the backend with matching semantics.
-
-**See:** [GET /users/:username](#get-usersusername) for full documentation.
-
-**Authentication:** Optional (if authenticated, includes `following` field and `liked_by_current_user` for reviews)
-
-**Query Parameters:**
-
-- `page` (optional): Page number for reviews (default: 1)
-- `per_page` (optional): Reviews per page (default: 20, max: 50)
-- `posts_page` (optional): Page number for posts (default: 1)
-- `posts_per_page` (optional): Posts per page (default: 10, max: 50)
-- `tag` (optional): Filter posts by tag
-- `category` (optional): Filter posts by category
-
----
-
-### GET /blogs/:username/:slug
-
-Get a single blog post by slug.
-
-**Authentication:** Optional (owner can view drafts/scheduled posts)
-
-**URL Parameters:**
-
-- `username` (required): The username of the blog owner
-- `slug` (required): The post slug
-
-**Response (200 OK):**
-
-```json
-{
-  "id": 1,
-  "title": "My First Post",
-  "slug": "my-first-post",
-  "excerpt": "A brief introduction...",
-  "body": "<p>Full HTML content from Tiptap editor...</p>",
-  "featured": false,
-  "status": "published",
-  "publish_date": "2026-02-25T10:00:00Z",
-  "featured_image_url": "https://...",
-  "tags": ["music", "reviews"],
-  "categories": ["tutorials"],
-  "authors": [
-    { "name": "John Doe", "url": null }
-  ],
-  "author": {
-    "id": 123,
-    "username": "johndoe",
-    "display_name": "John Doe",
-    "profile_image_url": "https://...",
-    "allow_anonymous_comments": true
-  },
-  "song": {
-    "song_name": "Bohemian Rhapsody",
-    "band_name": "Queen",
-    "album_name": "A Night at the Opera",
-    "artwork_url": "https://...",
-    "song_link": "https://song.link/...",
-    "streaming_links": {
-      "spotify": "https://open.spotify.com/track/...",
-      "appleMusic": "https://music.apple.com/...",
-      "youtubeMusic": "https://music.youtube.com/...",
-      "tidal": "https://tidal.com/...",
-      "amazonMusic": "https://music.amazon.com/...",
-      "deezer": "https://deezer.com/...",
-      "soundcloud": "https://soundcloud.com/...",
-      "bandcamp": "https://....bandcamp.com/..."
-    },
-    "preferred_link": "https://open.spotify.com/track/...",
-    "songlink_url": "https://song.link/...",
-    "songlink_search_url": "https://www.google.com/search?q=Queen%20Bohemian%20Rhapsody%20spotify%20OR%20apple%20music",
-    "band_links": {
-      "spotify": "https://open.spotify.com/artist/...",
-      "apple_music": "https://music.apple.com/artist/...",
-      "youtube_music": "https://music.youtube.com/channel/...",
-      "bandcamp": "https://queen.bandcamp.com",
-      "soundcloud": null,
-      "preferred_link": "https://open.spotify.com/artist/..."
-    }
-  },
-  "likes_count": 42,
-  "liked_by_current_user": false,
-  "comments_count": 5,
-  "can_edit": false,
-  "created_at": "2026-02-25T09:00:00Z",
-  "updated_at": "2026-02-25T10:00:00Z"
-}
-```
-
-**Notes:**
-
-- Non-published posts return 404 unless viewed by the owner
-- `can_edit` is true only when the authenticated user is the post owner
-- `song` is `null` if no song is attached to the post
-- `song.streaming_links` contains platform-specific URLs fetched via Track enrichment
-- `song.preferred_link` returns the streaming link matching the user's `preferred_streaming_platform` setting
-- `song.songlink_search_url` is a fallback Google search URL when streaming links aren't available yet
-- `song.band_links` contains the artist's streaming platform profile URLs
-- `likes_count` shows the total number of likes on the post
-- `liked_by_current_user` indicates whether the authenticated user has liked this post
-- `comments_count` shows the total number of comments on the post
-
----
-
-### GET /posts/:id
-
-Get a post by ID (owner only). Used for editing posts.
-
-**Authentication:** Required (owner only)
-
-**URL Parameters:**
-
-- `id` (required): The post ID
-
-**Response (200 OK):**
-
-Returns the full post object (same as GET /blogs/:username/:slug).
-
-**Response (401 Unauthorized):**
-
-```json
-{
-  "error": "You can only modify resources you own"
-}
-```
-
-**Notes:**
-
-- Only the post owner can access this endpoint
-- Returns full post data including body for editing
-- Use this endpoint when you have the post ID (e.g., from the management list)
-
----
-
-### POST /posts
-
-Create a new blog post.
-
-**Authentication:** Required
-
-**Required Ability:** `create_blog_post`
-
-**Request Body:**
-
-```json
-{
-  "post": {
-    "title": "My New Post",
-    "slug": "my-new-post",
-    "excerpt": "Optional excerpt for previews",
-    "body": "<p>HTML content</p>",
-    "status": "draft",
-    "featured": false,
-    "publish_date": "2026-03-01T12:00:00Z",
-    "tags": ["music", "news"],
-    "categories": ["announcements"],
-    "authors": [
-      { "name": "Guest Author", "url": "https://guest.com" }
-    ],
-    "song_name": "Bohemian Rhapsody",
-    "band_name": "Queen",
-    "album_name": "A Night at the Opera",
-    "artwork_url": "https://example.com/artwork.jpg",
-    "song_link": "https://song.link/example"
-  }
-}
-```
-
-**Response (201 Created):**
-
-Returns the full post object (same as GET /blogs/:username/:slug).
-
-**Field Notes:**
-
-| Field | Required | Notes |
-|-------|----------|-------|
-| `title` | Yes | Post title |
-| `slug` | No | Auto-generated from title if not provided |
-| `body` | Yes (if published) | HTML content from Tiptap |
-| `status` | No | `draft` (default), `published`, or `scheduled` |
-| `featured` | No | Default false |
-| `publish_date` | Yes (if scheduled) | Must be in the future for scheduled posts |
-| `tags` | No | Array of strings |
-| `categories` | No | Array of strings |
-| `authors` | No | Array of {name, url} objects; defaults to owner |
-| `featured_image` | No | File upload for featured image |
-| `song_name` | No | Name of the attached song |
-| `band_name` | No | Artist/band name for the song |
-| `album_name` | No | Album name (optional) |
-| `artwork_url` | No | URL to album/song artwork (also accepts `song_artwork_url`) |
-| `song_link` | No | Generic song link (e.g., song.link URL) |
-
-**Song Attachment Notes:**
-
-- When `song_name` and `band_name` are provided, the system automatically finds or creates a Track record
-- Streaming links (Spotify, Apple Music, etc.) are enriched asynchronously via background jobs
-- Use `GET /api/v1/scrobbles/recent` to fetch recently played songs for a song picker UI
-- Use `GET /api/v1/search` to search for songs by name
-
-**Required Abilities by Feature:**
-
-| Feature | Required Ability |
-|---------|------------------|
-| Create post | `create_blog_post` |
-| Save as draft | `draft_posts` |
-| Schedule post | `schedule_post` |
-| Attach featured image | `attach_images` |
-| Add tags/categories | `manage_tags` |
-
-**Response (403 Forbidden) - Upgrade Required:**
-
-```json
-{
-  "error": "upgrade_required",
-  "message": "This feature requires an upgrade.",
-  "required_ability": "create_blog_post",
-  "upgrade_plan": "band_starter"
-}
-```
-
----
-
-### PATCH /posts/:id
-
-Update an existing post.
-
-**Authentication:** Required (owner only)
-
-**URL Parameters:**
-
-- `id` (required): The post ID
-
-**Request Body:**
-
-Same fields as POST /posts (all optional).
-
-**Response (200 OK):**
-
-Returns the updated full post object.
-
-**Notes:**
-
-- Only the post owner can update
-- Same ability checks as create for specific features
-- Song attachment can be added, updated, or removed (set fields to `null` to remove)
-
----
-
-### DELETE /posts/:id
-
-Delete a post.
-
-**Authentication:** Required (owner only)
-
-**URL Parameters:**
-
-- `id` (required): The post ID
-
-**Response (204 No Content):**
-
-Empty response body.
-
----
-
-### GET /posts/my
-
-Get the current user's posts for management (all statuses including drafts). Paginated with a lightweight response format.
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `status` (optional): Filter by status (`draft`, `published`, `scheduled`)
-- `page` (optional): Page number (default: 1)
-- `per_page` (optional): Items per page (default: 20, max: 100)
-
-**Response (200 OK):**
-
-```json
-{
-  "posts": [
-    {
-      "id": 1,
-      "title": "My Draft Post",
-      "slug": "my-draft-post",
-      "status": "draft",
-      "featured": false,
-      "authors": [{ "name": "johndoe", "url": null }],
-      "publish_date": null,
-      "created_at": "2026-02-25T09:00:00Z",
-      "updated_at": "2026-02-25T09:00:00Z"
-    },
-    {
-      "id": 2,
-      "title": "Published Article",
-      "slug": "published-article",
-      "status": "published",
-      "featured": true,
-      "authors": [{ "name": "johndoe", "url": null }],
-      "publish_date": "2026-02-24T10:00:00Z",
-      "created_at": "2026-02-24T08:00:00Z",
-      "updated_at": "2026-02-24T10:00:00Z"
-    }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "per_page": 20,
-    "total_count": 45,
-    "total_pages": 3,
-    "has_next_page": true,
-    "has_previous_page": false
-  }
-}
-```
-
-**Notes:**
-
-- Returns all posts for the current user, including drafts and scheduled
-- Ordered by creation date (newest first)
-- Lightweight response format optimized for management lists (no body, excerpt, tags, categories, or images)
-- Use GET /blogs/:username/:slug to fetch full post details for editing
-
----
-
-### POST /blog_images
-
-Upload an image for use in blog post content.
-
-**Authentication:** Required
-
-**Required Ability:** `attach_images`
-
-**Content-Type:** `multipart/form-data`
-
-**Request Body:**
-
-- `image` (required): Image file (JPEG, PNG, WebP, or GIF)
-
-**Constraints:**
-
-- Maximum file size: 5MB
-- Allowed formats: JPEG, PNG, WebP, GIF
-
-**Response (201 Created):**
-
-```json
-{
-  "id": 123,
-  "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../image.jpg",
-  "filename": "my-image.jpg",
-  "content_type": "image/jpeg",
-  "byte_size": 245000
-}
-```
-
-**Response (422 Unprocessable Entity) - Invalid file type:**
-
-```json
-{
-  "error": "Invalid file type. Allowed: JPEG, PNG, WebP, GIF"
-}
-```
-
-**Response (422 Unprocessable Entity) - File too large:**
-
-```json
-{
-  "error": "File too large. Maximum size: 5MB"
-}
-```
-
-**Response (403 Forbidden) - Upgrade required:**
-
-```json
-{
-  "error": "upgrade_required",
-  "message": "This feature requires an upgrade.",
-  "required_ability": "attach_images",
-  "upgrade_plan": "band_starter"
-}
-```
-
-**Notes:**
-
-- Use the returned `url` in your Tiptap editor to embed the image in post content
-- Images are stored permanently and associated with the uploading user
-- The URL can be used directly in `<img>` tags within the post body HTML
-
----
-
-### Plan Access Matrix for Blog Posts
-
-| Plan | Create Posts | Draft | Schedule | Attach Images | Manage Tags |
-|------|-------------|-------|----------|---------------|-------------|
-| fan_free | No | No | No | No | No |
-| band_free | No | No | No | No | No |
-| band_starter | **Yes** | **Yes** | No | **Yes** | **Yes** |
-| band_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
-| blogger | **Yes** | **Yes** | No | **Yes** | **Yes** |
-| blogger_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
-
----
-
-## Post Likes Endpoints
-
-### POST /posts/:id/like
-
-Like a blog post.
-
-**Authentication:** Required
-
-**URL Parameters:**
-
-- `id` (required): The post ID
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Post liked successfully",
-  "liked": true,
-  "likes_count": 43
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "You have already liked this post"
-}
-```
-
----
-
-### DELETE /posts/:id/like
-
-Unlike a blog post.
-
-**Authentication:** Required
-
-**URL Parameters:**
-
-- `id` (required): The post ID
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Post unliked successfully",
-  "liked": false,
-  "likes_count": 42
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "You have not liked this post"
-}
-```
-
----
-
-### GET /posts/liked
-
-Get paginated list of blog posts the current user has liked.
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `page` (optional): Page number (default: 1)
-- `per_page` (optional): Items per page (default: 20, max: 50)
-
-**Response (200 OK):**
-
-```json
-{
-  "posts": [
-    {
-      "id": 1,
-      "title": "My First Post",
-      "slug": "my-first-post",
-      "excerpt": "A brief introduction...",
-      "featured": false,
-      "status": "published",
-      "publish_date": "2026-02-25T10:00:00Z",
-      "featured_image_url": "https://...",
-      "tags": ["music", "reviews"],
-      "categories": ["tutorials"],
-      "authors": [
-        { "name": "John Doe", "url": null }
-      ],
-      "author": {
-        "id": 123,
-        "username": "johndoe",
-        "display_name": "John Doe",
-        "profile_image_url": "https://...",
-        "allow_anonymous_comments": true
-      },
-      "song": null,
-      "likes_count": 42,
-      "liked_by_current_user": true,
-      "comments_count": 5,
-      "created_at": "2026-02-25T09:00:00Z",
-      "updated_at": "2026-02-25T10:00:00Z"
-    }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "per_page": 20,
-    "total_count": 15,
-    "total_pages": 1,
-    "has_next_page": false,
-    "has_previous_page": false
-  }
-}
-```
-
----
-
-## Post Comments Endpoints
-
-Post comments support both authenticated and anonymous commenting. Anonymous comments require the post author to have `allow_anonymous_comments: true` in their profile settings.
-
-### GET /posts/:post_id/comments
-
-Get paginated list of comments for a post.
-
-**Authentication:** Optional (affects `liked_by_current_user` field)
-
-**URL Parameters:**
-
-- `post_id` (required): The post ID
-
-**Query Parameters:**
-
-- `page` (optional): Page number (default: 1)
-- `per_page` (optional): Items per page (default: 20, max: 50)
-
-**Response (200 OK):**
-
-```json
-{
-  "comments": [
-    {
-      "id": 1,
-      "body": "Great post!",
-      "formatted_body": "Great post!",
-      "mentions": [],
-      "anonymous": false,
-      "author": {
-        "id": 123,
-        "username": "johndoe",
-        "display_name": "John Doe",
-        "profile_image_url": "https://..."
-      },
-      "likes_count": 5,
-      "liked_by_current_user": false,
-      "created_at": "2026-02-26T10:00:00Z",
-      "updated_at": "2026-02-26T10:00:00Z"
-    },
-    {
-      "id": 2,
-      "body": "Thanks for sharing!",
-      "anonymous": true,
-      "guest_name": "Anonymous Reader",
-      "likes_count": 2,
-      "liked_by_current_user": false,
-      "created_at": "2026-02-26T11:00:00Z",
-      "updated_at": "2026-02-26T11:00:00Z"
-    }
-  ],
-  "pagination": {
-    "current_page": 1,
-    "per_page": 20,
-    "total_count": 2,
-    "total_pages": 1,
-    "has_next_page": false,
-    "has_previous_page": false
-  }
-}
-```
-
-**Notes:**
-
-- Anonymous comments show `guest_name` but never expose `guest_email`
-- Anonymous comments don't have `formatted_body`, `mentions`, or `author` fields
-- Authenticated comments support @mentions with `formatted_body` containing clickable links
-
----
-
-### POST /posts/:post_id/comments
-
-Create a new comment on a post. Supports both authenticated and anonymous comments.
-
-**Authentication:** Optional (anonymous requires post author's `allow_anonymous_comments: true`)
-
-**URL Parameters:**
-
-- `post_id` (required): The post ID
-
-**Request Body (Authenticated):**
-
-```json
-{
-  "comment": {
-    "body": "Great post! @johndoe what do you think?"
-  }
-}
-```
-
-**Request Body (Anonymous):**
-
-```json
-{
-  "comment": {
-    "body": "Thanks for sharing!",
-    "guest_name": "Anonymous Reader",
-    "guest_email": "reader@example.com"
-  }
-}
-```
-
-**Response (201 Created) - Authenticated:**
-
-```json
-{
-  "message": "Comment added successfully",
-  "comment": {
-    "id": 1,
-    "body": "Great post! @johndoe what do you think?",
-    "formatted_body": "Great post! <a href=\"/users/johndoe\">@johndoe</a> what do you think?",
-    "mentions": [
-      {
-        "user_id": 123,
-        "username": "johndoe",
-        "display_name": "John Doe"
-      }
-    ],
-    "anonymous": false,
-    "author": {
-      "id": 456,
-      "username": "commenter",
-      "display_name": "Commenter Name",
-      "profile_image_url": "https://..."
-    },
-    "likes_count": 0,
-    "liked_by_current_user": false,
-    "created_at": "2026-02-26T10:00:00Z",
-    "updated_at": "2026-02-26T10:00:00Z"
-  },
-  "comments_count": 5
-}
-```
-
-**Response (201 Created) - Anonymous:**
-
-```json
-{
-  "message": "Comment added successfully",
-  "comment": {
-    "id": 2,
-    "body": "Thanks for sharing!",
-    "anonymous": true,
-    "guest_name": "Anonymous Reader",
-    "likes_count": 0,
-    "liked_by_current_user": false,
-    "created_at": "2026-02-26T11:00:00Z",
-    "updated_at": "2026-02-26T11:00:00Z"
-  },
-  "claim_token": "abc123xyz...",
-  "comments_count": 6
-}
-```
-
-**Error Response (403 Forbidden) - Anonymous not allowed:**
-
-```json
-{
-  "error": "Anonymous comments are not allowed on this post"
-}
-```
-
-**Notes:**
-
-- Anonymous comments return a `claim_token` that can be used to link the comment to a user account after signup
-- Anonymous comments do not support @mentions
-- Store the `claim_token` in localStorage and call `/post_comments/claim` after user signup
-
----
-
-### PATCH /posts/:post_id/comments/:id
-
-Update an existing comment (owner only).
-
-**Authentication:** Required
-
-**URL Parameters:**
-
-- `post_id` (required): The post ID
-- `id` (required): The comment ID
-
-**Request Body:**
-
-```json
-{
-  "comment": {
-    "body": "Updated comment text"
-  }
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Comment updated successfully",
-  "comment": {
-    "id": 1,
-    "body": "Updated comment text",
-    "formatted_body": "Updated comment text",
-    "mentions": [],
-    "anonymous": false,
-    "author": {
-      "id": 456,
-      "username": "commenter",
-      "display_name": "Commenter Name",
-      "profile_image_url": "https://..."
-    },
-    "likes_count": 5,
-    "liked_by_current_user": false,
-    "created_at": "2026-02-26T10:00:00Z",
-    "updated_at": "2026-02-26T12:00:00Z"
-  }
-}
-```
-
-**Error Response (403 Forbidden) - Not owner:**
-
-```json
-{
-  "error": "You are not authorized to modify this comment"
-}
-```
-
-**Error Response (403 Forbidden) - Anonymous comment:**
-
-```json
-{
-  "error": "Anonymous comments cannot be edited"
-}
-```
-
-**Notes:**
-
-- Only the comment owner or admin can update comments
-- Anonymous comments cannot be edited (they must be claimed first)
-
----
-
-### DELETE /posts/:post_id/comments/:id
-
-Delete a comment (owner or admin only).
-
-**Authentication:** Required
-
-**URL Parameters:**
-
-- `post_id` (required): The post ID
-- `id` (required): The comment ID
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Comment deleted successfully",
-  "comments_count": 4
-}
-```
-
-**Error Response (403 Forbidden):**
-
-```json
-{
-  "error": "You are not authorized to modify this comment"
-}
-```
-
-**Notes:**
-
-- Comment owner or admin can delete comments
-- For anonymous comments, only admin can delete
-
----
-
-### POST /post_comments/claim
-
-Claim an anonymous comment by linking it to the authenticated user's account.
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "claim_token": "abc123xyz..."
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Comment claimed successfully",
-  "comment": {
-    "id": 2,
-    "body": "Thanks for sharing!",
-    "formatted_body": "Thanks for sharing!",
-    "mentions": [],
-    "anonymous": false,
-    "author": {
-      "id": 789,
-      "username": "newuser",
-      "display_name": "New User",
-      "profile_image_url": "https://..."
-    },
-    "likes_count": 2,
-    "liked_by_current_user": false,
-    "created_at": "2026-02-26T11:00:00Z",
-    "updated_at": "2026-02-26T14:00:00Z"
-  }
-}
-```
-
-**Error Response (400 Bad Request):**
-
-```json
-{
-  "error": "Claim token is required"
-}
-```
-
-**Error Response (404 Not Found):**
-
-```json
-{
-  "error": "Invalid or expired claim token"
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "Comment has already been claimed"
-}
-```
-
-**Notes:**
-
-- Claim tokens are single-use and cleared after claiming
-- After claiming, the comment becomes a regular authenticated comment
-- The `guest_name` and `guest_email` fields are cleared upon claiming
-
----
-
-### POST /post_comments/:comment_id/like
-
-Like a post comment.
-
-**Authentication:** Required
-
-**URL Parameters:**
-
-- `comment_id` (required): The comment ID
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Comment liked successfully",
-  "liked": true,
-  "likes_count": 6
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "You have already liked this comment"
-}
-```
-
----
-
-### DELETE /post_comments/:comment_id/like
-
-Unlike a post comment.
-
-**Authentication:** Required
-
-**URL Parameters:**
-
-- `comment_id` (required): The comment ID
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Comment unliked successfully",
-  "liked": false,
-  "likes_count": 5
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "You have not liked this comment"
-}
-```
-
----
-
-### Anonymous Comments Flow
-
-1. **Guest posts comment** with `guest_name` and `guest_email` (if `allow_anonymous_comments` is enabled)
-2. **Server returns `claim_token`** in the response
-3. **Frontend stores `claim_token`** in localStorage
-4. **Frontend shows "Create account?" prompt** to encourage signup
-5. **After signup**, frontend calls `POST /post_comments/claim` with the stored token
-6. **Comment is linked** to the new user account, guest fields cleared
-
----
-
-## User Search Endpoint
-
-### GET /users/search
-
-Search for users by username prefix (for mention autocomplete).
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-- `q` (required): Username prefix to search (minimum 2 characters)
-
-**Response (200 OK):**
-
-```json
-{
-  "users": [
-    {
-      "id": 123,
-      "username": "johndoe",
-      "display_name": "John Doe",
-      "profile_image_url": "https://..."
-    },
-    {
-      "id": 456,
-      "username": "johnsmith",
-      "display_name": "John Smith",
-      "profile_image_url": null
-    }
-  ]
-}
-```
-
-**Notes:**
-- Returns up to 10 matching users
-- Excludes the current user from results
-- Excludes disabled accounts
-- Case-insensitive prefix matching
-
----
-
-## Profile Customization Endpoints
-
-Profile customization allows paid band and blogger accounts to customize their public profiles with theming, sections, and layout ordering.
-
-**Required Ability:** `can_customize_profile` (Band Starter, Band Pro, Blogger, Blogger Pro)
-
-### GET /api/v1/profile_theme
-
-Get the authenticated user's profile theme configuration including draft.
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "id": 1,
-    "user_id": 42,
-    "background_color": "#121212",
-    "brand_color": "#6366f1",
-    "font_color": "#f5f5f5",
-    "header_font": "Inter",
-    "body_font": "Inter",
-    "sections": [
-      { "type": "hero", "visible": true, "order": 0, "content": {} },
-      { "type": "music", "visible": true, "order": 1, "content": {} },
-      { "type": "events", "visible": true, "order": 2, "content": {} }
-    ],
-    "single_post_layout": {
-      "show_featured_image": true,
-      "show_author": true,
-      "show_song_embed": true,
-      "show_comments": true,
-      "show_related_posts": true,
-      "show_navigation": true,
-      "content_layout": "default",
-      "background_color": null,
-      "font_color": null,
-      "max_width": null
-    },
-    "draft_sections": null,
-    "draft_single_post_layout": null,
-    "has_draft": false,
-    "published_at": "2026-03-02T10:30:00Z",
-    "created_at": "2026-03-01T09:00:00Z",
-    "updated_at": "2026-03-02T10:30:00Z",
-    "config": {
-      "approved_fonts": ["Inter", "Space Grotesk", "DM Sans", "..."],
-      "section_types": ["hero", "music", "events", "posts", "about", "recommendations", "custom_text", "mailing_list", "merch"],
-      "max_sections": 12,
-      "max_custom_text": 3,
-      "section_schemas": { "...see Section Schemas Reference..." },
-      "social_link_types": ["instagram", "threads", "bluesky", "twitter", "tumblr", "tiktok", "facebook", "youtube"],
-      "streaming_link_types": ["spotify", "appleMusic", "bandcamp", "soundcloud", "youtubeMusic"],
-      "single_post_content_layouts": ["default", "wide", "narrow"],
-      "single_post_layout_schema": {
-        "show_featured_image": { "type": "boolean", "default": true },
-        "show_author": { "type": "boolean", "default": true },
-        "show_song_embed": { "type": "boolean", "default": true },
-        "show_comments": { "type": "boolean", "default": true },
-        "show_related_posts": { "type": "boolean", "default": true },
-        "show_navigation": { "type": "boolean", "default": true },
-        "content_layout": { "type": "enum", "options": ["default", "wide", "narrow"], "default": "default" },
-        "background_color": { "type": "color", "optional": true, "description": "Inherits from theme if null" },
-        "font_color": { "type": "color", "optional": true, "description": "Inherits from theme if null" },
-        "max_width": { "type": "integer", "min": 600, "max": 1600, "optional": true, "description": "Inherits from theme if null" }
-      }
-    },
-    "source_data": {
-      "display_name": "The Midnight Pines",
-      "location": "Portland, OR",
-      "about_text": "We are an indie rock band from Portland.",
-      "profile_image_url": "https://...",
-      "social_links": {
-        "instagram": "https://instagram.com/midnightpines",
-        "twitter": "https://twitter.com/midnightpines"
-      },
-      "user": {
-        "id": 42,
-        "username": "midnightpines",
-        "role": "band"
-      },
-      "band": {
-        "id": 5,
-        "slug": "midnight-pines",
-        "name": "The Midnight Pines",
-        "location": "Portland, OR",
-        "about": "We are an indie rock band from Portland.",
-        "profile_picture_url": "https://..."
-      },
-      "streaming_links": {
-        "spotify": "https://open.spotify.com/artist/...",
-        "bandcamp": "https://midnightpines.bandcamp.com"
-      },
-      "posts": [
-        { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
-      ],
-      "recommendations": [
-        { "id": 10, "content": "Amazing track!", "track": { "...": "..." }, "...": "..." }
-      ],
-      "events": [
-        { "id": 3, "name": "Live at The Doug Fir", "event_date": "2026-04-15T20:00:00Z", "...": "..." }
-      ],
-      "sample_post": {
-        "id": 1,
-        "title": "New Album Announcement",
-        "slug": "new-album",
-        "body": "<p>Full post body...</p>",
-        "...": "...",
-        "comments": [
-          { "id": 1, "body": "Great post!", "author": { "username": "fan1", "...": "..." }, "...": "..." }
-        ],
-        "related_posts": [
-          { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
-        ],
-        "navigation": {
-          "next_post": { "title": "Newer Post", "slug": "newer-post" },
-          "previous_post": { "title": "Older Post", "slug": "older-post" }
-        }
-      }
-    }
-  }
-}
-```
-
-**Error Response (403 Forbidden):**
-
-```json
-{
-  "error": "upgrade_required",
-  "message": "This feature requires an upgrade.",
-  "required_ability": "can_customize_profile",
-  "upgrade_plan": "band_starter"
-}
-```
-
-**Notes:**
-- Returns default theme if none exists
-- `config` contains static configuration for frontend reference
-- `draft_sections` contains unpublished section changes (null if no draft)
-- `draft_single_post_layout` contains unpublished single post layout changes (null if no draft)
-- `single_post_layout` is the published layout merged with defaults (all fields always present)
-- `source_data` contains the actual user/band data for site builder previews (see below)
-
-**Using source_data for Site Builder:**
-
-The `source_data` object provides the actual profile data that sections will display. Use it to:
-
-1. **Show default values in the editor** - When a section's content field has a `source` (e.g., `headline: { source: "display_name" }`), display `source_data.display_name` as the default/placeholder
-2. **Preview sections accurately** - Render the hero section showing `source_data.display_name` unless the user has provided custom `content.headline`
-3. **Show available links** - Display `source_data.social_links` and `source_data.streaming_links` so users can choose which to show/hide
-4. **Preview dynamic sections** - Use `source_data.posts`, `source_data.recommendations`, and `source_data.events` to preview content sections in the site builder
-5. **Preview single post page** - Use `source_data.sample_post` to render a preview of the single post layout in the site builder, including comments, related posts, and navigation
-
-| source_data field | Used by | Schema source reference |
-|-------------------|---------|------------------------|
-| `display_name` | Hero headline | `source: "display_name"` |
-| `location` | Hero subtitle | `source: "location"` |
-| `about_text` | About bio | `source: "about_text"` |
-| `profile_image_url` | Hero image | - |
-| `social_links` | Hero, About | `visible_social_links` setting |
-| `streaming_links` | Hero, Music | `visible_streaming_links` setting |
-| `posts` | Posts section | Up to 10 recent published posts |
-| `recommendations` | Recommendations section | Up to 10 recent reviews |
-| `events` | Events section | Up to 10 upcoming active events |
-| `sample_post` | Single post layout preview | Latest published post with comments, related posts, and navigation |
-| `band` | Band users only | Band profile data |
-
----
-
-### PUT /api/v1/profile_theme
-
-Update the profile theme. Section and single post layout changes go to draft and must be published separately.
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Request Body:**
-
-```json
-{
-  "background_color": "#1a1a1a",
-  "brand_color": "#ff6b35",
-  "font_color": "#f0f0f0",
-  "header_font": "Space Grotesk",
-  "body_font": "Inter",
-  "sections": [
-    {
-      "type": "hero",
-      "visible": true,
-      "order": 0,
-      "content": { "headline": "Welcome to our page" },
-      "settings": {
-        "show_profile_image": true,
-        "visible_streaming_links": ["spotify", "bandcamp"],
-        "visible_social_links": ["instagram", "twitter"]
-      }
-    },
-    {
-      "type": "music",
-      "visible": true,
-      "order": 1,
-      "settings": { "display_limit": 6 }
-    },
-    {
-      "type": "events",
-      "visible": true,
-      "order": 2,
-      "settings": { "display_limit": 4, "show_past_events": false }
-    },
-    {
-      "type": "about",
-      "visible": true,
-      "order": 3,
-      "content": { "bio": "About us..." },
-      "settings": { "show_social_links": true }
-    }
-  ],
-  "single_post_layout": {
-    "show_featured_image": true,
-    "show_author": true,
-    "show_song_embed": true,
-    "show_comments": true,
-    "show_related_posts": false,
-    "show_navigation": true,
-    "content_layout": "wide"
-  }
-}
-```
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "id": 1,
-    "background_color": "#1a1a1a",
-    "brand_color": "#ff6b35",
-    "sections": [...],
-    "draft_sections": [...],
-    "has_draft": true,
-    "...": "..."
-  }
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "validation_error",
-  "message": "Cannot have more than 12 sections, hero section can only appear once",
-  "details": [
-    "Cannot have more than 12 sections",
-    "hero section can only appear once"
-  ]
-}
-```
-
-**Notes:**
-- Global theme fields (colors, fonts) are updated immediately
-- Section changes go to `draft_sections` until published
-- `single_post_layout` changes go to `draft_single_post_layout` until published
-- Only include the fields you want to override in `single_post_layout` — omitted fields keep their current values
-- Color fields must be valid hex colors (e.g., `#FF5733`)
-- Fonts must be from the approved list
-
----
-
-### POST /api/v1/profile_theme/publish
-
-Publish draft sections and/or draft single post layout to make them live on the public profile.
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "id": 1,
-    "sections": [...],
-    "draft_sections": null,
-    "has_draft": false,
-    "published_at": "2026-03-02T15:00:00Z",
-    "...": "..."
-  },
-  "message": "Theme published successfully"
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "no_draft",
-  "message": "No draft to publish"
-}
-```
-
----
-
-### POST /api/v1/profile_theme/discard_draft
-
-Discard unpublished draft sections and draft single post layout.
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "id": 1,
-    "sections": [...],
-    "draft_sections": null,
-    "has_draft": false,
-    "...": "..."
-  },
-  "message": "Draft discarded"
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "no_draft",
-  "message": "No draft to discard"
-}
-```
-
----
-
-### POST /api/v1/profile_theme/reset
-
-Reset the theme to role-based defaults (colors, fonts, and sections).
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "id": 1,
-    "background_color": "#121212",
-    "brand_color": "#6366f1",
-    "font_color": "#f5f5f5",
-    "header_font": "Inter",
-    "body_font": "Inter",
-    "sections": [...],
-    "draft_sections": null,
-    "has_draft": false,
-    "published_at": null,
-    "...": "..."
-  },
-  "message": "Theme reset to defaults"
-}
-```
-
----
-
-### GET /api/v1/profile_assets
-
-List the authenticated user's uploaded profile assets (background images, etc.).
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Response (200 OK):**
-
-```json
-{
-  "data": [
-    {
-      "id": 1,
-      "purpose": "background",
-      "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../image.jpg",
-      "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/representations/.../image.jpg",
-      "file_type": "image/jpeg",
-      "file_size": 245000,
-      "created_at": "2026-03-01T09:00:00Z"
-    }
-  ],
-  "meta": {
-    "total": 1,
-    "limit": 20
-  }
-}
-```
-
----
-
-### POST /api/v1/profile_assets
-
-Upload a new profile asset image.
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**Content-Type:** `multipart/form-data`
-
-**Request Body:**
-
-- `image` (required): Image file (JPEG, PNG, or WebP, max 5MB)
-- `purpose` (optional): Asset purpose - `"background"`, `"header"`, or `"custom"` (default: `"background"`)
-
-**Response (201 Created):**
-
-```json
-{
-  "data": {
-    "id": 2,
-    "purpose": "background",
-    "url": "https://api.goodsongs.app/rails/active_storage/blobs/.../new-image.jpg",
-    "thumbnail_url": "https://api.goodsongs.app/rails/active_storage/representations/.../new-image.jpg",
-    "file_type": "image/png",
-    "file_size": 180000,
-    "created_at": "2026-03-02T14:00:00Z"
-  }
-}
-```
-
-**Error Response (422 Unprocessable Entity):**
-
-```json
-{
-  "error": "validation_error",
-  "message": "Image must be less than 5MB, Image must be a JPEG, PNG, or WebP image",
-  "details": {
-    "image": ["must be less than 5MB", "must be a JPEG, PNG, or WebP image"]
-  }
-}
-```
-
-**Notes:**
-- Maximum 20 assets per user
-- Maximum file size: 5MB
-- Allowed types: JPEG, PNG, WebP
-
----
-
-### DELETE /api/v1/profile_assets/:id
-
-Delete a profile asset.
-
-**Authentication:** Required + `can_customize_profile` ability
-
-**URL Parameters:**
-
-- `id` (required): The asset ID
-
-**Response (200 OK):**
-
-```json
-{
-  "message": "Asset deleted successfully"
-}
-```
-
-**Error Response (404 Not Found):**
-
-```json
-{
-  "error": "not_found",
-  "message": "Asset not found"
-}
-```
-
----
-
-### GET /api/v1/profiles/:username
-
-Get a user's public profile with theme and hydrated section data. This is the public-facing profile endpoint.
-
-**Authentication:** None required
-
-**URL Parameters:**
-
-- `username` (required): The user's username
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "user": {
-      "id": 42,
-      "username": "midnightpines",
-      "email": "band@example.com",
-      "about_me": "We are a band from Portland.",
-      "profile_image_url": "https://...",
-      "reviews_count": 15,
-      "role": "band",
-      "display_name": "The Midnight Pines",
-      "location": "Portland, OR",
-      "followers_count": 1200,
-      "following_count": 50,
-      "primary_band": {
-        "id": 5,
-        "slug": "midnight-pines",
-        "name": "The Midnight Pines",
-        "location": "Portland, OR",
-        "profile_picture_url": "https://..."
-      }
-    },
-    "theme": {
-      "background_color": "#121212",
-      "brand_color": "#6366f1",
-      "font_color": "#f5f5f5",
-      "header_font": "Inter",
-      "body_font": "Inter"
-    },
-    "sections": [
-      {
-        "type": "hero",
-        "order": 0,
-        "content": {
-          "headline": "The Midnight Pines",
-          "subtitle": "Portland, OR"
-        },
-        "settings": {
-          "show_profile_image": true,
-          "visible_streaming_links": ["spotify", "bandcamp"],
-          "visible_social_links": ["instagram", "twitter"]
-        },
-        "data": {
-          "display_name": "The Midnight Pines",
-          "profile_image_url": "https://...",
-          "location": "Portland, OR",
-          "streaming_links": {
-            "spotify": "https://open.spotify.com/artist/...",
-            "bandcamp": "https://midnightpines.bandcamp.com"
-          },
-          "social_links": {
-            "instagram": "https://instagram.com/midnightpines",
-            "twitter": "https://twitter.com/midnightpines"
-          },
-          "band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" }
-        }
-      },
-      {
-        "type": "music",
-        "order": 1,
-        "content": {},
-        "settings": { "display_limit": 6 },
-        "data": {
-          "band": { "...": "..." },
-          "tracks": [{ "id": 1, "name": "Song Title", "...": "..." }],
-          "bandcamp_embed": "<iframe>...</iframe>",
-          "streaming_links": { "spotify": "...", "bandcamp": "..." }
-        }
-      },
-      {
-        "type": "events",
-        "order": 2,
-        "content": {},
-        "settings": { "display_limit": 6, "show_past_events": false },
-        "data": {
-          "events": [
-            { "id": 1, "name": "Live at The Fillmore", "event_date": "2026-04-15", "...": "..." }
-          ]
-        }
-      },
-      {
-        "type": "posts",
-        "order": 3,
-        "content": {},
-        "settings": { "display_limit": 6 },
-        "data": {
-          "posts": [
-            { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
-          ]
-        }
-      }
-    ]
-  }
-}
-```
-
-**Response (404 Not Found):**
-
-```json
-{
-  "error": "not_found",
-  "message": "User not found"
-}
-```
-
-**Notes:**
-- Returns only visible sections
-- Filters out sections the user's plan doesn't support (mailing_list, merch)
-- Each section includes hydrated `data` with pre-fetched content
-- Fan accounts return basic profile without customization
-- If no theme exists, returns default sections based on user role
-
----
-
-### GET /api/v1/profiles/bands/:slug/posts/:post_slug
-
-Get a single blog post wrapped in the band's profile theme. Used for themed single post pages.
-
-**Authentication:** None required
-
-**URL Parameters:**
-
-- `slug` (required): The band's URL slug
-- `post_slug` (required): The post's URL slug
-
-**Response (200 OK):**
-
-```json
-{
-  "data": {
-    "post": {
-      "id": 1,
-      "title": "New Album Announcement",
-      "slug": "new-album",
-      "body": "<p>Full post body...</p>",
-      "excerpt": "Short summary...",
-      "featured_image_url": "https://...",
-      "publish_date": "2026-03-01T12:00:00Z",
-      "song": { "name": "Track Name", "band_name": "Artist", "...": "..." },
-      "author": { "username": "midnightpines", "display_name": "The Midnight Pines", "...": "..." },
-      "likes_count": 12,
-      "comments_count": 5,
-      "...": "..."
-    },
-    "user": {
-      "id": 42,
-      "username": "midnightpines",
-      "display_name": "The Midnight Pines",
-      "role": "band",
-      "primary_band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" },
-      "...": "..."
-    },
-    "theme": {
-      "background_color": "#121212",
-      "brand_color": "#6366f1",
-      "font_color": "#f5f5f5",
-      "header_font": "Inter",
-      "body_font": "Inter",
-      "content_max_width": 1200,
-      "single_post_layout": {
-        "show_featured_image": true,
-        "show_author": true,
-        "show_song_embed": true,
-        "show_comments": true,
-        "show_related_posts": true,
-        "show_navigation": true,
-        "content_layout": "default",
-        "background_color": null,
-        "font_color": null,
-        "max_width": null
-      }
-    },
-    "comments": {
-      "data": [
-        {
-          "id": 1,
-          "body": "Great post!",
-          "anonymous": false,
-          "likes_count": 3,
-          "author": { "id": 99, "username": "fan1", "display_name": "Fan One", "profile_image_url": "https://..." },
-          "created_at": "2026-03-01T14:00:00Z",
-          "updated_at": "2026-03-01T14:00:00Z"
-        }
-      ],
-      "pagination": {
-        "current_page": 1,
-        "total_count": 42,
-        "total_pages": 3,
-        "per_page": 20
-      }
-    },
-    "related_posts": [
-      { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
-    ],
-    "navigation": {
-      "next_post": { "title": "Newer Post Title", "slug": "newer-post" },
-      "previous_post": { "title": "Older Post Title", "slug": "older-post" }
-    }
-  }
-}
-```
-
-**Response (404 Not Found):**
-
-```json
-{
-  "error": "not_found",
-  "message": "Post not found"
-}
-```
-
-**Notes:**
-- `comments`, `related_posts`, and `navigation` are conditionally included based on the `single_post_layout` toggles
-- If `show_comments` is `false`, `comments` is omitted from the response
-- If `show_related_posts` is `false`, `related_posts` is omitted
-- If `show_navigation` is `false`, `navigation` is omitted
-- If no theme exists, `theme` is `null` and all defaults are used (all toggles on)
-- Comments do not include `liked_by_current_user` (no auth on public endpoint)
-- Comments are paginated (20 per page, first page only)
-
----
-
-### GET /api/v1/profiles/users/:username/posts/:post_slug
-
-Get a single blog post wrapped in the user's profile theme. Same response shape as the band post endpoint above.
-
-**Authentication:** None required
-
-**URL Parameters:**
-
-- `username` (required): The user's username
-- `post_slug` (required): The post's URL slug
-
-**Response:** Same as `GET /api/v1/profiles/bands/:slug/posts/:post_slug`
-
----
-
-### Single Post Layout Reference
-
-The `single_post_layout` controls how individual blog post pages are rendered. It follows the same draft/publish workflow as sections.
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `show_featured_image` | boolean | `true` | Show the post's featured image |
-| `show_author` | boolean | `true` | Show the post author info |
-| `show_song_embed` | boolean | `true` | Show the linked song embed |
-| `show_comments` | boolean | `true` | Show comments section |
-| `show_related_posts` | boolean | `true` | Show related posts from the same author |
-| `show_navigation` | boolean | `true` | Show prev/next post navigation |
-| `content_layout` | enum | `"default"` | `"default"`, `"wide"`, or `"narrow"` |
-| `background_color` | color/null | `null` | Override theme background (null = inherit) |
-| `font_color` | color/null | `null` | Override theme font color (null = inherit) |
-| `max_width` | integer/null | `null` | Override content max width, 600-1600 (null = inherit) |
-
----
-
-### Section Types Reference
-
-| Section Type | Description | Plan Availability |
-|--------------|-------------|-------------------|
-| `hero` | Profile header with name, image, location | All paid plans |
-| `music` | Band's tracks and music embeds | All paid plans |
-| `events` | Upcoming events list | All paid plans |
-| `posts` | Blog posts list | All paid plans |
-| `about` | About text/bio section | All paid plans |
-| `recommendations` | User's song recommendations/reviews | All paid plans |
-| `custom_text` | Custom text blocks (up to 3) | All paid plans |
-| `mailing_list` | Newsletter signup form | Band Pro, Blogger Pro |
-| `merch` | Merchandise links | Band Pro only |
-
----
-
-### Approved Fonts
-
-Inter, Space Grotesk, DM Sans, Plus Jakarta Sans, Outfit, Sora, Manrope, Rubik, Work Sans, Nunito Sans, Lora, Merriweather, Playfair Display, Source Serif 4, Libre Baskerville, IBM Plex Mono, JetBrains Mono
-
----
-
-### Section Schemas Reference
-
-Each section type has defined `content` and `settings` fields. Content fields override profile-derived data, while settings control display behavior.
-
-#### Hero Section
-
-**Content Fields:**
-| Field | Max Length | Description |
-|-------|------------|-------------|
-| `headline` | 120 | Override display name (source: user display_name) |
-| `subtitle` | 200 | Override location text (source: user/band location) |
-| `cta_text` | 40 | Call-to-action button text |
-| `cta_url` | URL | Call-to-action button link |
-
-**Settings:**
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `background_color` | hex color | - | Section background color override |
-| `show_profile_image` | boolean | true | Show/hide profile image |
-| `visible_streaming_links` | array | `:configured` | Which streaming links to show (see Link Visibility) |
-| `visible_social_links` | array | `:configured` | Which social links to show (see Link Visibility) |
-
-#### Music Section
-
-**Content Fields:** None (data hydrated from band)
-
-**Settings:**
-| Field | Type | Default | Range | Description |
-|-------|------|---------|-------|-------------|
-| `display_limit` | integer | 6 | 1-24 | Number of tracks to display |
-
-#### Events Section
-
-**Content Fields:** None (data hydrated from user's events)
-
-**Settings:**
-| Field | Type | Default | Range | Description |
-|-------|------|---------|-------|-------------|
-| `display_limit` | integer | 6 | 1-24 | Number of events to display |
-| `show_past_events` | boolean | false | - | Include past events |
-
-#### Posts Section
-
-**Content Fields:** None (data hydrated from user)
-
-**Settings:**
-| Field | Type | Default | Range | Description |
-|-------|------|---------|-------|-------------|
-| `display_limit` | integer | 6 | 1-24 | Number of posts to display |
-
-#### About Section
-
-**Content Fields:**
-| Field | Max Length | Description |
-|-------|------------|-------------|
-| `bio` | 2000 | Override bio text (source: band about or user about_me) |
-
-**Settings:**
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `show_social_links` | boolean | true | Show social links in about section |
-| `visible_social_links` | array | `:configured` | Which social links to show |
-
-#### Recommendations Section
-
-**Content Fields:** None (data hydrated from user reviews)
-
-**Settings:**
-| Field | Type | Default | Range | Description |
-|-------|------|---------|-------|-------------|
-| `display_limit` | integer | 12 | 1-24 | Number of recommendations to display |
-
-#### Custom Text Section
-
-**Content Fields:**
-| Field | Max Length | Description |
-|-------|------------|-------------|
-| `title` | 120 | Section heading |
-| `body` | 5000 | Main text content |
-
-**Settings:**
-| Field | Type | Values | Description |
-|-------|------|--------|-------------|
-| `text_align` | enum | left, center, right | Text alignment |
-| `background_color` | hex color | - | Section background color |
-
-#### Mailing List Section (Pro Plans)
-
-**Content Fields:**
-| Field | Max Length | Description |
-|-------|------------|-------------|
-| `heading` | 120 | Section heading |
-| `description` | 500 | Signup prompt text |
-
-**Settings:**
-| Field | Type | Description |
-|-------|------|-------------|
-| `provider_url` | URL | External mailing list provider URL |
-
-#### Merch Section (Band Pro)
-
-**Content Fields:**
-| Field | Max Length | Description |
-|-------|------------|-------------|
-| `heading` | 120 | Section heading |
-
-**Settings:**
-| Field | Type | Description |
-|-------|------|-------------|
-| `store_url` | URL | External merch store URL |
-
----
-
-### Link Visibility Settings
-
-The `visible_streaming_links` and `visible_social_links` settings control which links are shown:
-
-| Value | Behavior |
-|-------|----------|
-| `null` or `:configured` | Show all configured links (default) |
-| `[]` (empty array) | Show no links |
-| `["spotify", "bandcamp"]` | Show only specified link types |
-
-**Streaming Link Types:** `spotify`, `appleMusic`, `bandcamp`, `soundcloud`, `youtubeMusic`
-
-**Social Link Types:** `instagram`, `threads`, `bluesky`, `twitter`, `tumblr`, `tiktok`, `facebook`, `youtube`
-
-**Example - Show only Spotify and Instagram:**
-```json
-{
-  "type": "hero",
-  "visible": true,
-  "order": 0,
-  "settings": {
-    "visible_streaming_links": ["spotify"],
-    "visible_social_links": ["instagram"]
-  }
-}
-```
-
-**Example - Hide all social links:**
-```json
-{
-  "type": "hero",
-  "visible": true,
-  "order": 0,
-  "settings": {
-    "visible_social_links": []
-  }
-}
-```
-
-**Note:** Links are only shown if the user/band has them configured. The visibility setting filters the configured links; it cannot add links that don't exist.

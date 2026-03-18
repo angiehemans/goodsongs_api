@@ -18,7 +18,9 @@ class ProfileThemeSerializer
       content_max_width: theme.content_max_width,
       card_background_color: theme.card_background_color,
       card_background_opacity: theme.card_background_opacity,
+      border_radius: theme.border_radius,
       sections: theme.sections,
+      pages: theme.pages,
       single_post_layout: theme.resolved_single_post_layout,
       published_at: theme.published_at,
       has_draft: theme.has_draft?,
@@ -29,6 +31,7 @@ class ProfileThemeSerializer
     if include_draft
       data[:draft_sections] = theme.draft_sections
       data[:draft_single_post_layout] = theme.draft_single_post_layout
+      data[:draft_pages] = theme.draft_pages
     end
 
     # Include static config for frontend reference
@@ -40,6 +43,16 @@ class ProfileThemeSerializer
       section_schemas: ProfileSectionFields::SECTION_SCHEMAS,
       social_link_types: ProfileSectionFields::SOCIAL_LINK_TYPES,
       streaming_link_types: ProfileSectionFields::STREAMING_LINK_TYPES,
+      page_types: ProfileTheme::PAGE_TYPES,
+      page_schemas: {
+        links: {
+          heading: { type: 'string', max_length: 120, optional: true },
+          description: { type: 'string', max_length: 500, optional: true },
+          show_social_links: { type: 'boolean', default: true },
+          show_streaming_links: { type: 'boolean', default: true },
+          layout: { type: 'enum', options: ProfilePageValidator::LINK_PAGE_LAYOUTS, default: 'list' }
+        }
+      },
       single_post_content_layouts: ProfileTheme::SINGLE_POST_CONTENT_LAYOUTS,
       single_post_layout_schema: {
         show_featured_image: { type: 'boolean', default: true },
@@ -93,6 +106,9 @@ class ProfileThemeSerializer
 
       # Upcoming events for preview
       events: build_upcoming_events(user),
+
+      # Custom profile links for link page preview
+      profile_links: build_profile_links(user),
 
       # Sample post for single post layout preview in site builder
       sample_post: build_sample_post(user)
@@ -151,6 +167,20 @@ class ProfileThemeSerializer
     events.map { |e| EventSerializer.summary(e) }
   end
 
+  def self.build_profile_links(user)
+    user.profile_links.visible.ordered.map do |link|
+      {
+        id: link.id,
+        title: link.title,
+        description: link.description,
+        url: link.url,
+        icon: link.icon,
+        position: link.position,
+        thumbnail_url: link.thumbnail_url
+      }
+    end
+  end
+
   def self.build_social_links(user, band = nil)
     ProfileLinkHelper.social_links(user, band)
   end
@@ -171,7 +201,9 @@ class ProfileThemeSerializer
       content_max_width: theme.content_max_width,
       card_background_color: theme.card_background_color,
       card_background_opacity: theme.card_background_opacity,
-      single_post_layout: theme.resolved_single_post_layout
+      border_radius: theme.border_radius,
+      single_post_layout: theme.resolved_single_post_layout,
+      pages: theme.pages
     }
   end
 

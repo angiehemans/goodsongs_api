@@ -148,7 +148,7 @@ class DiscoverController < ApplicationController
     end
 
     json_response({
-      events: paginated_events.map { |event| EventSerializer.full(event) },
+      events: paginated_events.map { |event| EventSerializer.full(event, current_user: current_user) },
       pagination: pagination_meta(page, per_page, total_count),
       query: query
     })
@@ -205,7 +205,7 @@ class DiscoverController < ApplicationController
                             .where("bands.name % ?", query)
                             .order(Arel.sql("similarity(bands.name, #{Band.connection.quote(query)}) DESC"))
                             .limit(limit)
-                            .map { |event| EventSerializer.full(event) }
+                            .map { |event| EventSerializer.full(event, current_user: current_user) }
 
     json_response({
       results: results,

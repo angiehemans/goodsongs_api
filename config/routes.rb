@@ -103,8 +103,19 @@ Rails.application.routes.draw do
   end
 
   # Events routes (top-level index, create, show, update, destroy)
-  resources :events, only: [:index, :show, :create, :update, :destroy]
+  get '/events/liked', to: 'event_likes#index'
+  resources :events, only: [:index, :show, :create, :update, :destroy] do
+    member do
+      post 'like', to: 'event_likes#create'
+      delete 'like', to: 'event_likes#destroy'
+    end
+    resources :comments, controller: 'event_comments', only: [:index, :create, :update, :destroy]
+  end
   get '/users/:user_id/events', to: 'events#user_events'
+
+  # Event comment likes
+  post '/event_comments/:comment_id/like', to: 'event_comment_likes#create'
+  delete '/event_comments/:comment_id/like', to: 'event_comment_likes#destroy'
 
   # Venues routes
   resources :venues, only: [:index, :show, :create]
@@ -226,6 +237,14 @@ Rails.application.routes.draw do
         post :reset
       end
       resources :profile_assets, only: [:index, :create, :destroy]
+      resources :profile_links, only: [:index, :create, :update, :destroy] do
+        collection do
+          put :reorder
+        end
+        member do
+          post :update, as: :form_update
+        end
+      end
 
       # Public profiles (no auth required)
       get 'profiles/bands/:slug', to: 'profiles#band'
@@ -234,6 +253,10 @@ Rails.application.routes.draw do
       # Public themed single post pages
       get 'profiles/bands/:slug/posts/:post_slug', to: 'profiles#band_post'
       get 'profiles/users/:username/posts/:post_slug', to: 'profiles#user_post'
+
+      # Public link pages
+      get 'profiles/bands/:slug/links', to: 'profiles#band_links'
+      get 'profiles/users/:username/links', to: 'profiles#user_links'
     end
   end
 end

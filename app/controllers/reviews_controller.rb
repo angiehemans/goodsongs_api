@@ -80,11 +80,11 @@ class ReviewsController < ApplicationController
     page = page_param
     per_page = per_page_param(default: 20, max: 50)
 
-    reviews = QueryService.following_feed(current_user, page: page, per_page: per_page)
-    total_count = QueryService.following_feed_count(current_user)
+    items = QueryService.unified_following_feed(current_user, page: page, per_page: per_page)
+    total_count = QueryService.unified_following_feed_count(current_user)
 
     json_response({
-      reviews: reviews.map { |review| ReviewSerializer.full(review, current_user: current_user) },
+      feed_items: serialize_feed_items(items),
       pagination: pagination_meta(page, per_page, total_count)
     })
   end
@@ -106,6 +106,19 @@ class ReviewsController < ApplicationController
   end
 
   private
+
+  def serialize_feed_items(items)
+    items.map do |item|
+      case item[:type]
+      when 'review'
+        { type: 'review', data: ReviewSerializer.full(item[:record], current_user: current_user) }
+      when 'post'
+        { type: 'post', data: PostSerializer.for_feed(item[:record], current_user: current_user) }
+      when 'event'
+        { type: 'event', data: EventSerializer.for_feed(item[:record], current_user: current_user) }
+      end
+    end
+  end
 
   def set_review
     @review = Review.find(params[:id])

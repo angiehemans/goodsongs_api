@@ -14,7 +14,7 @@ class EventsController < ApplicationController
     total_count = events.count
     events = paginate(events)
     json_response({
-      events: events.map { |event| EventSerializer.full(event) },
+      events: events.map { |event| EventSerializer.full(event, current_user: current_user) },
       pagination: pagination_meta(page_param, per_page_param, total_count)
     })
   end
@@ -25,7 +25,7 @@ class EventsController < ApplicationController
     total_count = events.count
     events = paginate(events)
     json_response({
-      events: events.map { |event| EventSerializer.full(event) },
+      events: events.map { |event| EventSerializer.full(event, current_user: current_user) },
       pagination: pagination_meta(page_param, per_page_param, total_count)
     })
   end
@@ -37,14 +37,14 @@ class EventsController < ApplicationController
     total_count = events.count
     events = paginate(events)
     json_response({
-      events: events.map { |event| EventSerializer.full(event) },
+      events: events.map { |event| EventSerializer.full(event, current_user: current_user) },
       pagination: pagination_meta(page_param, per_page_param, total_count)
     })
   end
 
   # GET /events/:id
   def show
-    json_response(EventSerializer.full(@event))
+    json_response(EventSerializer.full(@event, current_user: current_user))
   end
 
   # POST /events
@@ -67,7 +67,7 @@ class EventsController < ApplicationController
     end
 
     if @event.save
-      json_response(EventSerializer.full(@event), :created)
+      json_response(EventSerializer.full(@event, current_user: current_user), :created)
     else
       render_errors(@event)
     end
@@ -85,7 +85,7 @@ class EventsController < ApplicationController
     @event.user = current_user
 
     if @event.save
-      json_response(EventSerializer.full(@event), :created)
+      json_response(EventSerializer.full(@event, current_user: current_user), :created)
     else
       render_errors(@event)
     end
@@ -102,7 +102,7 @@ class EventsController < ApplicationController
     end
 
     if @event.update(event_params.except(:venue_id, :venue_attributes))
-      json_response(EventSerializer.full(@event))
+      json_response(EventSerializer.full(@event, current_user: current_user))
     else
       render_errors(@event)
     end

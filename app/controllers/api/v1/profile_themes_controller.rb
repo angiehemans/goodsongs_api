@@ -49,8 +49,23 @@ module Api
           theme.draft_single_post_layout = permitted[:single_post_layout]
         end
 
+        # Validate pages if provided
+        if permitted[:pages].present?
+          validator = ProfilePageValidator.new(permitted[:pages])
+          unless validator.valid?
+            return render json: {
+              error: "validation_error",
+              message: validator.error_messages,
+              details: validator.errors
+            }, status: :unprocessable_entity
+          end
+
+          # Pages go to draft, not directly to published
+          theme.draft_pages = permitted[:pages]
+        end
+
         # Update other theme attributes directly
-        theme.assign_attributes(permitted.except(:sections, :single_post_layout))
+        theme.assign_attributes(permitted.except(:sections, :single_post_layout, :pages))
 
         if theme.save
           render json: { data: ProfileThemeSerializer.full(theme, include_draft: true, user: current_user) }
@@ -90,6 +105,18 @@ module Api
         # Validate draft single post layout before publishing
         if theme.draft_single_post_layout.present?
           validator = SinglePostLayoutValidator.new(theme.draft_single_post_layout)
+          unless validator.valid?
+            return render json: {
+              error: "validation_error",
+              message: validator.error_messages,
+              details: validator.errors
+            }, status: :unprocessable_entity
+          end
+        end
+
+        # Validate draft pages before publishing
+        if theme.draft_pages.present?
+          validator = ProfilePageValidator.new(theme.draft_pages)
           unless validator.valid?
             return render json: {
               error: "validation_error",
@@ -203,7 +230,7 @@ module Api
         result = {}
 
         # Extract simple fields (explicitly whitelisted)
-        %w[background_color brand_color font_color header_font body_font content_max_width card_background_opacity].each do |field|
+        %w[background_color brand_color font_color header_font body_font content_max_width card_background_opacity border_radius].each do |field|
           result[field] = source[field] if source[field].present?
         end
 
@@ -232,6 +259,19 @@ module Api
         # Handle single_post_layout - flat hash of settings
         if source[:single_post_layout].present?
           result[:single_post_layout] = sanitize_json(source[:single_post_layout])
+        end
+
+        # Handle pages - array of page configs
+        if source[:pages].present?
+          result[:pages] = source[:pages].map do |page|
+            page_hash = {
+              'type' => page[:type],
+              'slug' => page[:slug],
+              'visible' => page[:visible]
+            }
+            page_hash['settings'] = sanitize_json(page[:settings]) if page[:settings].present?
+            page_hash
+          end
         end
 
         result

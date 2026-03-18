@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_190147) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -172,6 +172,37 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
     t.index ["user_id"], name: "index_device_tokens_on_user_id"
   end
 
+  create_table "event_comment_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "event_comment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_comment_id"], name: "index_event_comment_likes_on_event_comment_id"
+    t.index ["user_id", "event_comment_id"], name: "index_event_comment_likes_on_user_id_and_event_comment_id", unique: true
+    t.index ["user_id"], name: "index_event_comment_likes_on_user_id"
+  end
+
+  create_table "event_comments", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "event_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id", "created_at"], name: "index_event_comments_on_event_id_and_created_at"
+    t.index ["event_id"], name: "index_event_comments_on_event_id"
+    t.index ["user_id"], name: "index_event_comments_on_user_id"
+  end
+
+  create_table "event_likes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "event_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_id"], name: "index_event_likes_on_event_id"
+    t.index ["user_id", "event_id"], name: "index_event_likes_on_user_id_and_event_id", unique: true
+    t.index ["user_id"], name: "index_event_likes_on_user_id"
+  end
+
   create_table "events", force: :cascade do |t|
     t.bigint "band_id"
     t.bigint "venue_id", null: false
@@ -186,6 +217,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "user_id", null: false
+    t.integer "event_likes_count", default: 0, null: false
+    t.integer "event_comments_count", default: 0, null: false
     t.index ["band_id"], name: "index_events_on_band_id"
     t.index ["event_date", "disabled"], name: "index_events_on_event_date_and_disabled"
     t.index ["event_date"], name: "index_events_on_event_date"
@@ -365,6 +398,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
     t.index ["user_id"], name: "index_profile_assets_on_user_id"
   end
 
+  create_table "profile_links", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "title", null: false
+    t.string "url", null: false
+    t.string "icon"
+    t.integer "position", default: 0, null: false
+    t.boolean "visible", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "description"
+    t.index ["user_id", "position"], name: "index_profile_links_on_user_id_and_position"
+    t.index ["user_id"], name: "index_profile_links_on_user_id"
+  end
+
   create_table "profile_themes", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "background_color", default: "#121212"
@@ -382,6 +429,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
     t.jsonb "draft_single_post_layout"
     t.string "card_background_color"
     t.integer "card_background_opacity", default: 10, null: false
+    t.jsonb "pages", default: []
+    t.jsonb "draft_pages", default: []
+    t.integer "border_radius", default: 8
     t.index ["user_id"], name: "index_profile_themes_on_user_id", unique: true
   end
 
@@ -598,6 +648,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
   add_foreign_key "bands", "users", column: "submitted_by_id"
   add_foreign_key "blog_images", "users"
   add_foreign_key "device_tokens", "users"
+  add_foreign_key "event_comment_likes", "event_comments"
+  add_foreign_key "event_comment_likes", "users"
+  add_foreign_key "event_comments", "events"
+  add_foreign_key "event_comments", "users"
+  add_foreign_key "event_likes", "events"
+  add_foreign_key "event_likes", "users"
   add_foreign_key "events", "bands"
   add_foreign_key "events", "users"
   add_foreign_key "events", "venues"
@@ -620,6 +676,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_06_000002) do
   add_foreign_key "posts", "tracks"
   add_foreign_key "posts", "users"
   add_foreign_key "profile_assets", "users"
+  add_foreign_key "profile_links", "users"
   add_foreign_key "profile_themes", "users"
   add_foreign_key "refresh_tokens", "users"
   add_foreign_key "review_comment_likes", "review_comments"
