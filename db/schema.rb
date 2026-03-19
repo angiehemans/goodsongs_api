@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_17_190147) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_19_000001) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -561,6 +561,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_190147) do
     t.jsonb "streaming_links", default: {}
     t.string "songlink_url"
     t.datetime "streaming_links_fetched_at"
+    t.string "artwork_url"
     t.index ["album_id"], name: "index_tracks_on_album_id"
     t.index ["audiodb_track_id"], name: "index_tracks_on_audiodb_track_id", unique: true, where: "(audiodb_track_id IS NOT NULL)"
     t.index ["band_id"], name: "index_tracks_on_band_id"

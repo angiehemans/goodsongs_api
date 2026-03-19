@@ -247,11 +247,57 @@ class AdminController < ApplicationController
     })
   end
 
+  # PATCH /admin/reviews/:id
+  def update_review
+    review = Review.find(params[:id])
+
+    if review.update(admin_review_params)
+      json_response({
+        message: 'Review has been updated',
+        review: ReviewSerializer.full(review.reload, current_user: current_user)
+      })
+    else
+      json_response({ errors: review.errors.full_messages }, :unprocessable_entity)
+    end
+  end
+
   # DELETE /admin/reviews/:id
   def destroy_review
     review = Review.find(params[:id])
     review.destroy!
     json_response({ message: 'Review has been deleted' })
+  end
+
+  # POST /admin/tracks/:id/artwork
+  # Upload or set artwork for a track (admin only)
+  # Accepts either a file upload (multipart) or a URL string
+  def update_track_artwork
+    track = Track.find(params[:id])
+
+    if params[:artwork].present?
+      # File upload
+      track.artwork.attach(params[:artwork])
+      # Clear external URL since we now have an uploaded image
+      track.update!(artwork_url: nil)
+    elsif params[:artwork_url].present?
+      # External URL — detach any uploaded artwork in favor of the URL
+      track.artwork.purge if track.artwork.attached?
+      track.update!(artwork_url: params[:artwork_url])
+    elsif params[:remove_artwork] == true || params[:remove_artwork] == 'true'
+      track.artwork.purge if track.artwork.attached?
+      track.update!(artwork_url: nil)
+    else
+      return json_response({ error: 'Provide artwork (file) or artwork_url (string)' }, :unprocessable_entity)
+    end
+
+    json_response({
+      message: 'Track artwork updated',
+      track: {
+        id: track.id,
+        name: track.name,
+        artwork_url: track.resolved_artwork_url
+      }
+    })
   end
 
   # POST /admin/reviews/:id/enrich
@@ -458,6 +504,18 @@ class AdminController < ApplicationController
       created_at: user.created_at,
       updated_at: user.updated_at
     }
+  end
+
+  def admin_review_params
+    params.permit(
+      :song_link,
+      :band_name,
+      :song_name,
+      :artwork_url,
+      :review_text,
+      liked_aspects: [],
+      genres: []
+    )
   end
 
   def admin_band_params

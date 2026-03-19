@@ -2,11 +2,14 @@
 
 # Canonical track data from MusicBrainz
 class Track < ApplicationRecord
+  include ImageUrlHelper
+
   belongs_to :band, optional: true
   belongs_to :album, optional: true
   belongs_to :submitted_by, class_name: 'User', optional: true
   has_many :scrobbles, dependent: :nullify
   has_many :reviews, dependent: :nullify
+  has_one_attached :artwork
 
   enum :source, { musicbrainz: 0, user_submitted: 1 }
 
@@ -59,6 +62,17 @@ class Track < ApplicationRecord
 
   def bandcamp_url
     streaming_links&.dig('bandcamp')
+  end
+
+  # Resolved artwork URL — prefers uploaded image, then external URL, then album artwork
+  def resolved_artwork_url
+    if artwork.attached?
+      return Rails.application.routes.url_helpers.rails_blob_url(artwork, **active_storage_url_options)
+    end
+
+    return artwork_url if artwork_url.present?
+
+    album&.resolved_cover_art_url
   end
 
   def has_streaming_links?

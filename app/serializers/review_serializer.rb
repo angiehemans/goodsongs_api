@@ -9,7 +9,7 @@ class ReviewSerializer
       song_link: review.song_link,
       band_name: review.band_name,
       song_name: review.song_name,
-      artwork_url: review.artwork_url,
+      artwork_url: resolved_artwork_url(review),
       review_text: review.review_text,
       formatted_review_text: MentionService.format_content(review.review_text, mentions),
       mentions: serialize_mentions(mentions),
@@ -33,7 +33,7 @@ class ReviewSerializer
       song_link: review.song_link,
       band_name: review.band_name,
       song_name: review.song_name,
-      artwork_url: review.artwork_url,
+      artwork_url: resolved_artwork_url(review),
       review_text: review.review_text,
       formatted_review_text: MentionService.format_content(review.review_text, mentions),
       mentions: serialize_mentions(mentions),
@@ -64,6 +64,7 @@ class ReviewSerializer
       name: track.name,
       album: track.album ? { id: track.album.id, name: track.album.name } : nil,
       source: track.source,
+      artwork_url: track.resolved_artwork_url,
       streaming_links: track.streaming_links || {},
       preferred_track_link: preferred_track_link_for(track, current_user),
       songlink_url: track.songlink_url,
@@ -99,5 +100,12 @@ class ReviewSerializer
         display_name: mention.user.display_name
       }
     end
+  end
+
+  # Resolve artwork: review's own URL first, then fall back to track artwork
+  def self.resolved_artwork_url(review)
+    return review.artwork_url if review.artwork_url.present?
+
+    review.track&.resolved_artwork_url
   end
 end

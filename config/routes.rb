@@ -133,8 +133,10 @@ Rails.application.routes.draw do
   post '/admin/bands/:id/enrich', to: 'admin#enrich_band'
   delete '/admin/bands/:id', to: 'admin#destroy_band'
   get '/admin/reviews', to: 'admin#reviews'
+  patch '/admin/reviews/:id', to: 'admin#update_review'
   post '/admin/reviews/:id/enrich', to: 'admin#enrich_review'
   delete '/admin/reviews/:id', to: 'admin#destroy_review'
+  post '/admin/tracks/:id/artwork', to: 'admin#update_track_artwork'
 
   # Admin RBAC routes
   namespace :admin do

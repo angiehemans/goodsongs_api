@@ -6984,6 +6984,45 @@ Get paginated list of all reviews (admin only).
 
 ---
 
+### PATCH /admin/reviews/:id
+
+Update a review (admin only). Allows editing review content fields.
+
+**Authentication:** Required (Admin only)
+
+**Request Body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `song_link` | string | Link to the song |
+| `band_name` | string | Band/artist name |
+| `song_name` | string | Song title |
+| `artwork_url` | string | URL for artwork image |
+| `review_text` | string | Review body text |
+| `liked_aspects` | string[] | Array of liked aspects |
+| `genres` | string[] | Array of genre tags |
+
+All fields are optional — only include fields you want to change.
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Review has been updated",
+  "review": { /* full review object */ }
+}
+```
+
+**Error Response (422 Unprocessable Entity):**
+
+```json
+{
+  "errors": ["Validation error message"]
+}
+```
+
+---
+
 ### DELETE /admin/reviews/:id
 
 Delete a review (admin only).
@@ -6997,6 +7036,51 @@ Delete a review (admin only).
   "message": "Review has been deleted"
 }
 ```
+
+---
+
+### POST /admin/tracks/:id/artwork
+
+Upload or set artwork for a track (admin only). Artwork set on a track is automatically used by all reviews linked to that track when those reviews don't have their own artwork.
+
+**Authentication:** Required (Admin only)
+
+**Request Body (multipart/form-data for file upload):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `artwork` | file | Image file (JPEG, PNG, WebP) |
+
+**Request Body (JSON for URL):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `artwork_url` | string | External URL for the artwork image |
+
+**Request Body (JSON to remove):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `remove_artwork` | boolean | Set to `true` to remove all artwork |
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Track artwork updated",
+  "track": {
+    "id": "uuid",
+    "name": "Song Name",
+    "artwork_url": "https://..."
+  }
+}
+```
+
+**Notes:**
+- Uploading a file clears any external `artwork_url`
+- Setting an `artwork_url` removes any uploaded file
+- Track artwork is resolved with priority: uploaded file > external URL > album cover art
+- Reviews without their own `artwork_url` automatically inherit artwork from their associated track
 
 ---
 
