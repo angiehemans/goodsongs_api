@@ -221,6 +221,9 @@ Rails.application.routes.draw do
       get 'users/:user_id/scrobbles', to: 'scrobbles#user_scrobbles'
       get 'search', to: 'search#index'
 
+      # Social sharing
+      get 'share_payload', to: 'share_payloads#show'
+
       # Tracking (unauthenticated)
       post 'track', to: 'tracking#create'
 

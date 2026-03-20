@@ -421,7 +421,12 @@ Get current authenticated user's profile.
     "key": "fan_free",
     "name": "Fan Free"
   },
-  "abilities": ["create_recommendation", "follow_users", "create_comments", "scrobble_lastfm"],
+  "abilities": [
+    "create_recommendation",
+    "follow_users",
+    "create_comments",
+    "scrobble_lastfm"
+  ],
   "preferred_streaming_platform": "spotify",
   "allow_anonymous_comments": false,
   "social_links": {
@@ -460,7 +465,18 @@ For BAND accounts:
     "key": "band_starter",
     "name": "Band Starter"
   },
-  "abilities": ["create_recommendation", "manage_storefront", "follow_users", "create_comments", "send_newsletter", "view_analytics", "manage_band_profile", "upload_music", "manage_events", "custom_design"],
+  "abilities": [
+    "create_recommendation",
+    "manage_storefront",
+    "follow_users",
+    "create_comments",
+    "send_newsletter",
+    "view_analytics",
+    "manage_band_profile",
+    "upload_music",
+    "manage_events",
+    "custom_design"
+  ],
   "preferred_streaming_platform": null,
   "allow_anonymous_comments": false,
   "social_links": {
@@ -507,6 +523,7 @@ youtube_url: "https://youtube.com/@username"
 ```
 
 **Fields:**
+
 - `about_me` (optional): User bio (max 500 characters)
 - `profile_image` (optional): Profile image file
 - `city` (optional): City name (max 100 characters)
@@ -515,6 +532,7 @@ youtube_url: "https://youtube.com/@username"
 - `allow_anonymous_comments` (optional): Whether to allow anonymous comments on the user's blog posts (default: false). Useful for bloggers who want guest engagement.
 
 **Social Links (all optional):**
+
 - `instagram_url`: Instagram profile URL (format: `https://instagram.com/...`)
 - `threads_url`: Threads profile URL (format: `https://threads.net/@...`)
 - `bluesky_url`: Bluesky profile URL (format: `https://bsky.app/profile/...`)
@@ -640,6 +658,7 @@ Get public profile for a user by username with paginated reviews. For blogger us
 ```
 
 **Notes:**
+
 - The `following` field is only included if the request includes a valid authentication token
 - The `liked_by_current_user` field on reviews reflects whether the authenticated user has liked each review
 - The `posts` and `posts_pagination` fields are only included for blogger users
@@ -762,6 +781,7 @@ Search for users by username prefix (for mention autocomplete).
 ```
 
 **Notes:**
+
 - Returns up to 10 matching users
 - Excludes the current user from results
 - Excludes disabled accounts
@@ -888,6 +908,53 @@ Get list of users following a specific user.
 
 **Response (200 OK):**
 Returns array of users (same format as GET /following)
+
+---
+
+## Social Sharing Endpoints
+
+### GET /api/v1/share_payload
+
+Returns a pre-built share payload for a piece of content, including caption text, canonical URL, image URL, and platform-specific intent URLs. The frontend uses this to power "Share to Threads" and other sharing features without constructing share text itself.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+| Param           | Required | Values                    |
+| --------------- | -------- | ------------------------- |
+| `postable_type` | Yes      | `review`, `post`, `event` |
+| `postable_id`   | Yes      | ID of the record          |
+
+**Response (200 OK):**
+
+```json
+{
+  "text": "\"Chaise Longue\" by Wet Leg - This song hits so hard\n\nRecommended on https://goodsongs.app/users/yabadabajew/reviews/abc123",
+  "url": "https://goodsongs.app/users/yabadabajew/reviews/abc123",
+  "image_url": "https://api.goodsongs.app/rails/active_storage/blobs/.../artwork.jpg",
+  "threads_intent_url": "https://www.threads.net/intent/post?text=This%20song%20hits...",
+  "instagram_intent_url": null
+}
+```
+
+**Notes:**
+
+- `instagram_intent_url` is always `null` in Phase 1 — Instagram has no web intent URL. The frontend handles Instagram sharing via Web Share API or clipboard fallback.
+- `image_url` may be `null` if the content has no associated image.
+- Text is automatically truncated to fit Threads' 500 character limit.
+- Caption format varies by content type:
+  - **Review:** `"\"{song_name}\" by {band_name} - {review_text}\n\nRecommended on {url}"`
+  - **Post:** `"{title}\n\n{url}"`
+  - **Event:** `"{name} — at {venue} — {date}\n\n{url}"`
+
+**Error Responses:**
+
+| Code | Reason                               |
+| ---- | ------------------------------------ |
+| 401  | Unauthenticated                      |
+| 404  | Record not found                     |
+| 422  | Invalid or unallowed `postable_type` |
 
 ---
 
@@ -1029,6 +1096,7 @@ Get the authenticated user's profile theme configuration including draft.
 ```
 
 **Notes:**
+
 - Returns default theme if none exists
 - `config` contains static configuration for frontend reference
 - `draft_sections` contains unpublished section changes (null if no draft)
@@ -1046,19 +1114,19 @@ The `source_data` object provides the actual profile data that sections will dis
 4. **Preview dynamic sections** - Use `source_data.posts`, `source_data.recommendations`, and `source_data.events` to preview content sections in the site builder
 5. **Preview single post page** - Use `source_data.sample_post` to render a preview of the single post layout in the site builder, including comments, related posts, and navigation
 
-| source_data field | Used by | Schema source reference |
-|-------------------|---------|------------------------|
-| `display_name` | Hero headline | `source: "display_name"` |
-| `location` | Hero subtitle | `source: "location"` |
-| `about_text` | About bio | `source: "about_text"` |
-| `profile_image_url` | Hero image | - |
-| `social_links` | Hero, About | `visible_social_links` setting |
-| `streaming_links` | Hero, Music | `visible_streaming_links` setting |
-| `posts` | Posts section | Up to 10 recent published posts |
-| `recommendations` | Recommendations section | Up to 10 recent reviews |
-| `events` | Events section | Up to 10 upcoming active events |
-| `sample_post` | Single post layout preview | Latest published post with comments, related posts, and navigation |
-| `band` | Band users only | Band profile data |
+| source_data field   | Used by                    | Schema source reference                                            |
+| ------------------- | -------------------------- | ------------------------------------------------------------------ |
+| `display_name`      | Hero headline              | `source: "display_name"`                                           |
+| `location`          | Hero subtitle              | `source: "location"`                                               |
+| `about_text`        | About bio                  | `source: "about_text"`                                             |
+| `profile_image_url` | Hero image                 | -                                                                  |
+| `social_links`      | Hero, About                | `visible_social_links` setting                                     |
+| `streaming_links`   | Hero, Music                | `visible_streaming_links` setting                                  |
+| `posts`             | Posts section              | Up to 10 recent published posts                                    |
+| `recommendations`   | Recommendations section    | Up to 10 recent reviews                                            |
+| `events`            | Events section             | Up to 10 upcoming active events                                    |
+| `sample_post`       | Single post layout preview | Latest published post with comments, related posts, and navigation |
+| `band`              | Band users only            | Band profile data                                                  |
 
 ---
 
@@ -1151,6 +1219,7 @@ Update the profile theme. Section and single post layout changes go to draft and
 ```
 
 **Notes:**
+
 - Global theme fields (colors, fonts) are updated immediately
 - Section changes go to `draft_sections` until published
 - `single_post_layout` changes go to `draft_single_post_layout` until published
@@ -1326,6 +1395,7 @@ Upload a new profile asset image.
 ```
 
 **Notes:**
+
 - Maximum 20 assets per user
 - Maximum file size: 5MB
 - Allowed types: JPEG, PNG, WebP
@@ -1428,7 +1498,11 @@ Get a user's public profile with theme and hydrated section data. This is the pu
             "instagram": "https://instagram.com/midnightpines",
             "twitter": "https://twitter.com/midnightpines"
           },
-          "band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" }
+          "band": {
+            "id": 5,
+            "slug": "midnight-pines",
+            "name": "The Midnight Pines"
+          }
         }
       },
       {
@@ -1450,7 +1524,12 @@ Get a user's public profile with theme and hydrated section data. This is the pu
         "settings": { "display_limit": 6, "show_past_events": false },
         "data": {
           "events": [
-            { "id": 1, "name": "Live at The Fillmore", "event_date": "2026-04-15", "...": "..." }
+            {
+              "id": 1,
+              "name": "Live at The Fillmore",
+              "event_date": "2026-04-15",
+              "...": "..."
+            }
           ]
         }
       },
@@ -1461,7 +1540,12 @@ Get a user's public profile with theme and hydrated section data. This is the pu
         "settings": { "display_limit": 6 },
         "data": {
           "posts": [
-            { "id": 1, "title": "New Album Announcement", "slug": "new-album", "...": "..." }
+            {
+              "id": 1,
+              "title": "New Album Announcement",
+              "slug": "new-album",
+              "...": "..."
+            }
           ]
         }
       }
@@ -1480,6 +1564,7 @@ Get a user's public profile with theme and hydrated section data. This is the pu
 ```
 
 **Notes:**
+
 - Returns only visible sections
 - Filters out sections the user's plan doesn't support (mailing_list, merch)
 - Each section includes hydrated `data` with pre-fetched content
@@ -1513,7 +1598,11 @@ Get a single blog post wrapped in the band's profile theme. Used for themed sing
       "featured_image_url": "https://...",
       "publish_date": "2026-03-01T12:00:00Z",
       "song": { "name": "Track Name", "band_name": "Artist", "...": "..." },
-      "author": { "username": "midnightpines", "display_name": "The Midnight Pines", "...": "..." },
+      "author": {
+        "username": "midnightpines",
+        "display_name": "The Midnight Pines",
+        "...": "..."
+      },
       "likes_count": 12,
       "comments_count": 5,
       "...": "..."
@@ -1523,7 +1612,11 @@ Get a single blog post wrapped in the band's profile theme. Used for themed sing
       "username": "midnightpines",
       "display_name": "The Midnight Pines",
       "role": "band",
-      "primary_band": { "id": 5, "slug": "midnight-pines", "name": "The Midnight Pines" },
+      "primary_band": {
+        "id": 5,
+        "slug": "midnight-pines",
+        "name": "The Midnight Pines"
+      },
       "...": "..."
     },
     "theme": {
@@ -1553,7 +1646,12 @@ Get a single blog post wrapped in the band's profile theme. Used for themed sing
           "body": "Great post!",
           "anonymous": false,
           "likes_count": 3,
-          "author": { "id": 99, "username": "fan1", "display_name": "Fan One", "profile_image_url": "https://..." },
+          "author": {
+            "id": 99,
+            "username": "fan1",
+            "display_name": "Fan One",
+            "profile_image_url": "https://..."
+          },
           "created_at": "2026-03-01T14:00:00Z",
           "updated_at": "2026-03-01T14:00:00Z"
         }
@@ -1566,7 +1664,12 @@ Get a single blog post wrapped in the band's profile theme. Used for themed sing
       }
     },
     "related_posts": [
-      { "id": 2, "title": "Tour Dates Announced", "slug": "tour-dates", "...": "..." }
+      {
+        "id": 2,
+        "title": "Tour Dates Announced",
+        "slug": "tour-dates",
+        "...": "..."
+      }
     ],
     "navigation": {
       "next_post": { "title": "Newer Post Title", "slug": "newer-post" },
@@ -1586,6 +1689,7 @@ Get a single blog post wrapped in the band's profile theme. Used for themed sing
 ```
 
 **Notes:**
+
 - `comments`, `related_posts`, and `navigation` are conditionally included based on the `single_post_layout` toggles
 - If `show_comments` is `false`, `comments` is omitted from the response
 - If `show_related_posts` is `false`, `related_posts` is omitted
@@ -1615,34 +1719,34 @@ Get a single blog post wrapped in the user's profile theme. Same response shape 
 
 The `single_post_layout` controls how individual blog post pages are rendered. It follows the same draft/publish workflow as sections.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `show_featured_image` | boolean | `true` | Show the post's featured image |
-| `show_author` | boolean | `true` | Show the post author info |
-| `show_song_embed` | boolean | `true` | Show the linked song embed |
-| `show_comments` | boolean | `true` | Show comments section |
-| `show_related_posts` | boolean | `true` | Show related posts from the same author |
-| `show_navigation` | boolean | `true` | Show prev/next post navigation |
-| `content_layout` | enum | `"default"` | `"default"`, `"wide"`, or `"narrow"` |
-| `background_color` | color/null | `null` | Override theme background (null = inherit) |
-| `font_color` | color/null | `null` | Override theme font color (null = inherit) |
-| `max_width` | integer/null | `null` | Override content max width, 600-1600 (null = inherit) |
+| Field                 | Type         | Default     | Description                                           |
+| --------------------- | ------------ | ----------- | ----------------------------------------------------- |
+| `show_featured_image` | boolean      | `true`      | Show the post's featured image                        |
+| `show_author`         | boolean      | `true`      | Show the post author info                             |
+| `show_song_embed`     | boolean      | `true`      | Show the linked song embed                            |
+| `show_comments`       | boolean      | `true`      | Show comments section                                 |
+| `show_related_posts`  | boolean      | `true`      | Show related posts from the same author               |
+| `show_navigation`     | boolean      | `true`      | Show prev/next post navigation                        |
+| `content_layout`      | enum         | `"default"` | `"default"`, `"wide"`, or `"narrow"`                  |
+| `background_color`    | color/null   | `null`      | Override theme background (null = inherit)            |
+| `font_color`          | color/null   | `null`      | Override theme font color (null = inherit)            |
+| `max_width`           | integer/null | `null`      | Override content max width, 600-1600 (null = inherit) |
 
 ---
 
 ### Section Types Reference
 
-| Section Type | Description | Plan Availability |
-|--------------|-------------|-------------------|
-| `hero` | Profile header with name, image, location | All paid plans |
-| `music` | Band's tracks and music embeds | All paid plans |
-| `events` | Upcoming events list | All paid plans |
-| `posts` | Blog posts list | All paid plans |
-| `about` | About text/bio section | All paid plans |
-| `recommendations` | User's song recommendations/reviews | All paid plans |
-| `custom_text` | Custom text blocks (up to 3) | All paid plans |
-| `mailing_list` | Newsletter signup form | Band Pro, Blogger Pro |
-| `merch` | Merchandise links | Band Pro only |
+| Section Type      | Description                               | Plan Availability     |
+| ----------------- | ----------------------------------------- | --------------------- |
+| `hero`            | Profile header with name, image, location | All paid plans        |
+| `music`           | Band's tracks and music embeds            | All paid plans        |
+| `events`          | Upcoming events list                      | All paid plans        |
+| `posts`           | Blog posts list                           | All paid plans        |
+| `about`           | About text/bio section                    | All paid plans        |
+| `recommendations` | User's song recommendations/reviews       | All paid plans        |
+| `custom_text`     | Custom text blocks (up to 3)              | All paid plans        |
+| `mailing_list`    | Newsletter signup form                    | Band Pro, Blogger Pro |
+| `merch`           | Merchandise links                         | Band Pro only         |
 
 ---
 
@@ -1769,17 +1873,18 @@ Each section type has defined `content` and `settings` fields. Content fields ov
 
 The `visible_streaming_links` and `visible_social_links` settings control which links are shown:
 
-| Value | Behavior |
-|-------|----------|
-| `null` or `:configured` | Show all configured links (default) |
-| `[]` (empty array) | Show no links |
-| `["spotify", "bandcamp"]` | Show only specified link types |
+| Value                     | Behavior                            |
+| ------------------------- | ----------------------------------- |
+| `null` or `:configured`   | Show all configured links (default) |
+| `[]` (empty array)        | Show no links                       |
+| `["spotify", "bandcamp"]` | Show only specified link types      |
 
 **Streaming Link Types:** `spotify`, `appleMusic`, `bandcamp`, `soundcloud`, `youtubeMusic`
 
 **Social Link Types:** `instagram`, `threads`, `bluesky`, `twitter`, `tumblr`, `tiktok`, `facebook`, `youtube`
 
 **Example - Show only Spotify and Instagram:**
+
 ```json
 {
   "type": "hero",
@@ -1793,6 +1898,7 @@ The `visible_streaming_links` and `visible_social_links` settings control which 
 ```
 
 **Example - Hide all social links:**
+
 ```json
 {
   "type": "hero",
@@ -1868,15 +1974,15 @@ icon: "link"
 thumbnail: <file>
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `title` | string | Yes | Link title (max 100 characters) |
-| `url` | string | Yes | Link URL (must start with http:// or https://) |
-| `icon` | string | No | Icon identifier (e.g., "music", "shop", "link") |
-| `description` | string | No | Short description of the link (max 200 characters) |
-| `position` | integer | No | Display order (auto-assigned if omitted) |
-| `visible` | boolean | No | Whether link is publicly visible (default: true) |
-| `thumbnail` | file | No | Link thumbnail image (JPEG, PNG, or WebP, max 2MB) |
+| Field         | Type    | Required | Description                                        |
+| ------------- | ------- | -------- | -------------------------------------------------- |
+| `title`       | string  | Yes      | Link title (max 100 characters)                    |
+| `url`         | string  | Yes      | Link URL (must start with http:// or https://)     |
+| `icon`        | string  | No       | Icon identifier (e.g., "music", "shop", "link")    |
+| `description` | string  | No       | Short description of the link (max 200 characters) |
+| `position`    | integer | No       | Display order (auto-assigned if omitted)           |
+| `visible`     | boolean | No       | Whether link is publicly visible (default: true)   |
+| `thumbnail`   | file    | No       | Link thumbnail image (JPEG, PNG, or WebP, max 2MB) |
 
 **Response (201 Created):**
 
@@ -1906,10 +2012,10 @@ Update an existing custom link. Supports both JSON and multipart/form-data (for 
 
 **Request Body:** Same fields as POST (all optional). Additionally:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `thumbnail` | file | Replace thumbnail image (JPEG, PNG, or WebP, max 2MB) |
-| `remove_thumbnail` | boolean | Set to `true` to remove the existing thumbnail |
+| Field              | Type    | Description                                           |
+| ------------------ | ------- | ----------------------------------------------------- |
+| `thumbnail`        | file    | Replace thumbnail image (JPEG, PNG, or WebP, max 2MB) |
+| `remove_thumbnail` | boolean | Set to `true` to remove the existing thumbnail        |
 
 **Response (200 OK):** Same shape as POST response.
 
@@ -1950,9 +2056,9 @@ Batch update positions for all links. The order of IDs in the array determines t
 ```json
 {
   "data": [
-    { "id": 3, "title": "Third Link", "position": 0, "..." : "..." },
-    { "id": 1, "title": "First Link", "position": 1, "..." : "..." },
-    { "id": 2, "title": "Second Link", "position": 2, "..." : "..." }
+    { "id": 3, "title": "Third Link", "position": 0, "...": "..." },
+    { "id": 1, "title": "First Link", "position": 1, "...": "..." },
+    { "id": 2, "title": "Second Link", "position": 2, "...": "..." }
   ]
 }
 ```
@@ -1990,22 +2096,22 @@ When updating the profile theme via `PUT /api/v1/profile_theme`, you can include
 
 **Page fields:**
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `type` | string | Yes | Page type (currently only `links`) |
-| `slug` | string | Yes | URL slug for the page |
-| `visible` | boolean | Yes | Whether the page is publicly accessible |
-| `settings` | object | No | Type-specific settings |
+| Field      | Type    | Required | Description                             |
+| ---------- | ------- | -------- | --------------------------------------- |
+| `type`     | string  | Yes      | Page type (currently only `links`)      |
+| `slug`     | string  | Yes      | URL slug for the page                   |
+| `visible`  | boolean | Yes      | Whether the page is publicly accessible |
+| `settings` | object  | No       | Type-specific settings                  |
 
 **Links page settings:**
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `heading` | string | null | Page heading (max 120 characters) |
-| `description` | string | null | Page description (max 500 characters) |
-| `show_social_links` | boolean | true | Show social platform links |
-| `show_streaming_links` | boolean | true | Show streaming platform links |
-| `layout` | string | "list" | Layout style: `list` or `grid` |
+| Field                  | Type    | Default | Description                           |
+| ---------------------- | ------- | ------- | ------------------------------------- |
+| `heading`              | string  | null    | Page heading (max 120 characters)     |
+| `description`          | string  | null    | Page description (max 500 characters) |
+| `show_social_links`    | boolean | true    | Show social platform links            |
+| `show_streaming_links` | boolean | true    | Show streaming platform links         |
+| `layout`               | string  | "list"  | Layout style: `list` or `grid`        |
 
 ### Pages in Profile Theme Response
 
@@ -2046,8 +2152,10 @@ Get a band's public link page.
       "content_max_width": 1200,
       "card_background_color": null,
       "card_background_opacity": 10,
-      "single_post_layout": { "..." : "..." },
-      "pages": [{ "type": "links", "slug": "links", "visible": true, "settings": {} }]
+      "single_post_layout": { "...": "..." },
+      "pages": [
+        { "type": "links", "slug": "links", "visible": true, "settings": {} }
+      ]
     },
     "page_settings": {
       "heading": "My Links",
@@ -2285,6 +2393,7 @@ Returns created review object including `genres` array and `track` object (if li
 **Example with User Mention:**
 
 Request:
+
 ```json
 {
   "review": {
@@ -2297,6 +2406,7 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "id": 123,
@@ -2339,6 +2449,7 @@ Response:
 ```
 
 **Error Response (422 - Invalid Mention):**
+
 ```json
 {
   "error": "Looks like you tagged a user that doesn't exist: @fakeuser"
@@ -2698,6 +2809,7 @@ Note: Comment body is limited to 300 characters.
 **Example with User Mention:**
 
 Request:
+
 ```json
 {
   "comment": {
@@ -2707,6 +2819,7 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "message": "Comment added successfully",
@@ -2938,9 +3051,7 @@ Get a single blog post by slug.
   "featured_image_url": "https://...",
   "tags": ["music", "reviews"],
   "categories": ["tutorials"],
-  "authors": [
-    { "name": "John Doe", "url": null }
-  ],
+  "authors": [{ "name": "John Doe", "url": null }],
   "author": {
     "id": 123,
     "username": "johndoe",
@@ -3052,9 +3163,7 @@ Create a new blog post.
     "publish_date": "2026-03-01T12:00:00Z",
     "tags": ["music", "news"],
     "categories": ["announcements"],
-    "authors": [
-      { "name": "Guest Author", "url": "https://guest.com" }
-    ],
+    "authors": [{ "name": "Guest Author", "url": "https://guest.com" }],
     "song_name": "Bohemian Rhapsody",
     "band_name": "Queen",
     "album_name": "A Night at the Opera",
@@ -3070,23 +3179,23 @@ Returns the full post object (same as GET /blogs/:username/:slug).
 
 **Field Notes:**
 
-| Field | Required | Notes |
-|-------|----------|-------|
-| `title` | Yes | Post title |
-| `slug` | No | Auto-generated from title if not provided |
-| `body` | Yes (if published) | HTML content from Tiptap |
-| `status` | No | `draft` (default), `published`, or `scheduled` |
-| `featured` | No | Default false |
-| `publish_date` | Yes (if scheduled) | Must be in the future for scheduled posts |
-| `tags` | No | Array of strings |
-| `categories` | No | Array of strings |
-| `authors` | No | Array of {name, url} objects; defaults to owner |
-| `featured_image` | No | File upload for featured image |
-| `song_name` | No | Name of the attached song |
-| `band_name` | No | Artist/band name for the song |
-| `album_name` | No | Album name (optional) |
-| `artwork_url` | No | URL to album/song artwork (also accepts `song_artwork_url`) |
-| `song_link` | No | Generic song link (e.g., song.link URL) |
+| Field            | Required           | Notes                                                       |
+| ---------------- | ------------------ | ----------------------------------------------------------- |
+| `title`          | Yes                | Post title                                                  |
+| `slug`           | No                 | Auto-generated from title if not provided                   |
+| `body`           | Yes (if published) | HTML content from Tiptap                                    |
+| `status`         | No                 | `draft` (default), `published`, or `scheduled`              |
+| `featured`       | No                 | Default false                                               |
+| `publish_date`   | Yes (if scheduled) | Must be in the future for scheduled posts                   |
+| `tags`           | No                 | Array of strings                                            |
+| `categories`     | No                 | Array of strings                                            |
+| `authors`        | No                 | Array of {name, url} objects; defaults to owner             |
+| `featured_image` | No                 | File upload for featured image                              |
+| `song_name`      | No                 | Name of the attached song                                   |
+| `band_name`      | No                 | Artist/band name for the song                               |
+| `album_name`     | No                 | Album name (optional)                                       |
+| `artwork_url`    | No                 | URL to album/song artwork (also accepts `song_artwork_url`) |
+| `song_link`      | No                 | Generic song link (e.g., song.link URL)                     |
 
 **Song Attachment Notes:**
 
@@ -3097,13 +3206,13 @@ Returns the full post object (same as GET /blogs/:username/:slug).
 
 **Required Abilities by Feature:**
 
-| Feature | Required Ability |
-|---------|------------------|
-| Create post | `create_blog_post` |
-| Save as draft | `draft_posts` |
-| Schedule post | `schedule_post` |
-| Attach featured image | `attach_images` |
-| Add tags/categories | `manage_tags` |
+| Feature               | Required Ability   |
+| --------------------- | ------------------ |
+| Create post           | `create_blog_post` |
+| Save as draft         | `draft_posts`      |
+| Schedule post         | `schedule_post`    |
+| Attach featured image | `attach_images`    |
+| Add tags/categories   | `manage_tags`      |
 
 **Response (403 Forbidden) - Upgrade Required:**
 
@@ -3288,14 +3397,14 @@ Upload an image for use in blog post content.
 
 ### Plan Access Matrix for Blog Posts
 
-| Plan | Create Posts | Draft | Schedule | Attach Images | Manage Tags |
-|------|-------------|-------|----------|---------------|-------------|
-| fan_free | No | No | No | No | No |
-| band_free | No | No | No | No | No |
-| band_starter | **Yes** | **Yes** | No | **Yes** | **Yes** |
-| band_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
-| blogger | **Yes** | **Yes** | No | **Yes** | **Yes** |
-| blogger_pro | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+| Plan         | Create Posts | Draft   | Schedule | Attach Images | Manage Tags |
+| ------------ | ------------ | ------- | -------- | ------------- | ----------- |
+| fan_free     | No           | No      | No       | No            | No          |
+| band_free    | No           | No      | No       | No            | No          |
+| band_starter | **Yes**      | **Yes** | No       | **Yes**       | **Yes**     |
+| band_pro     | **Yes**      | **Yes** | **Yes**  | **Yes**       | **Yes**     |
+| blogger      | **Yes**      | **Yes** | No       | **Yes**       | **Yes**     |
+| blogger_pro  | **Yes**      | **Yes** | **Yes**  | **Yes**       | **Yes**     |
 
 ---
 
@@ -3388,9 +3497,7 @@ Get paginated list of blog posts the current user has liked.
       "featured_image_url": "https://...",
       "tags": ["music", "reviews"],
       "categories": ["tutorials"],
-      "authors": [
-        { "name": "John Doe", "url": null }
-      ],
+      "authors": [{ "name": "John Doe", "url": null }],
       "author": {
         "id": 123,
         "username": "johndoe",
@@ -3965,6 +4072,7 @@ band[youtube_url]: "https://youtube.com/@bandname"
 ```
 
 **Social Links (all optional):**
+
 - `instagram_url`: Instagram profile URL
 - `threads_url`: Threads profile URL
 - `bluesky_url`: Bluesky profile URL
@@ -4060,6 +4168,7 @@ Events can be created either as standalone events (by any user with `manage_even
 ```
 
 **Notes:**
+
 - `band` is `null` when the event is not associated with a band
 - `user_id` is always present and identifies the event creator
 - `likes_count`, `liked_by_current_user`, and `comments_count` are included in event responses
@@ -4094,6 +4203,7 @@ Get all upcoming visible events (both band and non-band events).
 ```
 
 **Notes:**
+
 - Returns active, upcoming events sorted by `event_date` ascending
 - Includes events with no band and events with an active (non-disabled) band
 - Events belonging to disabled bands are excluded
@@ -4156,19 +4266,19 @@ Or with new venue:
 
 **Fields:**
 
-| Field | Required | Notes |
-|-------|----------|-------|
-| `name` | Yes | Event name |
-| `event_date` | Yes | ISO 8601 datetime |
-| `venue_id` | Yes* | Existing venue ID (*one of `venue_id` or `venue_attributes` required) |
-| `venue_attributes` | Yes* | `{name, address, city, region}` for new venue |
-| `description` | No | Event description |
-| `ticket_link` | No | URL to purchase tickets |
-| `price` | No | Price display string (e.g., "$25", "Free") |
-| `age_restriction` | No | `"All Ages"`, `"18+"`, or `"21+"` |
-| `image` | No | Event image file (multipart/form-data) |
-| `image_url` | No | Event image URL |
-| `band_id` | No | Associate with a band you own (validated) |
+| Field              | Required | Notes                                                                  |
+| ------------------ | -------- | ---------------------------------------------------------------------- |
+| `name`             | Yes      | Event name                                                             |
+| `event_date`       | Yes      | ISO 8601 datetime                                                      |
+| `venue_id`         | Yes\*    | Existing venue ID (\*one of `venue_id` or `venue_attributes` required) |
+| `venue_attributes` | Yes\*    | `{name, address, city, region}` for new venue                          |
+| `description`      | No       | Event description                                                      |
+| `ticket_link`      | No       | URL to purchase tickets                                                |
+| `price`            | No       | Price display string (e.g., "$25", "Free")                             |
+| `age_restriction`  | No       | `"All Ages"`, `"18+"`, or `"21+"`                                      |
+| `image`            | No       | Event image file (multipart/form-data)                                 |
+| `image_url`        | No       | Event image URL                                                        |
+| `band_id`          | No       | Associate with a band you own (validated)                              |
 
 **Response (201 Created):**
 Returns created event object
@@ -4193,6 +4303,7 @@ Returns created event object
 ```
 
 **Notes:**
+
 - The event is always owned by the authenticated user (`user_id` is set automatically)
 - `band_id` is optional; if provided, the band must be owned by the current user
 - Any user with the `manage_events` ability can create events (not just band accounts)
@@ -4252,6 +4363,7 @@ event[image]: <file>
 Returns created event object
 
 **Notes:**
+
 - You must own the band specified by `:slug`
 - The event's `user_id` is automatically set to the authenticated user
 - The event's `band_id` is automatically set to the band
@@ -4350,6 +4462,7 @@ Get upcoming events created by a specific user.
 ```
 
 **Notes:**
+
 - Returns active, upcoming events sorted by `event_date` ascending
 - Includes both band and non-band events created by the user
 
@@ -4567,6 +4680,7 @@ Note: Comment body is limited to 300 characters.
 **Example with User Mention:**
 
 Request:
+
 ```json
 {
   "comment": {
@@ -4576,6 +4690,7 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "message": "Comment added successfully",
@@ -5069,6 +5184,7 @@ Unregister a device token (e.g., when user logs out or disables notifications).
 When in-app notifications are created, push notifications are automatically sent to all registered devices. The push notification payload includes:
 
 **new_follower:**
+
 ```json
 {
   "title": "New Follower",
@@ -5082,6 +5198,7 @@ When in-app notifications are created, push notifications are automatically sent
 ```
 
 **new_review:**
+
 ```json
 {
   "title": "New Review",
@@ -5095,6 +5212,7 @@ When in-app notifications are created, push notifications are automatically sent
 ```
 
 **review_like:**
+
 ```json
 {
   "title": "New Like",
@@ -5108,6 +5226,7 @@ When in-app notifications are created, push notifications are automatically sent
 ```
 
 **review_comment:**
+
 ```json
 {
   "title": "New Comment",
@@ -5122,6 +5241,7 @@ When in-app notifications are created, push notifications are automatically sent
 ```
 
 **event_like:**
+
 ```json
 {
   "title": "New Like",
@@ -5135,6 +5255,7 @@ When in-app notifications are created, push notifications are automatically sent
 ```
 
 **event_comment:**
+
 ```json
 {
   "title": "New Comment",
@@ -5149,6 +5270,7 @@ When in-app notifications are created, push notifications are automatically sent
 ```
 
 **event_comment_like:**
+
 ```json
 {
   "title": "New Like",
@@ -5380,6 +5502,7 @@ Get paginated list of upcoming events. Includes both band events (from active ba
 ```
 
 **Notes:**
+
 - Returns active, upcoming events sorted by `event_date` ascending
 - When searching by `q`, only events with a matching band name are returned (band-less events are excluded from band-name search)
 - Without a search query, both band and non-band events are returned
@@ -5403,10 +5526,10 @@ Unified search across bands, users, reviews, and events.
 ```json
 {
   "results": {
-    "bands": [ { "...": "..." } ],
-    "users": [ { "...": "..." } ],
-    "reviews": [ { "...": "..." } ],
-    "events": [ { "...": "..." } ]
+    "bands": [{ "...": "..." }],
+    "users": [{ "...": "..." }],
+    "reviews": [{ "...": "..." }],
+    "events": [{ "...": "..." }]
   },
   "query": "band name",
   "counts": {
@@ -5419,6 +5542,7 @@ Unified search across bands, users, reviews, and events.
 ```
 
 **Notes:**
+
 - Bands: searched by name using trigram similarity
 - Users: searched by username (active fan users only)
 - Reviews: searched by band name or song name
@@ -5589,7 +5713,13 @@ Get all blogger dashboard data in a single optimized request.
       "key": "blogger",
       "name": "Blogger"
     },
-    "abilities": ["create_blog_post", "attach_images", "draft_posts", "manage_tags", "..."],
+    "abilities": [
+      "create_blog_post",
+      "attach_images",
+      "draft_posts",
+      "manage_tags",
+      "..."
+    ],
     "display_name": "musicblogger",
     "location": "New York, NY",
     "followers_count": 150,
@@ -6526,7 +6656,24 @@ All fields are optional. For file upload (profile_image), use `multipart/form-da
       "key": "band_starter",
       "name": "Band Starter"
     },
-    "abilities": ["create_recommendation", "follow_users", "create_comments", "manage_band_profile", "upload_music", "view_analytics", "manage_storefront", "send_newsletter", "manage_events", "custom_design", "create_blog_post", "attach_images", "attach_songs", "draft_posts", "manage_tags", "rss_feed"],
+    "abilities": [
+      "create_recommendation",
+      "follow_users",
+      "create_comments",
+      "manage_band_profile",
+      "upload_music",
+      "view_analytics",
+      "manage_storefront",
+      "send_newsletter",
+      "manage_events",
+      "custom_design",
+      "create_blog_post",
+      "attach_images",
+      "attach_songs",
+      "draft_posts",
+      "manage_tags",
+      "rss_feed"
+    ],
     "onboarding_completed": true,
     "admin": true,
     "disabled": false,
@@ -6992,15 +7139,15 @@ Update a review (admin only). Allows editing review content fields.
 
 **Request Body:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `song_link` | string | Link to the song |
-| `band_name` | string | Band/artist name |
-| `song_name` | string | Song title |
-| `artwork_url` | string | URL for artwork image |
-| `review_text` | string | Review body text |
+| Field           | Type     | Description            |
+| --------------- | -------- | ---------------------- |
+| `song_link`     | string   | Link to the song       |
+| `band_name`     | string   | Band/artist name       |
+| `song_name`     | string   | Song title             |
+| `artwork_url`   | string   | URL for artwork image  |
+| `review_text`   | string   | Review body text       |
 | `liked_aspects` | string[] | Array of liked aspects |
-| `genres` | string[] | Array of genre tags |
+| `genres`        | string[] | Array of genre tags    |
 
 All fields are optional — only include fields you want to change.
 
@@ -7009,7 +7156,9 @@ All fields are optional — only include fields you want to change.
 ```json
 {
   "message": "Review has been updated",
-  "review": { /* full review object */ }
+  "review": {
+    /* full review object */
+  }
 }
 ```
 
@@ -7047,20 +7196,20 @@ Upload or set artwork for a track (admin only). Artwork set on a track is automa
 
 **Request Body (multipart/form-data for file upload):**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field     | Type | Description                  |
+| --------- | ---- | ---------------------------- |
 | `artwork` | file | Image file (JPEG, PNG, WebP) |
 
 **Request Body (JSON for URL):**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field         | Type   | Description                        |
+| ------------- | ------ | ---------------------------------- |
 | `artwork_url` | string | External URL for the artwork image |
 
 **Request Body (JSON to remove):**
 
-| Field | Type | Description |
-|-------|------|-------------|
+| Field            | Type    | Description                         |
+| ---------------- | ------- | ----------------------------------- |
 | `remove_artwork` | boolean | Set to `true` to remove all artwork |
 
 **Response (200 OK):**
@@ -7077,6 +7226,7 @@ Upload or set artwork for a track (admin only). Artwork set on a track is automa
 ```
 
 **Notes:**
+
 - Uploading a file clears any external `artwork_url`
 - Setting an `artwork_url` removes any uploaded file
 - Track artwork is resolved with priority: uploaded file > external URL > album cover art
@@ -7219,14 +7369,22 @@ Side-by-side comparison matrix of all plans and abilities (admin only).
   ],
   "abilities": [
     {
-      "ability": { "key": "create_recommendation", "name": "Create Recommendation", "category": "content" },
+      "ability": {
+        "key": "create_recommendation",
+        "name": "Create Recommendation",
+        "category": "content"
+      },
       "fan_free": true,
       "band_free": true,
       "band_starter": true,
       "blogger_pro": true
     },
     {
-      "ability": { "key": "schedule_post", "name": "Schedule Posts", "category": "content" },
+      "ability": {
+        "key": "schedule_post",
+        "name": "Schedule Posts",
+        "category": "content"
+      },
       "fan_free": false,
       "band_free": false,
       "band_starter": false,
@@ -7353,7 +7511,14 @@ Get list of valid ability categories (admin only).
 
 ```json
 {
-  "categories": ["content", "monetization", "audience", "social", "analytics", "band"]
+  "categories": [
+    "content",
+    "monetization",
+    "audience",
+    "social",
+    "analytics",
+    "band"
+  ]
 }
 ```
 
@@ -7603,6 +7768,7 @@ or (for ability-gated endpoints):
 ### Roles
 
 User identity type that determines the overall UI experience:
+
 - `fan` - Discovers and recommends music
 - `band` - Artist/band with business tools
 - `blogger` - Music blogger with publishing tools
@@ -7610,6 +7776,7 @@ User identity type that determines the overall UI experience:
 ### Plans
 
 Subscription tiers that grant abilities:
+
 - `fan_free` - Free fan plan
 - `band_free` - Free band plan
 - `band_starter` - $15/month band plan with analytics, storefront, newsletter
@@ -7727,7 +7894,7 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - Use the `sources` query parameter to filter to specific sources
     - Designed to be extensible for future sources (e.g., Apple Music)
 
-14. **Roles, Plans & Abilities (RBAC):**
+13. **Roles, Plans & Abilities (RBAC):**
     - Every user has a `role` (fan, band, blogger) that determines their identity
     - Every user has a `plan` that determines their subscription tier
     - Plans grant `abilities` (atomic permissions like `schedule_post`, `manage_storefront`)
@@ -7738,7 +7905,7 @@ Common values: `"melody"`, `"lyrics"`, `"production"`, `"vocals"`, `"instrumenta
     - Admins can manage plan-ability mappings via `/admin/plans` and `/admin/abilities` endpoints
     - See `docs/RBAC_SYSTEM.md` for full architecture documentation
 
-13. **User Mentions (@tagging):**
+14. **User Mentions (@tagging):**
     - Users can mention other users in reviews and comments using `@username` syntax
     - Mentioned users receive notifications when tagged
     - Maximum 10 mentions per post/comment
