@@ -21,7 +21,19 @@ class SharePayloadBuilder
     }
   end
 
-  private
+  def for_threads
+    {
+      text: build_text,
+      image_url: resolve_image_url
+    }
+  end
+
+  def for_instagram
+    {
+      caption: build_text,
+      image_url: resolve_image_url
+    }
+  end
 
   def build_text
     body = case @postable

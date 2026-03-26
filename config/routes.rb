@@ -36,6 +36,12 @@ Rails.application.routes.draw do
   get '/users/:username', to: 'users#profile_by_username'
   get '/recently-played', to: 'users#recently_played'
   
+  # Social OAuth routes (Threads & Instagram)
+  get '/auth/threads/authorize', to: 'auth/threads#authorize'
+  get '/auth/threads/callback', to: 'auth/threads#callback'
+  get '/auth/instagram/authorize', to: 'auth/instagram#authorize'
+  get '/auth/instagram/callback', to: 'auth/instagram#callback'
+
   # Last.fm routes
   post '/lastfm/connect', to: 'lastfm#connect'
   delete '/lastfm/disconnect', to: 'lastfm#disconnect'
@@ -223,6 +229,11 @@ Rails.application.routes.draw do
 
       # Social sharing
       get 'share_payload', to: 'share_payloads#show'
+
+      # Connected accounts management
+      get    'connected_accounts',           to: 'connected_accounts#index'
+      patch  'connected_accounts/:platform', to: 'connected_accounts#update'
+      delete 'connected_accounts/:platform', to: 'connected_accounts#destroy'
 
       # Tracking (unauthenticated)
       post 'track', to: 'tracking#create'

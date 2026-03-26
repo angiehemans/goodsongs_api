@@ -78,8 +78,13 @@ class ProfileTheme < ApplicationRecord
   validates :background_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }
   validates :brand_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }
   validates :font_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }
-  validates :header_font, inclusion: { in: APPROVED_FONTS, message: "is not an approved font" }
-  validates :body_font, inclusion: { in: APPROVED_FONTS, message: "is not an approved font" }
+  GOOGLE_FONTS_URL_REGEX = /\Ahttps:\/\/fonts\.google\.com\/specimen\/[A-Za-z0-9+]+\z/
+  FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900].freeze
+
+  validate :validate_header_font
+  validate :validate_body_font
+  validates :header_font_weight, inclusion: { in: FONT_WEIGHTS, message: "must be a valid font weight (100-900)" }
+  validates :body_font_weight, inclusion: { in: FONT_WEIGHTS, message: "must be a valid font weight (100-900)" }
   validates :card_background_color, format: { with: HEX_COLOR_REGEX, message: "must be a valid hex color" }, allow_nil: true
   validates :card_background_opacity, numericality: { only_integer: true, in: 0..100, message: "must be between 0 and 100" }
   validates :border_radius, numericality: { only_integer: true, in: 0..32, message: "must be between 0 and 32" }
@@ -154,7 +159,9 @@ class ProfileTheme < ApplicationRecord
       brand_color: '#6366f1',
       font_color: '#f5f5f5',
       header_font: 'Inter',
+      header_font_weight: 400,
       body_font: 'Inter',
+      body_font_weight: 400,
       card_background_color: nil,
       card_background_opacity: 10,
       border_radius: 8,
@@ -180,7 +187,38 @@ class ProfileTheme < ApplicationRecord
     sections.select { |s| s['visible'] == true }
   end
 
+  # Extract the font family name from a Google Fonts URL, or return the font name as-is
+  def self.font_display_name(value)
+    if value&.start_with?("https://fonts.google.com/specimen/")
+      value.split("/").last.gsub("+", " ")
+    else
+      value
+    end
+  end
+
+  # Returns custom font URLs that need to be loaded by the frontend
+  def custom_font_urls
+    [header_font, body_font].select { |f| f&.match?(GOOGLE_FONTS_URL_REGEX) }.uniq
+  end
+
   private
+
+  def validate_header_font
+    validate_font_field(:header_font)
+  end
+
+  def validate_body_font
+    validate_font_field(:body_font)
+  end
+
+  def validate_font_field(field)
+    value = send(field)
+    return if value.blank?
+    return if APPROVED_FONTS.include?(value)
+    return if value.match?(GOOGLE_FONTS_URL_REGEX)
+
+    errors.add(field, "must be an approved font name or a Google Fonts URL (https://fonts.google.com/specimen/FontName)")
+  end
 
   def validate_sections_structure
     return if sections.blank?

@@ -3,7 +3,7 @@ class Notification < ApplicationRecord
   belongs_to :actor, class_name: 'User', optional: true
   belongs_to :notifiable, polymorphic: true, optional: true
 
-  TYPES = %w[new_follower new_review review_like review_comment comment_like mention post_like post_comment post_comment_like event_like event_comment event_comment_like].freeze
+  TYPES = %w[new_follower new_review review_like review_comment comment_like mention post_like post_comment post_comment_like event_like event_comment event_comment_like social_reauth_needed].freeze
 
   validates :notification_type, presence: true, inclusion: { in: TYPES }
 
@@ -149,6 +149,14 @@ class Notification < ApplicationRecord
       notification_type: 'event_comment_like',
       actor: liker,
       notifiable: comment
+    )
+  end
+
+  def self.notify_social_reauth_needed(user:, account:)
+    create!(
+      user: user,
+      notification_type: "social_reauth_needed",
+      notifiable: account
     )
   end
 
@@ -317,6 +325,15 @@ class Notification < ApplicationRecord
         'New Like',
         "#{actor_name} liked your comment",
         { type: 'event_comment_like', notification_id: id.to_s, comment_id: comment.id.to_s, event_id: comment.event_id.to_s }
+      ]
+    when 'social_reauth_needed'
+      account = notifiable
+      return [nil, nil, {}] unless account.is_a?(ConnectedAccount)
+
+      [
+        'Reconnect Required',
+        "Your #{account.platform.capitalize} connection needs to be re-authorized",
+        { type: 'social_reauth_needed', notification_id: id.to_s, platform: account.platform }
       ]
     when 'mention'
       case notifiable

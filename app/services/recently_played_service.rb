@@ -19,14 +19,19 @@ class RecentlyPlayedService
   end
 
   # Fetch recently played tracks from all enabled sources
-  # @param limit [Integer] maximum tracks to return (default: 20)
+  # @param page [Integer] page number (default: 1)
+  # @param per_page [Integer] tracks per page (default: 20, max: 50)
   # @param sources [Array<Symbol>, nil] filter to specific sources, e.g. [:lastfm, :scrobble]
-  # @return [Hash] { tracks: [...], sources: [...] }
-  def fetch(limit: 20, sources: nil)
+  # @return [Hash] { tracks: [...], sources: [...], pagination: {...} }
+  def fetch(page: 1, per_page: 20, sources: nil)
+    per_page = [per_page, 50].min
     active_providers = filter_providers(sources)
 
+    # Over-fetch from providers to account for dedup losses
+    fetch_limit = (page * per_page) + per_page
+
     # Fetch from all providers in parallel
-    all_tracks = fetch_parallel(active_providers, limit: limit)
+    all_tracks = fetch_parallel(active_providers, limit: fetch_limit)
 
     # Merge all tracks and sort by played_at (descending), now_playing first
     merged = merge_tracks(all_tracks)
@@ -34,12 +39,20 @@ class RecentlyPlayedService
     # Deduplicate consecutive plays of the same track
     deduped = deduplicate_consecutive(merged)
 
-    # Limit final result
-    final_tracks = deduped.first(limit)
+    # Paginate the deduped result
+    offset = (page - 1) * per_page
+    final_tracks = deduped.slice(offset, per_page) || []
+    has_next_page = deduped.length > offset + per_page
 
     {
       tracks: format_response(final_tracks),
-      sources: active_providers.map(&:source_name)
+      sources: active_providers.map(&:source_name),
+      pagination: {
+        current_page: page,
+        per_page: per_page,
+        has_next_page: has_next_page,
+        has_previous_page: page > 1
+      }
     }
   end
 

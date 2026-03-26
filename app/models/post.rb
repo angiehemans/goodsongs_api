@@ -20,6 +20,10 @@ class Post < ApplicationRecord
 
   before_validation :generate_slug
 
+  # Auto-post to connected social platforms
+  after_create_commit :enqueue_social_auto_posts, if: :published?
+  after_update_commit :enqueue_social_auto_posts_on_publish
+
   # Scopes
   scope :visible, -> { where(status: :published).where('publish_date IS NULL OR publish_date <= ?', Time.current) }
   scope :published_posts, -> { where(status: :published) }
@@ -120,5 +124,19 @@ class Post < ApplicationRecord
     return unless publish_date.present? && publish_date <= Time.current
 
     errors.add(:publish_date, 'must be in the future for scheduled posts')
+  end
+
+  def enqueue_social_auto_posts
+    user.connected_accounts.each do |account|
+      next unless account.should_auto_post?("post")
+
+      SocialAutoPostJob.perform_later("Post", id, account.platform)
+    end
+  end
+
+  def enqueue_social_auto_posts_on_publish
+    return unless saved_change_to_status? && published?
+
+    enqueue_social_auto_posts
   end
 end

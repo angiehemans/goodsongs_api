@@ -38,7 +38,8 @@ class UsersController < ApplicationController
     sources = params[:sources]&.split(',')&.map(&:strip)
 
     result = service.fetch(
-      limit: (params[:limit] || 20).to_i,
+      page: (params[:page] || 1).to_i,
+      per_page: (params[:per_page] || 20).to_i,
       sources: sources
     )
 

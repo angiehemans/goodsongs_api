@@ -230,7 +230,7 @@ module Api
         result = {}
 
         # Extract simple fields (explicitly whitelisted)
-        %w[background_color brand_color font_color header_font body_font content_max_width card_background_opacity border_radius].each do |field|
+        %w[background_color brand_color font_color header_font header_font_weight body_font body_font_weight content_max_width card_background_opacity border_radius].each do |field|
           result[field] = source[field] if source[field].present?
         end
 

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_19_000001) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_26_195318) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -158,6 +158,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_000001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["user_id"], name: "index_blog_images_on_user_id"
+  end
+
+  create_table "connected_accounts", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "platform", null: false
+    t.string "platform_user_id"
+    t.string "platform_username"
+    t.string "access_token"
+    t.string "account_type"
+    t.boolean "auto_post_recommendations", default: false
+    t.boolean "auto_post_band_posts", default: false
+    t.boolean "auto_post_events", default: false
+    t.boolean "needs_reauth", default: false
+    t.datetime "token_expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "platform"], name: "index_connected_accounts_on_user_id_and_platform", unique: true
+    t.index ["user_id"], name: "index_connected_accounts_on_user_id"
   end
 
   create_table "device_tokens", force: :cascade do |t|
@@ -432,6 +450,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_000001) do
     t.jsonb "pages", default: []
     t.jsonb "draft_pages", default: []
     t.integer "border_radius", default: 8
+    t.integer "header_font_weight", default: 400
+    t.integer "body_font_weight", default: 400
     t.index ["user_id"], name: "index_profile_themes_on_user_id", unique: true
   end
 
@@ -648,6 +668,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_000001) do
   add_foreign_key "bands", "users"
   add_foreign_key "bands", "users", column: "submitted_by_id"
   add_foreign_key "blog_images", "users"
+  add_foreign_key "connected_accounts", "users"
   add_foreign_key "device_tokens", "users"
   add_foreign_key "event_comment_likes", "event_comments"
   add_foreign_key "event_comment_likes", "users"

@@ -81,9 +81,21 @@ class Review < ApplicationRecord
   # Process mentions after saving
   after_save :process_mentions, if: :saved_change_to_review_text?
 
+  # Auto-post to connected social platforms
+  after_create_commit :enqueue_social_auto_posts
+
   private
 
   def process_mentions
     MentionService.new(review_text, mentioner: user, mentionable: self).sync_mentions
+  end
+
+  def enqueue_social_auto_posts
+    user.connected_accounts.each do |account|
+      next unless account.platform == "threads"
+      next unless account.should_auto_post?("review")
+
+      SocialAutoPostJob.perform_later("Review", id, account.platform)
+    end
   end
 end

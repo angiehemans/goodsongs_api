@@ -8,3 +8,9 @@
 #     command: "SoftDeletedRecord.due.delete_all"
 #     priority: 2
 #     schedule: at 5am every day
+
+production:
+  refresh_social_tokens:
+    class: RefreshSocialTokensJob
+    queue: default
+    schedule: at 3am every day

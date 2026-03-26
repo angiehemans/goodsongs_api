@@ -676,13 +676,15 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
 
 **Query Parameters:**
 
-- `limit` (optional): Number of tracks to return (default: 20)
+- `page` (optional): Page number (default: 1)
+- `per_page` (optional): Number of tracks per page (default: 20, max: 50)
 - `sources` (optional): Comma-separated list of sources to include. Valid values: `lastfm`, `scrobble`. If omitted, all connected sources are used.
 
 **Examples:**
 
-- `GET /recently-played` - All sources
-- `GET /recently-played?limit=50` - All sources, 50 tracks
+- `GET /recently-played` - All sources, first page
+- `GET /recently-played?per_page=50` - All sources, 50 tracks per page
+- `GET /recently-played?page=2&per_page=20` - Second page
 - `GET /recently-played?sources=lastfm` - Last.fm only
 - `GET /recently-played?sources=scrobble` - Local scrobbles only
 - `GET /recently-played?sources=lastfm,scrobble` - Both sources explicitly
@@ -714,7 +716,13 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
       "album_art_url": "https://..."
     }
   ],
-  "sources": ["lastfm", "scrobble"]
+  "sources": ["lastfm", "scrobble"],
+  "pagination": {
+    "current_page": 1,
+    "per_page": 20,
+    "has_next_page": true,
+    "has_previous_page": false
+  }
 }
 ```
 
@@ -734,6 +742,11 @@ Tracks are merged from all connected sources, sorted by `played_at` (most recent
   - `metadata_status` - Enrichment status: `pending`, `enriched`, `not_found`, `failed` (scrobble source only)
   - `has_preferred_artwork` - True if user has set custom artwork for this scrobble (scrobble source only)
 - `sources` - Array of source names that were queried
+- `pagination` - Pagination metadata
+  - `current_page` - Current page number
+  - `per_page` - Number of tracks per page
+  - `has_next_page` - True if more tracks are available
+  - `has_previous_page` - True if this is not the first page
 
 **Notes:**
 
@@ -955,6 +968,158 @@ Returns a pre-built share payload for a piece of content, including caption text
 | 401  | Unauthenticated                      |
 | 404  | Record not found                     |
 | 422  | Invalid or unallowed `postable_type` |
+
+---
+
+## Social OAuth Endpoints
+
+### GET /auth/threads/authorize
+
+Initiates the OAuth flow for connecting a Threads account. Returns a URL the client should open in a browser.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "authorize_url": "https://threads.net/oauth/authorize?client_id=...&redirect_uri=...&scope=threads_basic,threads_content_publish&response_type=code&state=..."
+}
+```
+
+---
+
+### GET /auth/threads/callback
+
+OAuth callback from Threads. This is a browser redirect endpoint, not a JSON API call. The server exchanges the authorization code for tokens, stores the connected account, and redirects the user back to the frontend.
+
+**Authentication:** None (state parameter contains signed user_id)
+
+**Query Parameters:**
+
+| Param  | Required | Description              |
+| ------ | -------- | ------------------------ |
+| `code` | Yes      | Authorization code       |
+| `state`| Yes      | Signed state from server |
+
+**Redirects to:** `{FRONTEND_URL}/settings/connections?status=success&platform=threads` or `?status=error&platform=threads`
+
+---
+
+### GET /auth/instagram/authorize
+
+Initiates the OAuth flow for connecting an Instagram account.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+{
+  "authorize_url": "https://www.instagram.com/oauth/authorize?client_id=...&redirect_uri=...&scope=instagram_basic,instagram_content_publish&response_type=code&state=..."
+}
+```
+
+---
+
+### GET /auth/instagram/callback
+
+OAuth callback from Instagram. Same pattern as Threads callback.
+
+**Authentication:** None (state parameter contains signed user_id)
+
+**Redirects to:** `{FRONTEND_URL}/settings/connections?status=success&platform=instagram` or `?status=error&platform=instagram`
+
+---
+
+## Connected Accounts Endpoints
+
+### GET /api/v1/connected_accounts
+
+List all connected social accounts for the current user.
+
+**Authentication:** Required
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "platform": "threads",
+    "platform_username": "myusername",
+    "account_type": null,
+    "auto_post_recommendations": true,
+    "auto_post_band_posts": false,
+    "auto_post_events": false,
+    "needs_reauth": false,
+    "created_at": "2026-03-24T12:00:00.000Z",
+    "updated_at": "2026-03-24T12:00:00.000Z"
+  }
+]
+```
+
+---
+
+### PATCH /api/v1/connected_accounts/:platform
+
+Update auto-post preferences for a connected account.
+
+**Authentication:** Required
+
+**URL Parameters:** `platform` — `threads` or `instagram`
+
+**Request Body:**
+
+```json
+{
+  "auto_post_recommendations": true,
+  "auto_post_band_posts": true,
+  "auto_post_events": false
+}
+```
+
+**Response (200 OK):** Returns the updated connected account object (same shape as index).
+
+**Notes:**
+- Only auto-post preference booleans can be updated via this endpoint.
+- Instagram personal accounts cannot auto-post (the API requires BUSINESS or CREATOR account type).
+
+---
+
+### DELETE /api/v1/connected_accounts/:platform
+
+Disconnect a social account.
+
+**Authentication:** Required
+
+**URL Parameters:** `platform` — `threads` or `instagram`
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "Disconnected threads"
+}
+```
+
+---
+
+## Auto-Post Behavior
+
+When a user creates content and has connected accounts with auto-post enabled, the content is automatically posted to the connected platforms via background jobs:
+
+| Content Type    | Threads | Instagram |
+| --------------- | ------- | --------- |
+| Review          | Yes     | No        |
+| Post (published)| Yes     | Yes       |
+| Event           | Yes     | Yes       |
+
+**Notes:**
+- Posts are only auto-posted when published (not drafts). Publishing a draft also triggers auto-post.
+- Instagram requires an image — posts without images are silently skipped.
+- Instagram personal accounts cannot auto-post.
+- If a token expires or becomes invalid, the account is flagged `needs_reauth: true` and a `social_reauth_needed` notification is sent.
+- Tokens are automatically refreshed daily before they expire.
 
 ---
 
@@ -1750,9 +1915,30 @@ The `single_post_layout` controls how individual blog post pages are rendered. I
 
 ---
 
-### Approved Fonts
+### Fonts
 
-Inter, Space Grotesk, DM Sans, Plus Jakarta Sans, Outfit, Sora, Manrope, Rubik, Work Sans, Nunito Sans, Lora, Merriweather, Playfair Display, Source Serif 4, Libre Baskerville, IBM Plex Mono, JetBrains Mono
+Both `header_font` and `body_font` accept either:
+
+1. **An approved font name** from the curated list (returned in `config.approved_fonts`):
+   Inter, Space Grotesk, DM Sans, Plus Jakarta Sans, Outfit, Sora, Manrope, Rubik, Work Sans, Nunito Sans, Lora, Merriweather, Playfair Display, Source Serif 4, Libre Baskerville, IBM Plex Mono, JetBrains Mono, Creepster, Jacquard 12, Astloch, Pirata One, Special Elite, Courier Prime, Cutive Mono
+
+2. **A Google Fonts URL** in the format `https://fonts.google.com/specimen/FontName` (e.g., `https://fonts.google.com/specimen/Open+Sans`). This allows users to use any font from Google Fonts beyond the curated list.
+
+**Font weight:** `header_font_weight` and `body_font_weight` control the CSS font weight. Valid values: `100`, `200`, `300`, `400` (default), `500`, `600`, `700`, `800`, `900`. Available weights are returned in `config.font_weights`.
+
+**Response fields for fonts:**
+
+| Field                | Description                                                                 |
+| -------------------- | --------------------------------------------------------------------------- |
+| `header_font`        | The stored value (font name or Google Fonts URL)                            |
+| `header_font_name`   | The resolved display name (e.g., `"Open Sans"` extracted from the URL)      |
+| `header_font_weight` | CSS font weight for headers (integer, default `400`)                        |
+| `body_font`          | The stored value (font name or Google Fonts URL)                            |
+| `body_font_name`     | The resolved display name                                                   |
+| `body_font_weight`   | CSS font weight for body text (integer, default `400`)                      |
+| `custom_font_urls`   | Array of Google Fonts URLs that need to be loaded (empty if all are curated) |
+
+The frontend should use `header_font_name` / `body_font_name` for CSS `font-family` values, `header_font_weight` / `body_font_weight` for CSS `font-weight`, and load any URLs in `custom_font_urls` via Google Fonts CSS API.
 
 ---
 
@@ -5280,6 +5466,20 @@ When in-app notifications are created, push notifications are automatically sent
     "notification_id": "123",
     "event_id": "789",
     "comment_id": "101"
+  }
+}
+```
+
+**social_reauth_needed:**
+
+```json
+{
+  "title": "Reconnect Required",
+  "body": "Your Threads connection needs to be re-authorized",
+  "data": {
+    "type": "social_reauth_needed",
+    "notification_id": "123",
+    "platform": "threads"
   }
 }
 ```

@@ -69,6 +69,9 @@ class User < ApplicationRecord
   # Device tokens for push notifications
   has_many :device_tokens, dependent: :destroy
 
+  # Connected social accounts (Threads, Instagram)
+  has_many :connected_accounts, dependent: :destroy
+
   # Geocoding for user location
   geocoded_by :full_location
   after_validation :safe_geocode, if: :should_geocode?

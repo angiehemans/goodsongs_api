@@ -32,4 +32,17 @@ class Event < ApplicationRecord
   validates :name, presence: true
   validates :event_date, presence: true
   validates :age_restriction, inclusion: { in: AGE_RESTRICTIONS }, allow_blank: true
+
+  # Auto-post to connected social platforms
+  after_create_commit :enqueue_social_auto_posts
+
+  private
+
+  def enqueue_social_auto_posts
+    user.connected_accounts.each do |account|
+      next unless account.should_auto_post?("event")
+
+      SocialAutoPostJob.perform_later("Event", id, account.platform)
+    end
+  end
 end
