@@ -29,7 +29,7 @@ namespace :storage do
       begin
         local_service.open(blob.key, checksum: blob.checksum) do |file|
           remote_service.upload(blob.key, file, checksum: blob.checksum,
-            content_type: blob.content_type, disposition: blob.service_metadata[:disposition])
+            content_type: blob.content_type)
         end
         migrated += 1
         print "."
