@@ -273,6 +273,9 @@ Rails.application.routes.draw do
       # Public link pages
       get 'profiles/bands/:slug/links', to: 'profiles#band_links'
       get 'profiles/users/:username/links', to: 'profiles#user_links'
+
+      # Direct uploads to DO Spaces (bypasses Rails for file data)
+      resources :direct_uploads, only: [:create]
     end
   end
 end

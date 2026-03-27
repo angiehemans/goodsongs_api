@@ -3581,6 +3581,62 @@ Upload an image for use in blog post content.
 
 ---
 
+### POST /api/v1/direct_uploads
+
+Request a presigned URL for uploading a file directly to cloud storage (DO Spaces), bypassing the Rails server. Use this for profile images, band avatars, event images, etc.
+
+**Authentication:** Required
+
+**Request Body:**
+
+```json
+{
+  "blob": {
+    "filename": "avatar.jpg",
+    "byte_size": 245000,
+    "checksum": "GQ2hP1m1v1A4rDnOiPqrhQ==",
+    "content_type": "image/jpeg"
+  }
+}
+```
+
+| Field          | Type    | Required | Description                              |
+| -------------- | ------- | -------- | ---------------------------------------- |
+| `filename`     | string  | Yes      | Original filename                        |
+| `byte_size`    | integer | Yes      | File size in bytes                       |
+| `checksum`     | string  | Yes      | Base64-encoded MD5 checksum of the file  |
+| `content_type` | string  | Yes      | MIME type (e.g. `image/jpeg`)            |
+
+**Response (200 OK):**
+
+```json
+{
+  "blob_id": "eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaH...",
+  "key": "abc123def456",
+  "direct_upload": {
+    "url": "https://goodsongs-production.nyc3.digitaloceanspaces.com/abc123def456",
+    "headers": {
+      "Content-Type": "image/jpeg",
+      "Content-MD5": "GQ2hP1m1v1A4rDnOiPqrhQ=="
+    }
+  }
+}
+```
+
+**Upload Flow:**
+
+1. Call this endpoint to get a presigned URL and `blob_id`
+2. PUT the file directly to `direct_upload.url` with the provided `headers`
+3. Attach the blob to a record by passing `blob_id` to the relevant update endpoint (e.g. PATCH /profile with `blob_id` for the avatar)
+
+**Notes:**
+
+- The presigned URL expires after a short time — upload promptly after receiving it
+- The `checksum` must be the Base64-encoded MD5 digest of the raw file bytes
+- In development, uploads go to local disk; in production, they go to DO Spaces CDN
+
+---
+
 ### Plan Access Matrix for Blog Posts
 
 | Plan         | Create Posts | Draft   | Schedule | Attach Images | Manage Tags |
