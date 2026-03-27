@@ -45,8 +45,15 @@ env:
     - DISCOGS_CONSUMER_SECRET
     - FIREBASE_PROJECT_ID
     - FIREBASE_SERVICE_ACCOUNT_JSON_BASE64
+    - SPACES_ACCESS_KEY
+    - SPACES_SECRET_KEY
+    - SPACES_BUCKET
+    - SPACES_REGION
+    - SPACES_ENDPOINT
+    - SPACES_CDN_HOST
   clear:
     MAILGUN_DOMAIN: mg.goodsongs.app
+    ACTIVE_STORAGE_SERVICE: digitalocean
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     SOLID_QUEUE_IN_PUMA: true
