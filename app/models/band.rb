@@ -26,7 +26,7 @@ class Band < ApplicationRecord
 
   validates :name, presence: true
   validates :name, uniqueness: { case_sensitive: false, scope: :user_id }, if: :user_submitted?
-  validates :slug, presence: true, uniqueness: true, format: { with: /\A[a-z0-9\-_]+\z/, message: "can only contain lowercase letters, numbers, hyphens, and underscores" }
+  validates :slug, presence: true, uniqueness: { message: "is already taken by another band" }, format: { with: /\A[a-z0-9\-_]+\z/, message: "can only contain lowercase letters, numbers, hyphens, and underscores" }
   validates :spotify_link, format: { with: /\Ahttps:\/\/(open\.)?spotify\.com(\/|\z)/, message: "must be a valid Spotify URL" }, allow_blank: true
   validates :bandcamp_link, format: { with: /\Ahttps:\/\/[\w\-]+\.bandcamp\.com(\/|\z)/, message: "must be a valid Bandcamp URL" }, allow_blank: true
   validates :apple_music_link, format: { with: /\Ahttps:\/\/music\.apple\.com(\/|\z)/, message: "must be a valid Apple Music URL" }, allow_blank: true
@@ -46,6 +46,7 @@ class Band < ApplicationRecord
 
   before_validation :normalize_links
   before_validation :normalize_social_links
+  before_validation :normalize_unique_identifiers
   before_validation :generate_slug
   
   scope :user_created, -> { where.not(user_id: nil) }
@@ -210,12 +211,12 @@ class Band < ApplicationRecord
     if slug.blank? || slug_should_be_auto_generated?
       candidate_slug = base_slug
       counter = 1
-      
+
       while Band.where(slug: candidate_slug).where.not(id: id).exists?
-        candidate_slug = "#{base_slug}-#{id || counter}"
         counter += 1
+        candidate_slug = "#{base_slug}-#{counter}"
       end
-      
+
       self.slug = candidate_slug
     end
   end
@@ -227,6 +228,12 @@ class Band < ApplicationRecord
   def slug_should_be_auto_generated?
     # Auto-generate if slug is blank or if name changed and slug wasn't manually set
     slug.blank? || (name_changed? && !slug_changed?)
+  end
+
+  def normalize_unique_identifiers
+    %i[musicbrainz_id audiodb_artist_id discogs_artist_id lastfm_artist_name].each do |field|
+      self[field] = nil if self[field].blank?
+    end
   end
 
   def normalize_social_links

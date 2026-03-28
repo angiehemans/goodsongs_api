@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_26_195318) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_28_010649) do
   create_schema "musicbrainz_staging"
 
   # These are extensions that must be enabled in order to support this database
@@ -145,7 +145,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_26_195318) do
     t.index ["created_at"], name: "index_bands_on_created_at"
     t.index ["discogs_artist_id"], name: "index_bands_on_discogs_artist_id", unique: true, where: "(discogs_artist_id IS NOT NULL)"
     t.index ["latitude", "longitude"], name: "index_bands_on_latitude_and_longitude"
-    t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true
+    t.index ["musicbrainz_id"], name: "index_bands_on_musicbrainz_id", unique: true, where: "(musicbrainz_id IS NOT NULL)"
     t.index ["name"], name: "index_bands_on_name"
     t.index ["name"], name: "index_bands_on_name_trgm", opclass: :gin_trgm_ops, using: :gin
     t.index ["slug"], name: "index_bands_on_slug", unique: true

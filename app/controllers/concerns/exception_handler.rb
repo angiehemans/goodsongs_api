@@ -15,6 +15,7 @@ module ExceptionHandler
 
     rescue_from ActiveRecord::RecordInvalid, with: :unprocessable_entity_request
     rescue_from ActiveRecord::RecordNotFound, with: :not_found_request
+    rescue_from ActiveRecord::RecordNotUnique, with: :conflict_request
   end
 
   private
@@ -37,5 +38,9 @@ module ExceptionHandler
 
   def not_found_request(e)
     render json: { error: e.message }, status: :not_found
+  end
+
+  def conflict_request(_e)
+    render json: { error: 'A record with that value already exists' }, status: :conflict
   end
 end
